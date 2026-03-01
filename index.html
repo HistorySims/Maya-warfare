@@ -1,1 +1,1394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>K'uhul Ajaw — Divine Lord</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #0b0b0c;
+  --panel:    #111214;
+  --border:   #1e3a2e;
+  --text:     #e7e0d2;
+  --muted:    #8b7355;
+  --jade:     #0f766e;
+  --jade-lt:  #14b8a6;
+  --amber:    #d97706;
+  --red:      #b91c1c;
+  --blood:    #7f1d1d;
+  --teal:     #06b6d4;
+  --brown:    #78350f;
+  --corn:     #ca8a04;
+  --maxW:     600px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Cinzel', Georgia, serif;
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  user-select: none;
+  touch-action: none;
+}
 
+/* ── HUD ── */
+#hud {
+  background: var(--panel);
+  border-bottom: 2px solid var(--border);
+  padding: 5px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+  min-height: 34px;
+}
+#hud-title { font-size: 1rem; font-weight: 900; color: var(--jade-lt); letter-spacing: .15em; }
+#hud-season { font-size: .75rem; color: var(--text); letter-spacing: .05em; }
+
+/* ── Resource bar ── */
+#resbar {
+  background: #0d1a14;
+  border-bottom: 1px solid var(--border);
+  padding: 3px 8px;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+.chip {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 7px;
+  font-size: .68rem;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+.chip.warn { border-color: var(--amber); color: var(--amber); }
+.chip.bad  { border-color: var(--red);   color: var(--red);   }
+.chip-val  { font-weight: 700; }
+
+/* ── Canvas ── */
+#cw {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  min-height: 0;
+}
+#gc {
+  display: block;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+/* ── Bottom panel ── */
+#bot {
+  background: var(--panel);
+  border-top: 2px solid var(--border);
+  flex-shrink: 0;
+  max-height: 230px;
+  transition: max-height .3s;
+  display: flex;
+  flex-direction: column;
+}
+#bot.shut { max-height: 28px; }
+#bot-tab {
+  width: 100%;
+  background: #0d1a14;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+  font-family: inherit;
+  font-size: .65rem;
+  padding: 3px 0;
+  cursor: pointer;
+  letter-spacing: .1em;
+  flex-shrink: 0;
+}
+#bot-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
+#panel { flex: 1; padding: 7px 9px; overflow-y: auto; min-width: 0; }
+#log {
+  width: 190px;
+  min-width: 130px;
+  font-size: .62rem;
+  font-family: monospace;
+  padding: 5px 7px;
+  overflow-y: auto;
+  color: var(--muted);
+  border-left: 1px solid var(--border);
+  line-height: 1.45;
+}
+@media (max-width: 480px) { #log { width: 130px; } }
+
+/* ── Shared form widgets ── */
+.row { margin-bottom: 7px; font-size: .7rem; }
+.row label { display: block; color: var(--muted); margin-bottom: 2px; letter-spacing: .04em; font-size: .64rem; }
+select {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: inherit;
+  font-size: .66rem;
+  padding: 3px 5px;
+  border-radius: 3px;
+}
+input[type=range] { width: 100%; accent-color: var(--jade-lt); }
+.infobox {
+  background: #0d1a14;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 4px 8px;
+  font-size: .63rem;
+  color: var(--muted);
+  line-height: 1.65;
+  margin-bottom: 7px;
+}
+.infobox span { color: var(--text); }
+.btn {
+  background: var(--jade);
+  border: none;
+  color: var(--text);
+  font-family: inherit;
+  font-size: .72rem;
+  padding: 5px 13px;
+  border-radius: 3px;
+  cursor: pointer;
+  letter-spacing: .07em;
+  margin-right: 4px;
+}
+.btn:hover { background: var(--jade-lt); }
+.btn.danger { background: var(--blood); }
+.btn.danger:hover { background: var(--red); }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+
+/* ── Joystick ── */
+#jzone {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  width: 96px;
+  height: 96px;
+  display: none;
+  z-index: 10;
+  touch-action: none;
+}
+#jbase {
+  width: 80px; height: 80px;
+  border-radius: 50%;
+  background: rgba(15,118,110,.18);
+  border: 2px solid rgba(20,184,166,.45);
+  position: absolute;
+  top: 8px; left: 8px;
+}
+#jstick {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: var(--jade-lt);
+  opacity: .8;
+  position: absolute;
+  top: 34px; left: 34px;
+}
+@media (max-width: 700px) { #jzone { display: block; } }
+
+/* ── Floating numbers ── */
+.fn {
+  position: absolute;
+  font-size: .82rem;
+  font-weight: 700;
+  pointer-events: none;
+  animation: fnUp 1.4s ease-out forwards;
+}
+@keyframes fnUp {
+  0%   { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-38px); }
+}
+
+/* ── Start overlay ── */
+#ov {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.93);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  text-align: center;
+  padding: 24px;
+}
+#ov h1 {
+  font-size: clamp(1.8rem, 9vw, 3.6rem);
+  font-weight: 900;
+  color: var(--jade-lt);
+  letter-spacing: .18em;
+  text-shadow: 0 0 40px rgba(20,184,166,.45);
+  margin-bottom: 4px;
+}
+#ov h2 { font-size: .82rem; color: var(--muted); letter-spacing: .22em; margin-bottom: 18px; }
+#ov p  { font-family: sans-serif; font-size: .83rem; color: var(--text); max-width: 380px; line-height: 1.65; margin-bottom: 8px; }
+#ov .hint { font-family: monospace; font-size: .72rem; color: var(--muted); margin-bottom: 22px; }
+#ov .decor {
+  font-size: .7rem;
+  color: var(--border);
+  letter-spacing: .3em;
+  margin-bottom: 14px;
+}
+
+/* ── Game-over overlay ── */
+#go {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.96);
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  text-align: center;
+  padding: 24px;
+}
+#go h1 { color: var(--red); font-size: 2rem; font-weight: 900; letter-spacing: .12em; margin-bottom: 10px; }
+#go p  { color: var(--muted); font-family: sans-serif; font-size: .85rem; margin-bottom: 20px; max-width: 340px; line-height: 1.6; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════ OVERLAYS ═══════════ -->
+<div id="ov">
+  <div class="decor">✦ ✦ ✦ ✦ ✦ ✦</div>
+  <h1>K'UHUL AJAW</h1>
+  <h2>DIVINE LORD OF THE MAYA</h2>
+  <p>Conquer your rivals. Install your kin. Build an empire across the jungle&hellip; if you can hold it.</p>
+  <p class="hint">WASD / Arrow keys to move &nbsp;·&nbsp; Click or Tap to strike</p>
+  <button class="btn" id="startBtn" style="font-size:.95rem;padding:11px 30px">BEGIN YOUR REIGN</button>
+  <div class="decor" style="margin-top:16px">✦ ✦ ✦ ✦ ✦ ✦</div>
+</div>
+
+<div id="go">
+  <h1>YOUR DYNASTY ENDS</h1>
+  <p>The jungle reclaims your name.<br>Another lord will rise where you have fallen.</p>
+  <button class="btn danger" onclick="location.reload()">Begin Again</button>
+</div>
+
+<!-- ═══════════ HUD ═══════════ -->
+<div id="hud">
+  <div id="hud-title">K'UHUL AJAW</div>
+  <div id="hud-season">&#9728; Dry Season <span id="snum">1</span></div>
+</div>
+
+<!-- ═══════════ RESOURCE BAR ═══════════ -->
+<div id="resbar">
+  <div class="chip" id="ch-food">🌽 Food <span class="chip-val" id="rv-food">200</span></div>
+  <div class="chip" id="ch-pop">👥 Pop <span class="chip-val" id="rv-pop">20</span></div>
+  <div class="chip" id="ch-vas">🏛 Vassals <span class="chip-val" id="rv-vas">0</span></div>
+  <div class="chip" id="ch-days">☀ Days <span class="chip-val" id="rv-days">80</span></div>
+</div>
+
+<!-- ═══════════ CANVAS ═══════════ -->
+<div id="cw">
+  <canvas id="gc"></canvas>
+  <div id="jzone"><div id="jbase"></div><div id="jstick"></div></div>
+</div>
+
+<!-- ═══════════ BOTTOM PANEL ═══════════ -->
+<div id="bot">
+  <button id="bot-tab" onclick="toggleBot()">&#9650; COUNCIL CHAMBER &#9650;</button>
+  <div id="bot-body">
+    <div id="panel"></div>
+    <div id="log"></div>
+  </div>
+</div>
+
+<script>
+'use strict';
+// ═══════════════════════════════════════════════════════════
+//  CONSTANTS
+// ═══════════════════════════════════════════════════════════
+const T  = 32;          // tile size px
+const WW = 120;         // world width  (tiles)
+const WH = 120;         // world height (tiles)
+const FOG  = 9;         // visibility radius (tiles)
+const DAYS = 80;        // days per dry season
+const DAY_MS = 1800;    // real ms per game day
+
+// City definitions
+const CITY_DEFS = [
+  { id:'ox_witz',   name:"Ox Witz",    tx:75, ty:60, col:'#7c3aed', order:1 },
+  { id:'kan_tuun',  name:"K'an Tuun",  tx:62, ty:30, col:'#0369a1', order:2 },
+  { id:'sak_nikte', name:"Sak Nikte'", tx:28, ty:28, col:'#b45309', order:3 },
+  { id:'ik_naah',   name:"Ik' Naah",  tx:58, ty:105, col:'#065f46', order:4 },
+];
+const HOME = { tx:60, ty:60 };
+
+// ═══════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════
+let G = null;   // global state, null until game starts
+
+function mkState() {
+  return {
+    phase: 'planning',   // planning|marching|combat|returning|transition
+    season: 1,
+    food: 200,
+    maxFood: 500,
+    population: 20,
+    farmers: 14,
+    homeSoldiers: 6,
+    daysLeft: DAYS,
+
+    // player world-pixel position
+    px: HOME.tx * T + T/2,
+    py: HOME.ty * T + T/2,
+    pHp: 30, pMaxHp: 30,
+    atkCd: 0,
+
+    // camera world-pixel position (top-left of viewport)
+    camX: HOME.tx * T - 300,
+    camY: HOME.ty * T - 200,
+
+    // army
+    trail: [],         // {type,px,py,hp,maxHp,alive,atkCd,food?}
+    marchSoldiers: 0,
+    marchPorters:  0,
+    marchFood:     0,
+    marchTarget:   null,  // city object ref
+
+    // cities
+    cities: CITY_DEFS.map(d => ({
+      ...d,
+      status:'independent',  // independent|vassal|rebellious
+      conquered: 0,
+      wallHp: 0,
+    })),
+
+    // enemies active in combat
+    enemies: [],
+    combatCity: null,
+
+    // farm plots around home
+    farms: mkFarms(),
+
+    // fog of war — set of "tx,ty" strings
+    fog: new Set(),
+
+    // input
+    keys: {},
+
+    // day timer accumulator
+    dayAcc: 0,
+
+    // panel redraw throttle
+    panelAcc: 0,
+
+    // floating numbers queue
+    floats: [],
+
+    // transition data
+    trans: null, transAcc: 0,
+
+    // narrative
+    introShown: false,
+  };
+}
+
+function mkFarms() {
+  const f = [];
+  const ring = [
+    [-3,-4],[-2,-4],[-1,-4],[0,-4],[1,-4],[2,-4],
+    [-3,-5],[-2,-5],[-1,-5],[0,-5],[1,-5],[2,-5],
+    [3,-3],[4,-3],[3,-2],[4,-2],[3,-1],[4,-1],
+    [-4,-3],[-5,-3],[-4,-2],[-5,-2],[-4,-1],[-5,-1],
+  ];
+  ring.forEach(([dx,dy]) => f.push({
+    tx: HOME.tx+dx, ty: HOME.ty+dy,
+    growth: Math.random() < .45 ? 2 : 1,
+  }));
+  return f;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  CANVAS + RESIZE
+// ═══════════════════════════════════════════════════════════
+const cv  = document.getElementById('gc');
+const ctx = cv.getContext('2d');
+
+function resize() {
+  const cw = document.getElementById('cw');
+  cv.width  = cw.clientWidth  || window.innerWidth;
+  cv.height = cw.clientHeight || 300;
+}
+window.addEventListener('resize', resize);
+
+// ═══════════════════════════════════════════════════════════
+//  LOG
+// ═══════════════════════════════════════════════════════════
+function log(msg, col) {
+  const el = document.getElementById('log');
+  const d  = document.createElement('div');
+  d.textContent = '› ' + msg;
+  if (col) d.style.color = col;
+  d.style.borderBottom = '1px solid #1e3a2e';
+  d.style.paddingBottom = '2px';
+  d.style.marginBottom  = '2px';
+  el.prepend(d);
+  while (el.children.length > 40) el.removeChild(el.lastChild);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  FLOATING NUMBERS
+// ═══════════════════════════════════════════════════════════
+function spawnFloat(txt, col, sx, sy) {
+  const cw = document.getElementById('cw');
+  const el = document.createElement('div');
+  el.className = 'fn';
+  el.textContent = txt;
+  el.style.color = col;
+  el.style.left  = Math.round(sx) + 'px';
+  el.style.top   = Math.round(sy) + 'px';
+  cw.appendChild(el);
+  setTimeout(() => el.remove(), 1450);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  PANEL TOGGLE
+// ═══════════════════════════════════════════════════════════
+function toggleBot() {
+  const b = document.getElementById('bot');
+  b.classList.toggle('shut');
+  document.getElementById('bot-tab').textContent =
+    b.classList.contains('shut')
+      ? '▼ COUNCIL CHAMBER ▼'
+      : '▲ COUNCIL CHAMBER ▲';
+}
+
+// ═══════════════════════════════════════════════════════════
+//  HUD UPDATE
+// ═══════════════════════════════════════════════════════════
+function hudUpdate() {
+  document.getElementById('rv-food').textContent = G.food;
+  document.getElementById('rv-pop').textContent  = G.population;
+  document.getElementById('rv-vas').textContent  = G.cities.filter(c=>c.status==='vassal').length;
+  document.getElementById('rv-days').textContent = G.daysLeft;
+  document.getElementById('snum').textContent    = G.season;
+
+  const dc = document.getElementById('ch-days');
+  dc.className = 'chip' + (G.daysLeft < 15 ? ' bad' : G.daysLeft < 30 ? ' warn' : '');
+  const fc = document.getElementById('ch-food');
+  fc.className = 'chip' + (G.food < 30 ? ' bad' : G.food < 80 ? ' warn' : '');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  PANEL UI
+// ═══════════════════════════════════════════════════════════
+function panelUpdate() {
+  const p = document.getElementById('panel');
+  if      (G.phase === 'planning')  renderPlanning(p);
+  else if (G.phase === 'marching' || G.phase === 'returning') renderMarch(p);
+  else if (G.phase === 'combat')    renderCombat(p);
+  else if (G.phase === 'transition') {
+    p.innerHTML = `<div style="font-size:.78rem;color:var(--muted);padding:6px 0">
+      <div style="font-size:.9rem;color:var(--teal);margin-bottom:6px">&#127783; The rains come…</div>
+      The jungle drinks. The corn is counted.<br>The dry season will return.
+    </div>`;
+  }
+}
+
+function renderPlanning(p) {
+  const cityOpts = G.cities.map(c => {
+    const dist = tileDist(HOME.tx, HOME.ty, c.tx, c.ty).toFixed(0);
+    const icon = {independent:'○', vassal:'◆', rebellious:'✗'}[c.status] || '?';
+    const col  = c.status === 'rebellious' ? 'color:#b91c1c' : c.status === 'vassal' ? 'color:#14b8a6' : '';
+    return `<option value="${c.id}" style="${col}">${icon} ${c.name} (~${dist} tiles · ${c.status})</option>`;
+  }).join('');
+
+  const maxSol = G.homeSoldiers;
+  const maxPor = Math.max(0, G.farmers - 2);
+
+  p.innerHTML = `
+    <div class="row">
+      <label>CAMPAIGN TARGET</label>
+      <select id="sel-tgt" onchange="planStats()">
+        <option value="">— Choose a city —</option>
+        ${cityOpts}
+      </select>
+    </div>
+    <div class="row">
+      <label>WARRIORS: <span id="sl-sv">3</span> / ${maxSol}</label>
+      <input type="range" id="sl-s" min="0" max="${maxSol}" value="${Math.min(3,maxSol)}" oninput="planStats()">
+    </div>
+    <div class="row">
+      <label>PORTERS (food carriers): <span id="sl-pv">3</span></label>
+      <input type="range" id="sl-p" min="0" max="${maxPor}" value="${Math.min(3,maxPor)}" oninput="planStats()">
+    </div>
+    <div class="infobox" id="pstats">Select a target to see march estimates.</div>
+    <button class="btn" id="btn-march" onclick="doMarch()" disabled>MARCH!</button>
+  `;
+  planStats();
+}
+
+function planStats() {
+  const sel  = document.getElementById('sel-tgt');
+  const slS  = document.getElementById('sl-s');
+  const slP  = document.getElementById('sl-p');
+  if (!sel || !slS || !slP) return;
+
+  const s = +slS.value, por = +slP.value;
+  document.getElementById('sl-sv').textContent = s;
+  document.getElementById('sl-pv').textContent = por;
+
+  const city   = G.cities.find(c => c.id === sel.value);
+  const dist   = city ? tileDist(HOME.tx, HOME.ty, city.tx, city.ty) : 0;
+  const farmers = G.farmers - por;
+  const fullCorn = G.farms.filter(f => f.growth >= 2).length;
+  const estHarv  = Math.round(fullCorn * farmers * 0.75);
+  const foodNeed = Math.round(dist * (s + por) * 0.25 * 2); // rough round-trip
+
+  const box = document.getElementById('pstats');
+  if (city) {
+    const warnWall = city.status === 'rebellious'
+      ? `<br><span style="color:#b91c1c">⚠ Fortifications reported — expect heavy losses at the walls.</span>` : '';
+    box.innerHTML = `
+      Farmers left at home: <span>${farmers}</span><br>
+      Est. harvest (rainy season): <span>+${estHarv} food</span><br>
+      Est. food needed (round trip): <span>${foodNeed}</span><br>
+      Distance: <span>${dist.toFixed(0)} tiles</span>${warnWall}
+    `;
+  } else {
+    box.innerHTML = 'Select a target to see march estimates.';
+  }
+
+  const btn = document.getElementById('btn-march');
+  if (btn) btn.disabled = !(city && s > 0);
+}
+
+function renderMarch(p) {
+  const alive  = G.trail.filter(u => u.alive);
+  const solCnt = alive.filter(u => u.type==='soldier').length;
+  const porCnt = alive.filter(u => u.type==='porter').length;
+  const dir    = G.phase === 'returning' ? '← Returning home' : `→ Marching to ${G.marchTarget?.name||'?'}`;
+  const dayCol = G.daysLeft < 15 ? '#b91c1c' : G.daysLeft < 30 ? '#d97706' : '#14b8a6';
+
+  p.innerHTML = `
+    <div class="infobox">
+      ${dir}<br>
+      Food supply: <span>${G.marchFood}</span><br>
+      Warriors: <span>${solCnt}</span> &nbsp; Porters: <span>${porCnt}</span><br>
+      Days left: <span style="color:${dayCol}">${G.daysLeft}</span>
+    </div>
+    <button class="btn danger" onclick="doRetreat()">&#8592; RETREAT</button>
+  `;
+}
+
+function renderCombat(p) {
+  const solAlive = G.trail.filter(u => u.type==='soldier' && u.alive).length;
+  const enAlive  = G.enemies.filter(e => e.alive).length;
+  const city     = G.combatCity;
+  const wallNote = city?.status === 'rebellious'
+    ? `<br><span style="color:#b91c1c">Kill zone active — walls channel your warriors!</span>` : '';
+
+  p.innerHTML = `
+    <div class="infobox">
+      Your warriors: <span>${solAlive}</span><br>
+      Enemy defenders: <span style="color:#b91c1c">${enAlive}</span><br>
+      Your HP: <span style="color:#14b8a6">${G.pHp} / ${G.pMaxHp}</span>${wallNote}
+    </div>
+    <button class="btn danger" onclick="doRetreat()">&#8592; FLEE</button>
+  `;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  GAME ACTIONS
+// ═══════════════════════════════════════════════════════════
+function doMarch() {
+  const sel = document.getElementById('sel-tgt');
+  const s   = +document.getElementById('sl-s').value;
+  const por = +document.getElementById('sl-p').value;
+  const city = G.cities.find(c => c.id === sel.value);
+  if (!city || s <= 0) return;
+
+  G.homeSoldiers -= s;
+  G.farmers     -= por;
+  G.marchSoldiers = s;
+  G.marchPorters  = por;
+  G.marchFood     = por * 22 + 15;
+  G.marchTarget   = city;
+  G.phase         = 'marching';
+
+  spawnTrail(s, por);
+  log(`You depart for ${city.name} with ${s} warriors and ${por} porters.`, '#e7e0d2');
+  panelUpdate();
+}
+
+function spawnTrail(s, por) {
+  G.trail = [];
+  for (let i = 0; i < s; i++) {
+    G.trail.push({
+      type:'soldier',
+      px: G.px + (Math.random()-.5)*40,
+      py: G.py + 20 + i*8,
+      hp:10, maxHp:10, alive:true, atkCd:0,
+    });
+  }
+  for (let i = 0; i < por; i++) {
+    G.trail.push({
+      type:'porter',
+      px: G.px + (Math.random()-.5)*30,
+      py: G.py + 50 + i*8,
+      hp:5, maxHp:5, alive:true, atkCd:0,
+      food: 22,
+    });
+  }
+}
+
+function doRetreat() {
+  if (G.phase === 'combat') log('You pull back from the battle!', '#d97706');
+  G.phase       = 'returning';
+  G.marchTarget = null;
+  panelUpdate();
+}
+
+function startCombat(city) {
+  G.phase     = 'combat';
+  G.combatCity = city;
+
+  const isReb = city.status === 'rebellious';
+  const count = Math.min(isReb ? 5 + city.conquered * 2 : 4, 14);
+
+  G.enemies = [];
+  for (let i = 0; i < count; i++) {
+    const ang = (i / count) * Math.PI * 2;
+    const r   = T * 2;
+    G.enemies.push({
+      px: city.tx * T + T/2 + Math.cos(ang)*r,
+      py: city.ty * T + T/2 + Math.sin(ang)*r,
+      hp: isReb ? 12 + city.conquered*2 : 8,
+      maxHp: isReb ? 12 + city.conquered*2 : 8,
+      alive: true, atkCd: 0,
+    });
+  }
+
+  log(`Defenders of ${city.name} rise against you!`, '#b91c1c');
+  if (isReb) log(`The double walls funnel your warriors — expect casualties.`, '#b91c1c');
+  panelUpdate();
+}
+
+function conquestVictory(city) {
+  city.status    = 'vassal';
+  city.conquered += 1;
+
+  const bonus = 25 + Math.floor(Math.random()*20);
+  G.food = Math.min(G.maxFood, G.food + bonus);
+  spawnFloat(`+${bonus} food`, '#ca8a04', cv.width/2, cv.height/2 - 50);
+
+  log(`${city.name} has fallen! Your kinsman is installed as Ajaw.`, '#14b8a6');
+  log(`Tribute promised. Your flag flies on their pyramid.`, '#e7e0d2');
+
+  G.phase       = 'returning';
+  G.marchTarget = null;
+  G.enemies     = [];
+  panelUpdate();
+}
+
+function arriveHome() {
+  // count living soldiers coming back
+  const retSol = G.trail.filter(u => u.type==='soldier' && u.alive).length;
+  G.homeSoldiers += retSol;
+  G.trail = [];
+  G.enemies = [];
+  G.marchTarget = null;
+
+  // harvest calculation
+  const fullCorn   = G.farms.filter(f => f.growth >= 2).length;
+  const harvesters = G.farmers + retSol;
+  const harvest    = Math.round(fullCorn * harvesters * 0.75);
+  G.food = Math.min(G.maxFood, G.food + harvest);
+
+  const popBefore = G.population;
+  const surplus   = G.food - G.population * 10;
+  if (surplus > 20) {
+    const g = Math.floor(Math.random()*2)+1;
+    G.population += g; G.farmers += g;
+  } else if (surplus < -20) {
+    const loss = Math.floor(Math.random()*2)+1;
+    G.population = Math.max(8, G.population - loss);
+    G.farmers    = Math.max(4, G.farmers - loss);
+  }
+
+  G.trans = { harvest, popBefore, popAfter: G.population,
+              vassals: G.cities.filter(c=>c.status==='vassal').length };
+  G.transAcc = 0;
+  G.phase    = 'transition';
+
+  log(`Returned home. Harvest: +${harvest} food. Pop: ${popBefore}→${G.population}.`, '#ca8a04');
+  spawnFloat(`+${harvest}`, '#ca8a04', cv.width/2, cv.height/3);
+  panelUpdate();
+}
+
+function endTransition() {
+  G.season++;
+  document.getElementById('snum').textContent = G.season;
+
+  // Reset farms + slight regrowth
+  G.farms.forEach(f => { f.growth = 0; });
+  G.farms.forEach(f => { if (Math.random() < .45) f.growth = 1; });
+  G.farms.forEach(f => { if (f.growth===1 && Math.random() < .4) f.growth = 2; });
+
+  G.daysLeft = DAYS;
+  G.dayAcc   = 0;
+
+  // Rebuild soldiers from population
+  const newSol = Math.floor(G.population * 0.3);
+  if (newSol > G.homeSoldiers) {
+    const diff = newSol - G.homeSoldiers;
+    G.homeSoldiers += diff;
+    G.farmers      = Math.max(4, G.farmers - diff);
+  }
+
+  scriptedEvents();
+
+  G.phase = 'planning';
+  log(`Dry Season ${G.season} begins. The sun rises over the jungle.`, '#14b8a6');
+  panelUpdate();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SCRIPTED NARRATIVE
+// ═══════════════════════════════════════════════════════════
+function scriptedEvents() {
+  const s = G.season;
+
+  // Intro for season 1 (shown when game starts)
+  if (s === 1 && !G.introShown) {
+    G.introShown = true;
+    log(`A rival city lies to the east — Ox Witz. Assemble your warriors.`, '#ca8a04');
+  }
+
+  // Tribute check (season 2+)
+  if (s >= 2) {
+    for (const city of G.cities) {
+      if (city.status !== 'vassal') continue;
+
+      let arrives = true;
+      if (s === 5 && city.id === 'ox_witz') {
+        arrives = false; // scripted first crack
+      } else if (s >= 6) {
+        arrives = Math.random() > 0.62;
+      } else if (s >= 7) {
+        arrives = Math.random() > 0.70;
+      }
+
+      if (arrives) {
+        const amt = 20 + Math.floor(Math.random()*18);
+        G.food = Math.min(G.maxFood, G.food + amt);
+        log(`Tribute from ${city.name}: +${amt} food.`, '#ca8a04');
+        spawnFloat(`+${amt}`, '#ca8a04', cv.width/2, cv.height/2);
+      } else {
+        city.status = 'rebellious';
+        log(`The tribute from ${city.name} never arrived…`, '#b91c1c');
+        log(`Your kinsman in ${city.name} has declared independence. Fortifications are rising.`, '#b91c1c');
+      }
+    }
+  }
+
+  // Tone-shift messages
+  if (s === 3) log(`"Your name is carved on stelae across the lowlands."`, '#ca8a04');
+  if (s === 4) log(`"Every city in the jungle speaks your title with reverence."`, '#ca8a04');
+  if (s === 5) setTimeout(()=>log(`"My lord… the tribute from the east never came."`, '#b91c1c'), 1200);
+  if (s === 7) { log(`"Your warriors grow weary of marching."`, '#8b7355'); log(`"The elders ask when the wars will end."`, '#8b7355'); }
+  if (s === 8) log(`"The jungle between your cities grows thicker, and the roads grow longer…"`, '#8b7355');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  UPDATE
+// ═══════════════════════════════════════════════════════════
+let lastTs = 0;
+
+function update(dt) {
+  // ── Camera lerp ──
+  const W = cv.width, H = cv.height;
+  G.camX += (G.px - W/2 - G.camX) * 0.10;
+  G.camY += (G.py - H/2 - G.camY) * 0.10;
+
+  if (G.phase === 'transition') {
+    G.transAcc += dt;
+    if (G.transAcc > 3800) endTransition();
+    return;
+  }
+
+  // ── Player movement ──
+  movePlayer(dt);
+
+  // ── Trail follow ──
+  trailFollow();
+
+  // ── Day tick (marching + returning) ──
+  if (G.phase === 'marching' || G.phase === 'returning') {
+    G.dayAcc += dt;
+    if (G.dayAcc >= DAY_MS) {
+      G.dayAcc -= DAY_MS;
+      G.daysLeft--;
+
+      // Food consumption
+      if (G.phase === 'marching' && G.marchFood > 0) {
+        const alive = G.trail.filter(u=>u.alive).length;
+        const consume = Math.ceil(alive * 0.25);
+        G.marchFood = Math.max(0, G.marchFood - consume);
+
+        if (G.marchFood <= 0) {
+          // Send porters home first
+          const p = G.trail.find(u => u.type==='porter' && u.alive);
+          if (p) {
+            p.alive = false;
+            log('Porter exhausted — turned back.', '#78350f');
+          } else {
+            // Soldiers start deserting
+            const sol = G.trail.find(u => u.type==='soldier' && u.alive);
+            if (sol) { sol.alive = false; log('A warrior deserts — no food.', '#b91c1c'); }
+          }
+        }
+      }
+
+      if (G.daysLeft === 30) log('The rains are two months away. Consider your position.', '#d97706');
+      if (G.daysLeft === 15) log('⚠ The rains approach! Return home now!', '#b91c1c');
+      if (G.daysLeft <= 0) {
+        log('The rains have arrived. Your march is cut short!', '#b91c1c');
+        G.food = Math.max(0, G.food - 15); // penalty
+        doRetreat();
+      }
+    }
+  }
+
+  // ── Phase-specific logic ──
+  if (G.phase === 'marching') {
+    // Check proximity to target city
+    if (G.marchTarget) {
+      const city = G.cities.find(c => c.id === G.marchTarget.id);
+      if (city) {
+        const d = wpDist(G.px, G.py, city.tx * T + T/2, city.ty * T + T/2);
+        if (d < T * 2.5 && G.enemies.length === 0) {
+          startCombat(city);
+        }
+      }
+    }
+  }
+
+  if (G.phase === 'returning') {
+    const d = wpDist(G.px, G.py, HOME.tx*T+T/2, HOME.ty*T+T/2);
+    if (d < T * 2) arriveHome();
+  }
+
+  if (G.phase === 'combat') {
+    updateCombat(dt);
+  }
+
+  // ── Panel throttle ──
+  G.panelAcc += dt;
+  if (G.panelAcc > 500) { G.panelAcc = 0; panelUpdate(); }
+
+  hudUpdate();
+}
+
+function movePlayer(dt) {
+  const spd = T * 0.075;
+  let dx = 0, dy = 0;
+
+  if (G.keys['ArrowLeft']  || G.keys['KeyA']) dx -= spd;
+  if (G.keys['ArrowRight'] || G.keys['KeyD']) dx += spd;
+  if (G.keys['ArrowUp']    || G.keys['KeyW']) dy -= spd;
+  if (G.keys['ArrowDown']  || G.keys['KeyS']) dy += spd;
+
+  if (joy.active) { dx += joy.dx * spd * 1.6; dy += joy.dy * spd * 1.6; }
+
+  if (dx && dy) { dx *= 0.707; dy *= 0.707; }
+
+  G.px = clamp(G.px + dx, T, (WW-1)*T);
+  G.py = clamp(G.py + dy, T, (WH-1)*T);
+}
+
+function trailFollow() {
+  const alive = G.trail.filter(u => u.alive);
+  alive.forEach((u, i) => {
+    const anchor = i === 0
+      ? { px: G.px, py: G.py + 28 }
+      : { px: alive[i-1].px, py: alive[i-1].py + 20 };
+    const off = ((i % 3) - 1) * 16;
+    const tx  = anchor.px + off;
+    const ty  = anchor.py;
+    u.px += (tx - u.px) * 0.10;
+    u.py += (ty - u.py) * 0.10;
+  });
+}
+
+function updateCombat(dt) {
+  const enAlive  = G.enemies.filter(e => e.alive);
+  const solAlive = G.trail.filter(u => u.type==='soldier' && u.alive);
+  const city     = G.combatCity;
+
+  // ── Victory check ──
+  if (enAlive.length === 0) { conquestVictory(city); return; }
+
+  // ── Defeat check ──
+  if (G.pHp <= 0) { gameOver(); return; }
+  if (solAlive.length === 0) {
+    const near = enAlive.filter(e => wpDist(e.px,e.py,G.px,G.py) < 55);
+    if (near.length >= 3) { gameOver(); return; }
+  }
+
+  const cx = city.tx*T + T/2;
+  const cy = city.ty*T + T/2;
+
+  // Kill-zone damage for rebellious: units between outer and inner wall ring take periodic damage
+  if (city.status === 'rebellious') {
+    const zoneInner = T * 1.5, zoneOuter = T * 3;
+    for (const u of solAlive) {
+      const d = wpDist(u.px, u.py, cx, cy);
+      if (d > zoneInner && d < zoneOuter) {
+        u.atkCd += dt;
+        if (u.atkCd > 900) { u.atkCd = 0; u.hp -= 3; if (u.hp <= 0) u.alive = false; }
+      }
+    }
+  }
+
+  // ── Enemy AI ──
+  for (const e of enAlive) {
+    let tgt = null, tdist = Infinity;
+    for (const a of solAlive) {
+      const d = wpDist(e.px,e.py,a.px,a.py);
+      if (d < tdist) { tdist = d; tgt = a; }
+    }
+    const pd = wpDist(e.px,e.py,G.px,G.py);
+    if (pd < tdist) { tdist = pd; tgt = { px:G.px, py:G.py, isPlayer:true }; }
+
+    if (tgt && tdist > 14) {
+      const dx = tgt.px - e.px, dy = tgt.py - e.py;
+      const d  = Math.sqrt(dx*dx+dy*dy);
+      e.px += (dx/d)*1.3; e.py += (dy/d)*1.3;
+    } else if (tgt) {
+      e.atkCd += dt;
+      if (e.atkCd > 1100) {
+        e.atkCd = 0;
+        if (tgt.isPlayer) { G.pHp -= 2; }
+        else { tgt.hp -= 2; if (tgt.hp <= 0) tgt.alive = false; }
+      }
+    }
+  }
+
+  // ── Ally AI ──
+  for (const a of solAlive) {
+    if (!a.alive) continue;
+    let tgt = null, tdist = Infinity;
+    for (const e of enAlive) {
+      const d = wpDist(a.px,a.py,e.px,e.py);
+      if (d < tdist) { tdist = d; tgt = e; }
+    }
+    if (tgt && tdist > 14) {
+      const dx = tgt.px - a.px, dy = tgt.py - a.py;
+      const d  = Math.sqrt(dx*dx+dy*dy);
+      a.px += (dx/d)*1.1; a.py += (dy/d)*1.1;
+    } else if (tgt) {
+      a.atkCd += dt;
+      if (a.atkCd > 950) { a.atkCd = 0; tgt.hp -= 3; if (tgt.hp <= 0) tgt.alive = false; }
+    }
+  }
+
+  // ── Player auto-attack ──
+  G.atkCd += dt;
+  if (G.atkCd > 550) {
+    const near = enAlive.find(e => wpDist(e.px,e.py,G.px,G.py) < 44);
+    if (near) {
+      near.hp -= 6;
+      G.atkCd = 0;
+      if (near.hp <= 0) near.alive = false;
+    }
+  }
+}
+
+function gameOver() {
+  G.phase = 'gameover';
+  document.getElementById('go').style.display = 'flex';
+  log('YOUR DYNASTY HAS ENDED.', '#b91c1c');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  RENDER
+// ═══════════════════════════════════════════════════════════
+function render() {
+  if (!G) return;
+  const W = cv.width, H = cv.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const cx = G.camX, cy = G.camY;
+
+  // ── Tiles ──
+  const t0x = Math.floor(cx/T) - 1;
+  const t0y = Math.floor(cy/T) - 1;
+  const t1x = t0x + Math.ceil(W/T) + 2;
+  const t1y = t0y + Math.ceil(H/T) + 2;
+
+  for (let ty = t0y; ty <= t1y; ty++) {
+    for (let tx = t0x; tx <= t1x; tx++) {
+      ctx.fillStyle = tileCol(tx, ty);
+      ctx.fillRect(tx*T - cx, ty*T - cy, T, T);
+    }
+  }
+
+  // ── Farm plots ──
+  for (const f of G.farms) {
+    if (fogHides(f.tx, f.ty)) continue;
+    const fx = f.tx*T - cx + 6, fy = f.ty*T - cy + 6;
+    ctx.fillStyle = ['#3d2b1f','#166534','#ca8a04'][f.growth] || '#3d2b1f';
+    ctx.fillRect(fx, fy, 20, 20);
+    if (f.growth === 2) {  // corn stalks hint
+      ctx.fillStyle = '#92400e';
+      ctx.fillRect(fx+8, fy, 4, 20);
+    }
+  }
+
+  // ── Home city ──
+  drawHomeCity(cx, cy);
+
+  // ── Rival cities ──
+  for (const city of G.cities) {
+    if (fogHides(city.tx, city.ty)) continue;
+    drawCity(city, cx, cy);
+  }
+
+  // ── Enemies ──
+  for (const e of G.enemies) {
+    if (!e.alive) continue;
+    const sx = e.px - cx, sy = e.py - cy;
+    ctx.fillStyle = '#b91c1c';
+    ctx.beginPath(); ctx.arc(sx, sy, 5, 0, Math.PI*2); ctx.fill();
+    hpBar(sx-6, sy-10, 12, 3, e.hp/e.maxHp, '#b91c1c');
+  }
+
+  // ── Trail ──
+  for (const u of G.trail) {
+    if (!u.alive) continue;
+    const sx = u.px - cx, sy = u.py - cy;
+    ctx.fillStyle = u.type==='soldier' ? '#d6d3d1' : '#a16207';
+    ctx.beginPath(); ctx.arc(sx, sy, u.type==='soldier' ? 5 : 4, 0, Math.PI*2); ctx.fill();
+  }
+
+  // ── Player ──
+  {
+    const sx = G.px - cx, sy = G.py - cy;
+    // shadow
+    ctx.fillStyle = 'rgba(0,0,0,.35)';
+    ctx.beginPath(); ctx.ellipse(sx, sy+9, 8, 4, 0, 0, Math.PI*2); ctx.fill();
+    // body
+    ctx.fillStyle = '#14b8a6';
+    ctx.beginPath(); ctx.arc(sx, sy, 9, 0, Math.PI*2); ctx.fill();
+    // crown dot
+    ctx.fillStyle = '#ecfdf5';
+    ctx.beginPath(); ctx.arc(sx, sy-11, 4, 0, Math.PI*2); ctx.fill();
+    // hp
+    hpBar(sx-11, sy-18, 22, 4, G.pHp/G.pMaxHp, '#14b8a6');
+  }
+
+  // ── Fog of war ──
+  drawFog(W, H);
+
+  // ── Direction arrow ──
+  if (G.marchTarget && (G.phase==='marching' || G.phase==='returning')) {
+    const tgt = G.phase==='returning'
+      ? { tx: HOME.tx, ty: HOME.ty }
+      : G.marchTarget;
+    drawArrow(tgt, W, H, cx, cy);
+  }
+
+  // ── Transition overlay ──
+  if (G.phase === 'transition') drawTransition(W, H);
+}
+
+function tileCol(tx, ty) {
+  if (tx < 0 || ty < 0 || tx >= WW || ty >= WH) return '#050708';
+  if (onRoad(tx, ty)) return '#3d362a';
+  const dx = tx - HOME.tx, dy = ty - HOME.ty;
+  if (dx*dx + dy*dy < 64) return '#162a1a';  // clearing near home
+  return '#0f1a10';
+}
+
+function onRoad(tx, ty) {
+  const px = tx + 0.5, py = ty + 0.5;
+  const ax = HOME.tx + 0.5, ay = HOME.ty + 0.5;
+  for (const c of CITY_DEFS) {
+    const bx = c.tx + 0.5, by = c.ty + 0.5;
+    const dx = bx-ax, dy = by-ay;
+    const len2 = dx*dx+dy*dy;
+    if (len2 === 0) continue;
+    const t = clamp(((px-ax)*dx+(py-ay)*dy)/len2, 0, 1);
+    const nx = ax+t*dx-px, ny = ay+t*dy-py;
+    if (nx*nx+ny*ny < 0.85) return true;
+  }
+  return false;
+}
+
+function fogHides(tx, ty) {
+  const dx = G.px - (tx*T + T/2);
+  const dy = G.py - (ty*T + T/2);
+  return dx*dx + dy*dy > (FOG*T)*(FOG*T);
+}
+
+function drawFog(W, H) {
+  const sx = G.px - G.camX, sy = G.py - G.camY;
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(0, 0, W, H);
+  ctx.arc(sx, sy, FOG*T, 0, Math.PI*2, true);  // CCW hole
+  ctx.fillStyle = 'rgba(5,7,8,.97)';
+  ctx.fill('evenodd');
+  ctx.restore();
+
+  // soft vignette inside visible area
+  const grad = ctx.createRadialGradient(sx, sy, FOG*T*0.55, sx, sy, FOG*T);
+  grad.addColorStop(0, 'rgba(0,0,0,0)');
+  grad.addColorStop(1, 'rgba(0,0,0,.6)');
+  ctx.fillStyle = grad;
+  ctx.beginPath(); ctx.arc(sx, sy, FOG*T, 0, Math.PI*2); ctx.fill();
+}
+
+function drawHomeCity(cx, cy) {
+  const hx = HOME.tx*T - cx, hy = HOME.ty*T - cy;
+  // Visible even at fog edge if player is nearby (it's home base)
+  if (fogHides(HOME.tx, HOME.ty) && wpDist(G.px,G.py,HOME.tx*T,HOME.ty*T) > FOG*T*1.4) return;
+
+  // Ground clearing
+  ctx.fillStyle = '#0d2218';
+  ctx.fillRect(hx - T*2, hy - T*2, T*5, T*5);
+
+  // Pyramid (stepped squares)
+  ctx.fillStyle = '#4b5563'; ctx.fillRect(hx+2,  hy+2,  T-4,  T-4);
+  ctx.fillStyle = '#6b7280'; ctx.fillRect(hx+6,  hy+6,  T-12, T-12);
+  ctx.fillStyle = '#9ca3af'; ctx.fillRect(hx+10, hy+10, T-20, T-20);
+
+  // Label
+  ctx.fillStyle = '#14b8a6';
+  ctx.font = 'bold 9px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('YOUR CITY', hx+T/2, hy+T+14);
+}
+
+function drawCity(city, cx, cy) {
+  const ox = city.tx*T - cx, oy = city.ty*T - cy;
+
+  // Ground
+  ctx.fillStyle = '#162018';
+  ctx.fillRect(ox - T, oy - T, T*3, T*3);
+
+  // Pyramid color by status
+  const colMap = { independent: city.col, vassal:'#0f766e', rebellious:'#7f1d1d' };
+  ctx.fillStyle = colMap[city.status] || city.col;
+  ctx.fillRect(ox+4, oy+4, T-8, T-8);
+  ctx.fillStyle = 'rgba(0,0,0,.4)';
+  ctx.fillRect(ox+10, oy+10, T-20, T-20);
+
+  // Walls for rebellious
+  if (city.status === 'rebellious') {
+    ctx.strokeStyle = '#92400e'; ctx.lineWidth = 3;
+    ctx.strokeRect(ox - T + 4, oy - T + 4, T*3-8, T*3-8);
+    ctx.strokeStyle = '#b45309'; ctx.lineWidth = 2;
+    ctx.strokeRect(ox - T/2 + 4, oy - T/2 + 4, T*2-8, T*2-8);
+    // Gate opening hint
+    ctx.strokeStyle = '#0b0b0c'; ctx.lineWidth = 5;
+    ctx.beginPath(); ctx.moveTo(ox + T*1.5 - 6, oy - T + 4); ctx.lineTo(ox + T*1.5 - 6, oy - T + 10); ctx.stroke();
+  }
+
+  // Name + status icon
+  const iconMap = { independent:'○', vassal:'◆', rebellious:'✗' };
+  ctx.fillStyle = '#e7e0d2';
+  ctx.font = '9px monospace'; ctx.textAlign = 'center';
+  ctx.fillText(city.name, ox+T/2, oy+T+12);
+  ctx.fillStyle = colMap[city.status] || '#e7e0d2';
+  ctx.fillText(iconMap[city.status]||'?', ox+T/2, oy+T+22);
+}
+
+function hpBar(x, y, w, h, pct, col) {
+  ctx.fillStyle = '#292524';
+  ctx.fillRect(x, y, w, h);
+  ctx.fillStyle = col;
+  ctx.fillRect(x, y, w * clamp(pct,0,1), h);
+}
+
+function drawArrow(tgt, W, H, cx, cy) {
+  const psx = G.px - cx, psy = G.py - cy;
+  const tsx = tgt.tx * T - cx, tsy = tgt.ty * T - cy;
+  const dx = tsx - psx, dy = tsy - psy;
+  const dist = Math.sqrt(dx*dx+dy*dy);
+  if (dist < FOG*T*0.75) return;
+
+  const ang = Math.atan2(dy, dx);
+  const r   = FOG*T - 35;
+  const ax  = clamp(psx + Math.cos(ang)*r, 18, W-18);
+  const ay  = clamp(psy + Math.sin(ang)*r, 18, H-18);
+
+  ctx.save();
+  ctx.translate(ax, ay);
+  ctx.rotate(ang);
+  ctx.fillStyle = 'rgba(20,184,166,.8)';
+  ctx.beginPath();
+  ctx.moveTo(13, 0); ctx.lineTo(-9, -6); ctx.lineTo(-9, 6);
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+
+function drawTransition(W, H) {
+  const p = clamp(G.transAcc / 3800, 0, 1);
+  ctx.fillStyle = `rgba(6,182,212,${p * 0.55})`;
+  ctx.fillRect(0, 0, W, H);
+
+  if (p > 0.3) {
+    ctx.strokeStyle = 'rgba(6,182,212,.5)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 60; i++) {
+      const rx = ((i*71) + G.transAcc*.8) % (W + 20) - 10;
+      const ry = ((i*47) + G.transAcc*1.1) % (H + 20) - 10;
+      ctx.beginPath(); ctx.moveTo(rx, ry); ctx.lineTo(rx-3, ry+12); ctx.stroke();
+    }
+  }
+
+  if (p > 0.45 && G.trans) {
+    ctx.fillStyle = '#e7e0d2';
+    ctx.font = `bold ${Math.round(14 + p*4)}px Cinzel, serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText(`Dry Season ${G.season} Complete`, W/2, H/2 - 44);
+    ctx.font = '13px Cinzel, serif';
+    ctx.fillStyle = '#14b8a6';
+    ctx.fillText(`Harvest: +${G.trans.harvest} food`, W/2, H/2 - 8);
+    ctx.fillText(`Population: ${G.trans.popBefore} → ${G.trans.popAfter}`, W/2, H/2 + 14);
+    ctx.fillText(`Vassal Cities: ${G.trans.vassals}`, W/2, H/2 + 36);
+  }
+  if (p > 0.88) {
+    ctx.font = '10px Cinzel, serif';
+    ctx.fillStyle = '#8b7355';
+    ctx.textAlign = 'center';
+    ctx.fillText('The dry season returns…', W/2, H/2 + 66);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  GAME LOOP
+// ═══════════════════════════════════════════════════════════
+function loop(ts) {
+  const dt = Math.min(ts - lastTs, 100);
+  lastTs = ts;
+  if (G && G.phase !== 'gameover') {
+    update(dt);
+    render();
+  }
+  requestAnimationFrame(loop);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  START
+// ═══════════════════════════════════════════════════════════
+function startGame() {
+  document.getElementById('ov').style.display = 'none';
+  resize();
+  G = mkState();
+
+  // Show intro log
+  log(`Your reign begins. The jungle awaits.`, '#14b8a6');
+  log(`A rival city lies to the east — Ox Witz.`, '#ca8a04');
+  log(`Assemble your warriors in the Council Chamber below.`, '#8b7355');
+
+  panelUpdate();
+  hudUpdate();
+  lastTs = performance.now();
+  requestAnimationFrame(loop);
+}
+
+document.getElementById('startBtn').addEventListener('click', startGame);
+
+// Click-to-attack on canvas
+cv.addEventListener('click', e => {
+  if (!G || G.phase !== 'combat') return;
+  const r   = cv.getBoundingClientRect();
+  const wx  = (e.clientX - r.left) * (cv.width / r.width)  + G.camX;
+  const wy  = (e.clientY - r.top)  * (cv.height / r.height) + G.camY;
+  for (const en of G.enemies) {
+    if (!en.alive) continue;
+    if (wpDist(en.px,en.py,wx,wy) < 20) {
+      en.hp -= 9; G.atkCd = 0;
+      if (en.hp <= 0) en.alive = false;
+      return;
+    }
+  }
+});
+
+// Touch attack on canvas
+cv.addEventListener('touchend', e => {
+  if (!G || G.phase !== 'combat') return;
+  const t = e.changedTouches[0];
+  const r = cv.getBoundingClientRect();
+  const wx = (t.clientX - r.left) * (cv.width / r.width)  + G.camX;
+  const wy = (t.clientY - r.top)  * (cv.height / r.height) + G.camY;
+  for (const en of G.enemies) {
+    if (!en.alive) continue;
+    if (wpDist(en.px,en.py,wx,wy) < 28) {
+      en.hp -= 9; G.atkCd = 0;
+      if (en.hp <= 0) en.alive = false;
+      return;
+    }
+  }
+}, { passive: true });
+
+// Keyboard
+document.addEventListener('keydown', e => { if (G) G.keys[e.code] = true; });
+document.addEventListener('keyup',   e => { if (G) G.keys[e.code] = false; });
+
+// ═══════════════════════════════════════════════════════════
+//  JOYSTICK
+// ═══════════════════════════════════════════════════════════
+const joy = { active: false, dx: 0, dy: 0, bx: 0, by: 0 };
+const jzone  = document.getElementById('jzone');
+const jstick = document.getElementById('jstick');
+
+jzone.addEventListener('touchstart', e => {
+  e.preventDefault();
+  const r = jzone.getBoundingClientRect();
+  joy.active = true;
+  joy.bx = r.left + r.width/2;
+  joy.by = r.top  + r.height/2;
+}, { passive: false });
+
+document.addEventListener('touchmove', e => {
+  if (!joy.active) return;
+  e.preventDefault();
+  const t   = e.touches[0];
+  const dx  = t.clientX - joy.bx;
+  const dy  = t.clientY - joy.by;
+  const d   = Math.min(32, Math.sqrt(dx*dx+dy*dy));
+  const ang = Math.atan2(dy, dx);
+  joy.dx = Math.cos(ang) * d / 32;
+  joy.dy = Math.sin(ang) * d / 32;
+  jstick.style.left = (34 + Math.cos(ang)*d) + 'px';
+  jstick.style.top  = (34 + Math.sin(ang)*d) + 'px';
+}, { passive: false });
+
+document.addEventListener('touchend', () => {
+  joy.active = false; joy.dx = 0; joy.dy = 0;
+  jstick.style.left = '34px'; jstick.style.top = '34px';
+});
+
+// ═══════════════════════════════════════════════════════════
+//  UTILITIES
+// ═══════════════════════════════════════════════════════════
+function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
+function wpDist(ax, ay, bx, by) { const dx=ax-bx,dy=ay-by; return Math.sqrt(dx*dx+dy*dy); }
+function tileDist(ax, ay, bx, by) { return Math.sqrt((ax-bx)**2+(ay-by)**2); }
+</script>
+</body>
+</html>
