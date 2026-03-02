@@ -145,7 +145,10 @@ select {
   font-size: .66rem;
   padding: 3px 5px;
   border-radius: 3px;
+  touch-action: auto;
 }
+#bot, #panel { touch-action: auto; }
+@media (max-width: 700px) { select { font-size: 16px; } }
 input[type=range] { width: 100%; accent-color: var(--jade-lt); }
 .infobox {
   background: #0d1a14;
@@ -1039,8 +1042,31 @@ function render() {
 
   for (let ty = t0y; ty <= t1y; ty++) {
     for (let tx = t0x; tx <= t1x; tx++) {
-      ctx.fillStyle = tileCol(tx, ty);
-      ctx.fillRect(tx*T - cx, ty*T - cy, T, T);
+      const col = tileCol(tx, ty);
+      const px = tx*T - cx, py = ty*T - cy;
+      ctx.fillStyle = col;
+      ctx.fillRect(px, py, T, T);
+      // Jungle variation — deterministic hash of tile coords
+      if (col === '#0f1a10' || col === '#162a1a') {
+        const seed = (tx * 7 + ty * 13) & 7;
+        if (seed === 0) {
+          // darker canopy shadow
+          ctx.fillStyle = '#0a1409';
+          ctx.fillRect(px + ((tx*31+ty*17)&15)+2, py + ((tx*11+ty*23)&15)+2, 8, 8);
+        } else if (seed === 3) {
+          // lighter leafy gap
+          ctx.fillStyle = '#1a2f1a';
+          ctx.fillRect(px + ((tx*19+ty*29)&17)+1, py + ((tx*37+ty*7)&17)+1, 6, 6);
+        }
+      }
+      // Path variation — sacbe limestone stones
+      if (col === '#b8a87a') {
+        const seed2 = (tx * 11 + ty * 7) % 5;
+        if (seed2 < 2) {
+          ctx.fillStyle = '#d4c49a';
+          ctx.fillRect(px + ((tx*23+ty*19)&19)+1, py + ((tx*13+ty*31)&19)+1, 4, 3);
+        }
+      }
     }
   }
 
@@ -1048,11 +1074,34 @@ function render() {
   for (const f of G.farms) {
     if (fogHides(f.tx, f.ty)) continue;
     const fx = f.tx*T - cx + 6, fy = f.ty*T - cy + 6;
-    ctx.fillStyle = ['#3d2b1f','#166534','#ca8a04'][f.growth] || '#3d2b1f';
+    // Dirt base
+    ctx.fillStyle = '#7c4a1e';
     ctx.fillRect(fx, fy, 20, 20);
-    if (f.growth === 2) {  // corn stalks hint
-      ctx.fillStyle = '#92400e';
-      ctx.fillRect(fx+8, fy, 4, 20);
+    if (f.growth === 0) {
+      // Bare: dirt texture dots
+      ctx.fillStyle = '#5c3317';
+      ctx.fillRect(fx+3,  fy+5,  2, 2);
+      ctx.fillRect(fx+10, fy+12, 2, 2);
+      ctx.fillRect(fx+15, fy+6,  2, 2);
+    } else if (f.growth === 1) {
+      // Sprouts: two small green shoots
+      ctx.fillStyle = '#4ade80';
+      ctx.fillRect(fx+5,  fy+9, 2, 8);
+      ctx.fillRect(fx+13, fy+9, 2, 8);
+      // Leaf tips
+      ctx.fillRect(fx+3,  fy+9, 2, 2);
+      ctx.fillRect(fx+11, fy+9, 2, 2);
+    } else if (f.growth >= 2) {
+      // Mature corn: 3 tall stalks with ears
+      ctx.fillStyle = '#65a30d';
+      ctx.fillRect(fx+3,  fy+4, 2, 14);
+      ctx.fillRect(fx+9,  fy+2, 2, 16);
+      ctx.fillRect(fx+15, fy+4, 2, 14);
+      // Corn ears
+      ctx.fillStyle = '#ca8a04';
+      ctx.fillRect(fx+2,  fy+6, 3, 3);
+      ctx.fillRect(fx+8,  fy+4, 3, 3);
+      ctx.fillRect(fx+14, fy+6, 3, 3);
     }
   }
 
@@ -1069,33 +1118,22 @@ function render() {
   for (const e of G.enemies) {
     if (!e.alive) continue;
     const sx = e.px - cx, sy = e.py - cy;
-    ctx.fillStyle = '#b91c1c';
-    ctx.beginPath(); ctx.arc(sx, sy, 5, 0, Math.PI*2); ctx.fill();
-    hpBar(sx-6, sy-10, 12, 3, e.hp/e.maxHp, '#b91c1c');
+    drawSpriteSoldier(sx, sy, true, e.hp/e.maxHp);
   }
 
   // ── Trail ──
   for (const u of G.trail) {
     if (!u.alive) continue;
     const sx = u.px - cx, sy = u.py - cy;
-    ctx.fillStyle = u.type==='soldier' ? '#d6d3d1' : '#a16207';
-    ctx.beginPath(); ctx.arc(sx, sy, u.type==='soldier' ? 5 : 4, 0, Math.PI*2); ctx.fill();
+    if (u.type === 'soldier') drawSpriteSoldier(sx, sy, false, u.hp/u.maxHp);
+    else drawSpritePorter(sx, sy);
   }
 
   // ── Player ──
   {
     const sx = G.px - cx, sy = G.py - cy;
-    // shadow
-    ctx.fillStyle = 'rgba(0,0,0,.35)';
-    ctx.beginPath(); ctx.ellipse(sx, sy+9, 8, 4, 0, 0, Math.PI*2); ctx.fill();
-    // body
-    ctx.fillStyle = '#14b8a6';
-    ctx.beginPath(); ctx.arc(sx, sy, 9, 0, Math.PI*2); ctx.fill();
-    // crown dot
-    ctx.fillStyle = '#ecfdf5';
-    ctx.beginPath(); ctx.arc(sx, sy-11, 4, 0, Math.PI*2); ctx.fill();
-    // hp
-    hpBar(sx-11, sy-18, 22, 4, G.pHp/G.pMaxHp, '#14b8a6');
+    drawSpritePlayer(sx, sy);
+    // (hp bar drawn inside drawSpritePlayer)
   }
 
   // ── Fog of war ──
@@ -1115,7 +1153,7 @@ function render() {
 
 function tileCol(tx, ty) {
   if (tx < 0 || ty < 0 || tx >= WW || ty >= WH) return '#050708';
-  if (onRoad(tx, ty)) return '#3d362a';
+  if (onRoad(tx, ty)) return '#b8a87a';
   const dx = tx - HOME.tx, dy = ty - HOME.ty;
   if (dx*dx + dy*dy < 64) return '#162a1a';  // clearing near home
   return '#0f1a10';
@@ -1169,10 +1207,14 @@ function drawHomeCity(cx, cy) {
   ctx.fillStyle = '#0d2218';
   ctx.fillRect(hx - T*2, hy - T*2, T*5, T*5);
 
-  // Pyramid (stepped squares)
-  ctx.fillStyle = '#4b5563'; ctx.fillRect(hx+2,  hy+2,  T-4,  T-4);
-  ctx.fillStyle = '#6b7280'; ctx.fillRect(hx+6,  hy+6,  T-12, T-12);
-  ctx.fillStyle = '#9ca3af'; ctx.fillRect(hx+10, hy+10, T-20, T-20);
+  // 5-step pyramid — tan stone tones, widest at base
+  ctx.fillStyle = '#7a6848'; ctx.fillRect(hx+1,  hy+22, 30, 6);  // layer 1 base
+  ctx.fillStyle = '#927f5e'; ctx.fillRect(hx+4,  hy+17, 24, 6);  // layer 2
+  ctx.fillStyle = '#a39070'; ctx.fillRect(hx+7,  hy+12, 18, 6);  // layer 3
+  ctx.fillStyle = '#b4a07a'; ctx.fillRect(hx+10, hy+7,  12, 6);  // layer 4
+  ctx.fillStyle = '#c4b08a'; ctx.fillRect(hx+13, hy+2,   6, 6);  // layer 5 top
+  // Doorway at base
+  ctx.fillStyle = '#1a0d00'; ctx.fillRect(hx+13, hy+25,  6, 4);
 
   // Label
   ctx.fillStyle = '#14b8a6';
@@ -1188,22 +1230,46 @@ function drawCity(city, cx, cy) {
   ctx.fillStyle = '#162018';
   ctx.fillRect(ox - T, oy - T, T*3, T*3);
 
-  // Pyramid color by status
+  // 5-step pyramid tinted by status
   const colMap = { independent: city.col, vassal:'#0f766e', rebellious:'#7f1d1d' };
-  ctx.fillStyle = colMap[city.status] || city.col;
-  ctx.fillRect(ox+4, oy+4, T-8, T-8);
-  ctx.fillStyle = 'rgba(0,0,0,.4)';
-  ctx.fillRect(ox+10, oy+10, T-20, T-20);
+  const base = colMap[city.status] || city.col;
+  // Draw pyramid layers — darkest at base, lightest at top, all tinted by status hue
+  ctx.fillStyle = base;                   ctx.fillRect(ox+1,  oy+22, 30, 6);
+  ctx.fillStyle = 'rgba(255,255,255,.08)';ctx.fillRect(ox+1,  oy+22, 30, 6);
+  ctx.fillStyle = base;                   ctx.fillRect(ox+4,  oy+17, 24, 6);
+  ctx.fillStyle = 'rgba(255,255,255,.13)';ctx.fillRect(ox+4,  oy+17, 24, 6);
+  ctx.fillStyle = base;                   ctx.fillRect(ox+7,  oy+12, 18, 6);
+  ctx.fillStyle = 'rgba(255,255,255,.20)';ctx.fillRect(ox+7,  oy+12, 18, 6);
+  ctx.fillStyle = base;                   ctx.fillRect(ox+10, oy+7,  12, 6);
+  ctx.fillStyle = 'rgba(255,255,255,.28)';ctx.fillRect(ox+10, oy+7,  12, 6);
+  ctx.fillStyle = base;                   ctx.fillRect(ox+13, oy+2,   6, 6);
+  ctx.fillStyle = 'rgba(255,255,255,.36)';ctx.fillRect(ox+13, oy+2,   6, 6);
+  // Doorway at base
+  ctx.fillStyle = '#1a0d00'; ctx.fillRect(ox+13, oy+25, 6, 4);
 
-  // Walls for rebellious
+  // Walls for rebellious — thick fillRect segments, gate gap on south side
   if (city.status === 'rebellious') {
-    ctx.strokeStyle = '#92400e'; ctx.lineWidth = 3;
-    ctx.strokeRect(ox - T + 4, oy - T + 4, T*3-8, T*3-8);
-    ctx.strokeStyle = '#b45309'; ctx.lineWidth = 2;
-    ctx.strokeRect(ox - T/2 + 4, oy - T/2 + 4, T*2-8, T*2-8);
-    // Gate opening hint
-    ctx.strokeStyle = '#0b0b0c'; ctx.lineWidth = 5;
-    ctx.beginPath(); ctx.moveTo(ox + T*1.5 - 6, oy - T + 4); ctx.lineTo(ox + T*1.5 - 6, oy - T + 10); ctx.stroke();
+    const wx = ox - T + 2, wy = oy - T + 2, wsz = T*3 - 4;
+    // Outer wall (dark brown stone)
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(wx,        wy,        wsz, 5);           // top
+    ctx.fillRect(wx,        wy+wsz-5,  wsz, 5);           // bottom
+    ctx.fillRect(wx,        wy,        5,   wsz);          // left
+    ctx.fillRect(wx+wsz-5,  wy,        5,   wsz);          // right
+    // Gate gap — overwrite center of bottom wall with ground color
+    ctx.fillStyle = '#162018';
+    ctx.fillRect(wx + Math.floor(wsz/2) - 8, wy+wsz-5, 16, 5);
+
+    // Inner wall (lighter amber stone)
+    const iwx = ox - T/2 + 4, iwy = oy - T/2 + 4, iwsz = T*2 - 8;
+    ctx.fillStyle = '#a16207';
+    ctx.fillRect(iwx,         iwy,         iwsz, 4);
+    ctx.fillRect(iwx,         iwy+iwsz-4,  iwsz, 4);
+    ctx.fillRect(iwx,         iwy,         4,    iwsz);
+    ctx.fillRect(iwx+iwsz-4,  iwy,         4,    iwsz);
+    // Inner gate gap — same axis as outer
+    ctx.fillStyle = '#162018';
+    ctx.fillRect(iwx + Math.floor(iwsz/2) - 6, iwy+iwsz-4, 12, 4);
   }
 
   // Name + status icon
@@ -1213,6 +1279,105 @@ function drawCity(city, cx, cy) {
   ctx.fillText(city.name, ox+T/2, oy+T+12);
   ctx.fillStyle = colMap[city.status] || '#e7e0d2';
   ctx.fillText(iconMap[city.status]||'?', ox+T/2, oy+T+22);
+}
+
+// ── Pixel-art sprites ─────────────────────────────────────
+function drawSpritePlayer(sx, sy) {
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,.35)';
+  ctx.fillRect(sx-6,  sy+8,  12, 3);
+  // Legs
+  ctx.fillStyle = '#5c3317';
+  ctx.fillRect(sx-4,  sy+5,   3, 5);
+  ctx.fillRect(sx+1,  sy+5,   3, 5);
+  // Loincloth
+  ctx.fillStyle = '#92400e';
+  ctx.fillRect(sx-4,  sy+2,   8, 4);
+  // Torso (tan with jaguar spots)
+  ctx.fillStyle = '#c49a6c';
+  ctx.fillRect(sx-4,  sy-5,   8, 8);
+  ctx.fillStyle = '#2d1508';
+  ctx.fillRect(sx-2,  sy-4,   2, 2);
+  ctx.fillRect(sx+1,  sy-2,   2, 2);
+  ctx.fillRect(sx-1,  sy+1,   2, 2);
+  // Head
+  ctx.fillStyle = '#c49a6c';
+  ctx.fillRect(sx-3,  sy-10,  6, 6);
+  // Jade ear spools
+  ctx.fillStyle = '#14b8a6';
+  ctx.fillRect(sx-5,  sy-9,   2, 2);
+  ctx.fillRect(sx+3,  sy-9,   2, 2);
+  // Obsidian club
+  ctx.fillStyle = '#111827';
+  ctx.fillRect(sx+5,  sy-1,   2, 7);
+  ctx.fillStyle = '#374151';
+  ctx.fillRect(sx+4,  sy-3,   4, 3);
+  // Headdress — red base, green mid, bright green tall center, red side feathers
+  ctx.fillStyle = '#dc2626';
+  ctx.fillRect(sx-4,  sy-13,  8, 3);
+  ctx.fillStyle = '#16a34a';
+  ctx.fillRect(sx-3,  sy-16,  6, 3);
+  ctx.fillStyle = '#4ade80';
+  ctx.fillRect(sx-1,  sy-20,  2, 4);
+  ctx.fillStyle = '#ef4444';
+  ctx.fillRect(sx-4,  sy-18,  2, 3);
+  ctx.fillRect(sx+2,  sy-18,  2, 3);
+  // HP bar
+  hpBar(sx-11, sy-24, 22, 4, G.pHp/G.pMaxHp, '#14b8a6');
+}
+
+function drawSpriteSoldier(sx, sy, isEnemy, hpPct) {
+  const armorCol  = isEnemy ? '#ef4444' : '#f5f5f4';
+  const legCol    = isEnemy ? '#b91c1c' : '#d6d3d1';
+  const featherCol= isEnemy ? '#ef4444' : '#16a34a';
+  const barCol    = isEnemy ? '#b91c1c' : '#d6d3d1';
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,.3)';
+  ctx.fillRect(sx-4,  sy+7,   8, 2);
+  // Legs
+  ctx.fillStyle = legCol;
+  ctx.fillRect(sx-3,  sy+4,   2, 4);
+  ctx.fillRect(sx+1,  sy+4,   2, 4);
+  // Body / armor
+  ctx.fillStyle = armorCol;
+  ctx.fillRect(sx-3,  sy-4,   6, 9);
+  // Head
+  ctx.fillStyle = '#c49a6c';
+  ctx.fillRect(sx-2,  sy-8,   4, 5);
+  // Feather
+  ctx.fillStyle = featherCol;
+  ctx.fillRect(sx-1,  sy-11,  2, 4);
+  // Macuahuitl club
+  ctx.fillStyle = '#78350f';
+  ctx.fillRect(sx+4,  sy-1,   2, 6);
+  ctx.fillStyle = '#292524';
+  ctx.fillRect(sx+3,  sy-3,   3, 3);
+  // HP bar
+  hpBar(sx-6, sy-14, 12, 3, hpPct, barCol);
+}
+
+function drawSpritePorter(sx, sy) {
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,.3)';
+  ctx.fillRect(sx-4,  sy+7,   8, 2);
+  // Legs
+  ctx.fillStyle = '#d6d3d1';
+  ctx.fillRect(sx-2,  sy+4,   2, 5);
+  ctx.fillRect(sx+1,  sy+4,   2, 5);
+  // Body (shifted forward — bent posture)
+  ctx.fillStyle = '#f5f5f4';
+  ctx.fillRect(sx-1,  sy-3,   6, 8);
+  // Head (bent forward)
+  ctx.fillStyle = '#c49a6c';
+  ctx.fillRect(sx+1,  sy-7,   4, 5);
+  // Tumpline strap
+  ctx.fillStyle = '#8b7355';
+  ctx.fillRect(sx,    sy-2,   1, 4);
+  // Cargo bundle on back
+  ctx.fillStyle = '#92400e';
+  ctx.fillRect(sx-6,  sy-4,   7, 7);
+  ctx.fillStyle = '#78350f';
+  ctx.fillRect(sx-5,  sy-3,   5, 5);
 }
 
 function hpBar(x, y, w, h, pct, col) {
