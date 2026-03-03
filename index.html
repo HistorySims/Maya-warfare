@@ -463,6 +463,11 @@ function mkState() {
 
     // narrative
     introShown: false,
+
+    // planning-phase pledge tracking (slider state before march)
+    pledgedSoldiers: 0,
+    pledgedPorters:  0,
+    homeFarmers:     14,   // farmers who stayed behind during last march
   };
 }
 
@@ -583,19 +588,31 @@ function renderPlanning(p) {
       <label>PORTERS (food carriers): <span id="sl-pv">${Math.min(3,maxPor)}</span> / ${maxPor}</label>
       <input type="range" id="sl-p" min="0" max="${maxPor}" value="${Math.min(3,maxPor)}" oninput="planStats()">
     </div>
-    <div class="infobox" id="pstats">
-      Est. harvest this season: <span>+${estHarv} food</span><br>
-      <span style="color:var(--muted)">Walk to a road sign to begin your campaign.</span>
-    </div>
+    <div class="infobox" id="pstats"></div>
+    <div style="font-size:.6rem;color:var(--muted);margin-top:4px">Walk to a road sign to begin your campaign.</div>
   `;
+  planStats();
 }
 
 function planStats() {
   const slS = document.getElementById('sl-s');
   const slP = document.getElementById('sl-p');
   if (!slS || !slP) return;
+  G.pledgedSoldiers = +slS.value;
+  G.pledgedPorters  = +slP.value;
   document.getElementById('sl-sv').textContent = slS.value;
   document.getElementById('sl-pv').textContent = slP.value;
+  // Update harvest estimate with current farmers left behind
+  const farmersLeft = G.farmers - G.pledgedPorters;
+  const fullCorn = G.farms.filter(f => f.growth >= 2).length;
+  const estHarv  = Math.round(fullCorn * (farmersLeft + G.pledgedSoldiers * 0) * 0.75);
+  const box = document.getElementById('pstats');
+  if (box) {
+    const leftNote = farmersLeft < 4
+      ? `<span style="color:#b91c1c"> ⚠ Too few farmers at home!</span>` : '';
+    box.innerHTML = `Farmers staying home: <span>${farmersLeft}</span>${leftNote}<br>
+      Est. harvest: <span>+${Math.round(fullCorn * farmersLeft * 0.75)} food</span>`;
+  }
 }
 
 function renderMarch(p) {
@@ -683,6 +700,9 @@ function doMarch(city, s, por) {
 
   G.homeSoldiers -= s;
   G.farmers     -= por;
+  G.homeFarmers  = G.farmers;          // farmers left tending plots during this march
+  G.pledgedSoldiers = 0;               // reset, they're now the real trail
+  G.pledgedPorters  = 0;
   G.marchSoldiers = s;
   G.marchPorters  = por;
   G.marchFood     = por * 22 + 15;
@@ -690,7 +710,7 @@ function doMarch(city, s, por) {
   G.phase         = 'marching';
 
   spawnTrail(s, por);
-  log(`You depart for ${city.name} with ${s} warriors and ${por} porters.`, '#e7e0d2');
+  log(`You depart for ${city.name} with ${s} warriors and ${por} porters. ${G.homeFarmers} farmers tend the fields.`, '#e7e0d2');
   panelUpdate();
 }
 
@@ -765,14 +785,17 @@ function conquestVictory(city) {
 }
 
 function arriveHome() {
-  // count living soldiers coming back
+  // Survivors return to their roles — soldiers to garrison, porters back to fields
   const retSol = G.trail.filter(u => u.type==='soldier' && u.alive).length;
+  const retPor = G.trail.filter(u => u.type==='porter'  && u.alive).length;
   G.homeSoldiers += retSol;
+  G.farmers      += retPor;   // porters rejoin the farming pool
   G.trail = [];
   G.enemies = [];
   G.marchTarget = null;
 
-  // harvest calculation
+  // Harvest: all farmers + returning soldiers pitch in
+  // (G.farmers already includes retPor after the line above)
   const fullCorn   = G.farms.filter(f => f.growth >= 2).length;
   const harvesters = G.farmers + retSol;
   const harvest    = Math.round(fullCorn * harvesters * 0.75);
@@ -794,7 +817,8 @@ function arriveHome() {
   G.transAcc = 0;
   G.phase    = 'transition';
 
-  log(`Returned home. Harvest: +${harvest} food. Pop: ${popBefore}→${G.population}.`, '#ca8a04');
+  const returnNote = retPor > 0 ? ` ${retPor} porters join the harvest.` : '';
+  log(`Returned home.${returnNote} Harvest: +${harvest} food. Pop: ${popBefore}→${G.population}.`, '#ca8a04');
   spawnFloat(`+${harvest}`, '#ca8a04', cv.width/2, cv.height/3);
   panelUpdate();
 }
@@ -803,10 +827,19 @@ function endTransition() {
   G.season++;
   document.getElementById('snum').textContent = G.season;
 
-  // Reset farms + slight regrowth
-  G.farms.forEach(f => { f.growth = 0; });
-  G.farms.forEach(f => { if (Math.random() < .45) f.growth = 1; });
-  G.farms.forEach(f => { if (f.growth===1 && Math.random() < .4) f.growth = 2; });
+  // Reset farms — rainy season growth is capped by how many farmers stayed home.
+  // Each farmer can tend roughly one plot; untended plots start bare and stall.
+  const tended = Math.min(G.homeFarmers, G.farms.length);
+  G.farms.forEach((f, i) => {
+    f.growth = 0;
+    if (i < tended && Math.random() < .55) f.growth = 1;          // tended: good sprout chance
+    else if (i >= tended && Math.random() < .15) f.growth = 1;    // untended: scrubby regrowth only
+  });
+  G.farms.forEach(f => {
+    if (f.growth === 1 && Math.random() < .45) f.growth = 2;      // some sprouts reach corn
+  });
+  // Reset homeFarmers for next season (full workforce until next march)
+  G.homeFarmers = G.farmers;
 
   G.daysLeft = DAYS;
   G.dayAcc   = 0;
@@ -1397,24 +1430,47 @@ function drawSigns(cx, cy) {
   }
 }
 
-// ── Farmers on fields ──────────────────────────────────────
+// ── Farmers on fields + pledged army gathering near player ──
 function drawFarmers(cx, cy) {
   if (G.phase !== 'planning') return;
+
+  const ps = G.pledgedSoldiers || 0;
+  const pp = G.pledgedPorters  || 0;
+  // Farmers staying on plots = total farmers minus those pledged as porters
+  const farmersOnPlots = Math.max(0, G.farmers - pp);
+
+  // Draw farmers on plots (only as many as are actually staying)
+  let placed = 0;
   for (let i = 0; i < G.farms.length; i++) {
+    if (placed >= farmersOnPlots) break;
     const f = G.farms[i];
     if (fogHides(f.tx, f.ty)) continue;
-    // Place one farmer per plot, deterministic offset within the tile
+    placed++;
     const ox = f.tx*T - cx + ((i * 17) & 7) + 8;
     const oy = f.ty*T - cy + ((i * 11) & 5) + 22;
-    // Small bent figure (farmer leaning over crop)
-    ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.fillRect(ox-2, oy+7, 6, 2); // shadow
-    ctx.fillStyle = '#d6d3d1';         ctx.fillRect(ox-1, oy-2, 4, 6); // body
-    ctx.fillStyle = '#c49a6c';         ctx.fillRect(ox,   oy-5, 3, 4); // head
-    ctx.fillStyle = '#4ade80';         ctx.fillRect(ox+1, oy-7, 2, 2); // green cap
-    ctx.fillStyle = '#d6d3d1';         ctx.fillRect(ox-2, oy+4, 2, 4); // left leg
-    ctx.fillStyle = '#d6d3d1';         ctx.fillRect(ox+2, oy+4, 2, 4); // right leg
-    // Arm reaching down to crop
-    ctx.fillStyle = '#c49a6c';         ctx.fillRect(ox+3, oy+1, 3, 2); // arm
+    ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.fillRect(ox-2, oy+7, 6, 2);
+    ctx.fillStyle = '#d6d3d1';         ctx.fillRect(ox-1, oy-2, 4, 6);
+    ctx.fillStyle = '#c49a6c';         ctx.fillRect(ox,   oy-5, 3, 4);
+    ctx.fillStyle = '#4ade80';         ctx.fillRect(ox+1, oy-7, 2, 2);
+    ctx.fillStyle = '#d6d3d1';         ctx.fillRect(ox-2, oy+4, 2, 4);
+    ctx.fillStyle = '#d6d3d1';         ctx.fillRect(ox+2, oy+4, 2, 4);
+    ctx.fillStyle = '#c49a6c';         ctx.fillRect(ox+3, oy+1, 3, 2);
+  }
+
+  const pcx = G.px - cx, pcy = G.py - cy;
+
+  // Pledged soldiers cluster behind/beside player (soldier sprites, awaiting march)
+  for (let i = 0; i < ps; i++) {
+    const angle = (i / Math.max(ps, 1)) * Math.PI * 2 + 0.8;
+    const r = 18 + (i % 3) * 12;
+    drawSpriteSoldier(pcx + Math.cos(angle) * r, pcy + Math.sin(angle) * r + 8, false, 1);
+  }
+
+  // Pledged porters cluster on the other side (porter sprites, left their plots)
+  for (let i = 0; i < pp; i++) {
+    const angle = (i / Math.max(pp, 1)) * Math.PI * 2 + 2.5;
+    const r = 18 + (i % 3) * 12;
+    drawSpritePorter(pcx + Math.cos(angle) * r, pcy + Math.sin(angle) * r + 8);
   }
 }
 
