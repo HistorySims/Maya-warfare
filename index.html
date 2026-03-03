@@ -220,6 +220,44 @@ input[type=range] { width: 100%; accent-color: var(--jade-lt); }
   100% { opacity: 0; transform: translateY(-38px); }
 }
 
+/* ── Road sign popup ── */
+#sign-popup {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,.7);
+  touch-action: auto;
+}
+#sign-popup.visible { display: flex; }
+#sign-inner {
+  background: var(--panel);
+  border: 2px solid var(--border);
+  border-radius: 6px;
+  padding: 18px 22px;
+  max-width: 280px;
+  width: 90vw;
+  text-align: center;
+  touch-action: auto;
+}
+#sign-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--jade-lt);
+  letter-spacing: .1em;
+  margin-bottom: 10px;
+}
+#sign-body {
+  font-family: sans-serif;
+  font-size: .8rem;
+  color: var(--text);
+  line-height: 1.7;
+  margin-bottom: 14px;
+}
+#sign-btns { display: flex; gap: 8px; justify-content: center; }
+
 /* ── Start overlay ── */
 #ov {
   position: fixed; inset: 0;
@@ -285,6 +323,18 @@ input[type=range] { width: 100%; accent-color: var(--jade-lt); }
   <button class="btn danger" onclick="location.reload()">Begin Again</button>
 </div>
 
+<!-- ═══════════ ROAD SIGN POPUP ═══════════ -->
+<div id="sign-popup">
+  <div id="sign-inner">
+    <div id="sign-title"></div>
+    <div id="sign-body"></div>
+    <div id="sign-btns">
+      <button class="btn" onclick="confirmMarch()">MARCH!</button>
+      <button class="btn danger" onclick="closeSignPopup()">Stay</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══════════ HUD ═══════════ -->
 <div id="hud">
   <div id="hud-title">K'UHUL AJAW</div>
@@ -334,6 +384,16 @@ const CITY_DEFS = [
   { id:'ik_naah',   name:"Ik' Naah",  tx:58, ty:105, col:'#065f46', order:4 },
 ];
 const HOME = { tx:60, ty:60 };
+
+// Road signs — placed 3 tiles from HOME toward each city along the sacbe
+const SIGNS = CITY_DEFS.map(c => {
+  const dx = c.tx - HOME.tx, dy = c.ty - HOME.ty;
+  const len = Math.sqrt(dx*dx + dy*dy);
+  const tx = HOME.tx + Math.round(dx/len * 3);
+  const ty = HOME.ty + Math.round(dy/len * 3);
+  return { city: c, tx, ty, px: tx*T + T/2, py: ty*T + T/2,
+           dist: Math.round(len) };
+});
 
 // ═══════════════════════════════════════════════════════════
 //  STATE
@@ -509,71 +569,33 @@ function panelUpdate() {
 }
 
 function renderPlanning(p) {
-  const cityOpts = G.cities.map(c => {
-    const dist = tileDist(HOME.tx, HOME.ty, c.tx, c.ty).toFixed(0);
-    const icon = {independent:'○', vassal:'◆', rebellious:'✗'}[c.status] || '?';
-    const col  = c.status === 'rebellious' ? 'color:#b91c1c' : c.status === 'vassal' ? 'color:#14b8a6' : '';
-    return `<option value="${c.id}" style="${col}">${icon} ${c.name} (~${dist} tiles · ${c.status})</option>`;
-  }).join('');
-
   const maxSol = G.homeSoldiers;
   const maxPor = Math.max(0, G.farmers - 2);
+  const fullCorn = G.farms.filter(f => f.growth >= 2).length;
+  const estHarv  = Math.round(fullCorn * G.farmers * 0.75);
 
   p.innerHTML = `
     <div class="row">
-      <label>CAMPAIGN TARGET</label>
-      <select id="sel-tgt" onchange="planStats()">
-        <option value="">— Choose a city —</option>
-        ${cityOpts}
-      </select>
-    </div>
-    <div class="row">
-      <label>WARRIORS: <span id="sl-sv">3</span> / ${maxSol}</label>
+      <label>WARRIORS TO BRING: <span id="sl-sv">${Math.min(3,maxSol)}</span> / ${maxSol}</label>
       <input type="range" id="sl-s" min="0" max="${maxSol}" value="${Math.min(3,maxSol)}" oninput="planStats()">
     </div>
     <div class="row">
-      <label>PORTERS (food carriers): <span id="sl-pv">3</span></label>
+      <label>PORTERS (food carriers): <span id="sl-pv">${Math.min(3,maxPor)}</span> / ${maxPor}</label>
       <input type="range" id="sl-p" min="0" max="${maxPor}" value="${Math.min(3,maxPor)}" oninput="planStats()">
     </div>
-    <div class="infobox" id="pstats">Select a target to see march estimates.</div>
-    <button class="btn" id="btn-march" onclick="doMarch()" disabled>MARCH!</button>
+    <div class="infobox" id="pstats">
+      Est. harvest this season: <span>+${estHarv} food</span><br>
+      <span style="color:var(--muted)">Walk to a road sign to begin your campaign.</span>
+    </div>
   `;
-  planStats();
 }
 
 function planStats() {
-  const sel  = document.getElementById('sel-tgt');
-  const slS  = document.getElementById('sl-s');
-  const slP  = document.getElementById('sl-p');
-  if (!sel || !slS || !slP) return;
-
-  const s = +slS.value, por = +slP.value;
-  document.getElementById('sl-sv').textContent = s;
-  document.getElementById('sl-pv').textContent = por;
-
-  const city   = G.cities.find(c => c.id === sel.value);
-  const dist   = city ? tileDist(HOME.tx, HOME.ty, city.tx, city.ty) : 0;
-  const farmers = G.farmers - por;
-  const fullCorn = G.farms.filter(f => f.growth >= 2).length;
-  const estHarv  = Math.round(fullCorn * farmers * 0.75);
-  const foodNeed = Math.round(dist * (s + por) * 0.25 * 2); // rough round-trip
-
-  const box = document.getElementById('pstats');
-  if (city) {
-    const warnWall = city.status === 'rebellious'
-      ? `<br><span style="color:#b91c1c">⚠ Fortifications reported — expect heavy losses at the walls.</span>` : '';
-    box.innerHTML = `
-      Farmers left at home: <span>${farmers}</span><br>
-      Est. harvest (rainy season): <span>+${estHarv} food</span><br>
-      Est. food needed (round trip): <span>${foodNeed}</span><br>
-      Distance: <span>${dist.toFixed(0)} tiles</span>${warnWall}
-    `;
-  } else {
-    box.innerHTML = 'Select a target to see march estimates.';
-  }
-
-  const btn = document.getElementById('btn-march');
-  if (btn) btn.disabled = !(city && s > 0);
+  const slS = document.getElementById('sl-s');
+  const slP = document.getElementById('sl-p');
+  if (!slS || !slP) return;
+  document.getElementById('sl-sv').textContent = slS.value;
+  document.getElementById('sl-pv').textContent = slP.value;
 }
 
 function renderMarch(p) {
@@ -614,11 +636,49 @@ function renderCombat(p) {
 // ═══════════════════════════════════════════════════════════
 //  GAME ACTIONS
 // ═══════════════════════════════════════════════════════════
-function doMarch() {
-  const sel = document.getElementById('sel-tgt');
-  const s   = +document.getElementById('sl-s').value;
-  const por = +document.getElementById('sl-p').value;
-  const city = G.cities.find(c => c.id === sel.value);
+// ── Road sign popup ──────────────────────────────────────────
+let _pendingSign = null;  // sign object waiting for player confirmation
+
+function showSignPopup(sign) {
+  _pendingSign = sign;
+  const slS = document.getElementById('sl-s');
+  const slP = document.getElementById('sl-p');
+  const s   = slS ? +slS.value : Math.min(3, G.homeSoldiers);
+  const por = slP ? +slP.value : Math.min(3, Math.max(0, G.farmers - 2));
+  const food = por * 22 + 15;
+  const c    = sign.city;
+  const liveCity = G.cities.find(x => x.id === c.id);
+  const statusText = { independent:'Independent', vassal:'Your vassal', rebellious:'REBELLIOUS' }[liveCity.status] || '';
+  const statusCol  = liveCity.status === 'rebellious' ? 'color:#b91c1c' : liveCity.status === 'vassal' ? 'color:#14b8a6' : '';
+  const wallWarn   = liveCity.status === 'rebellious' ? '<br><span style="color:#b91c1c">⚠ Fortified — expect wall casualties</span>' : '';
+
+  document.getElementById('sign-title').textContent = `Road to ${c.name}`;
+  document.getElementById('sign-body').innerHTML = `
+    <span style="${statusCol}">${statusText}</span> &nbsp;·&nbsp; ~${sign.dist} tiles<br>
+    Warriors: <strong>${s}</strong> &nbsp; Porters: <strong>${por}</strong><br>
+    Food packed: <strong>${food}</strong>${wallWarn}
+  `;
+  document.getElementById('sign-popup').classList.add('visible');
+}
+
+function confirmMarch() {
+  closeSignPopup();
+  if (!_pendingSign) return;
+  const slS = document.getElementById('sl-s');
+  const slP = document.getElementById('sl-p');
+  const s   = slS ? +slS.value : Math.min(3, G.homeSoldiers);
+  const por = slP ? +slP.value : Math.min(3, Math.max(0, G.farmers - 2));
+  const liveCity = G.cities.find(x => x.id === _pendingSign.city.id);
+  _pendingSign = null;
+  doMarch(liveCity, s, por);
+}
+
+function closeSignPopup() {
+  document.getElementById('sign-popup').classList.remove('visible');
+  _pendingSign = null;
+}
+
+function doMarch(city, s, por) {
   if (!city || s <= 0) return;
 
   G.homeSoldiers -= s;
@@ -873,6 +933,14 @@ function update(dt) {
     }
   }
 
+  // ── Sign proximity (planning phase only) ──
+  if (G.phase === 'planning' && !document.getElementById('sign-popup').classList.contains('visible')) {
+    for (const sign of SIGNS) {
+      const d = wpDist(G.px, G.py, sign.px, sign.py);
+      if (d < T * 1.6) { showSignPopup(sign); break; }
+    }
+  }
+
   // ── Phase-specific logic ──
   if (G.phase === 'marching') {
     // Check proximity to target city
@@ -1114,6 +1182,12 @@ function render() {
     drawCity(city, cx, cy);
   }
 
+  // ── Road signs ──
+  drawSigns(cx, cy);
+
+  // ── Farmers on fields ──
+  drawFarmers(cx, cy);
+
   // ── Enemies ──
   for (const e of G.enemies) {
     if (!e.alive) continue;
@@ -1279,6 +1353,69 @@ function drawCity(city, cx, cy) {
   ctx.fillText(city.name, ox+T/2, oy+T+12);
   ctx.fillStyle = colMap[city.status] || '#e7e0d2';
   ctx.fillText(iconMap[city.status]||'?', ox+T/2, oy+T+22);
+}
+
+// ── Road signs ────────────────────────────────────────────
+function drawSigns(cx, cy) {
+  if (G.phase !== 'planning') return;
+  for (const sign of SIGNS) {
+    const sx = sign.px - cx, sy = sign.py - cy;
+    const liveCity = G.cities.find(c => c.id === sign.city.id);
+    const near = wpDist(G.px, G.py, sign.px, sign.py) < T * 1.6;
+
+    // Sign post
+    ctx.fillStyle = '#7a5c2e';
+    ctx.fillRect(sx - 1, sy - 2, 3, 14);
+
+    // Sign board background
+    ctx.fillStyle = near ? '#d4b97a' : '#c4a868';
+    ctx.fillRect(sx - 18, sy - 16, 36, 14);
+    // Board border
+    ctx.fillStyle = '#7a5c2e';
+    ctx.fillRect(sx - 18, sy - 16, 36, 2);
+    ctx.fillRect(sx - 18, sy - 4,  36, 2);
+    ctx.fillRect(sx - 18, sy - 16, 2,  14);
+    ctx.fillRect(sx + 16, sy - 16, 2,  14);
+
+    // City name
+    const icon = { independent:'○', vassal:'◆', rebellious:'✗' }[liveCity.status] || '○';
+    ctx.fillStyle = liveCity.status === 'rebellious' ? '#b91c1c' : '#2d1a00';
+    ctx.font = 'bold 7px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${icon} ${sign.city.name}`, sx, sy - 8);
+
+    // Distance line
+    ctx.fillStyle = '#5c3d10';
+    ctx.font = '6px monospace';
+    ctx.fillText(`~${sign.dist} tiles`, sx, sy - 1);
+
+    // Glow hint when near
+    if (near) {
+      ctx.fillStyle = 'rgba(212,185,122,.25)';
+      ctx.fillRect(sx - 20, sy - 18, 40, 18);
+    }
+  }
+}
+
+// ── Farmers on fields ──────────────────────────────────────
+function drawFarmers(cx, cy) {
+  if (G.phase !== 'planning') return;
+  for (let i = 0; i < G.farms.length; i++) {
+    const f = G.farms[i];
+    if (fogHides(f.tx, f.ty)) continue;
+    // Place one farmer per plot, deterministic offset within the tile
+    const ox = f.tx*T - cx + ((i * 17) & 7) + 8;
+    const oy = f.ty*T - cy + ((i * 11) & 5) + 22;
+    // Small bent figure (farmer leaning over crop)
+    ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.fillRect(ox-2, oy+7, 6, 2); // shadow
+    ctx.fillStyle = '#d6d3d1';         ctx.fillRect(ox-1, oy-2, 4, 6); // body
+    ctx.fillStyle = '#c49a6c';         ctx.fillRect(ox,   oy-5, 3, 4); // head
+    ctx.fillStyle = '#4ade80';         ctx.fillRect(ox+1, oy-7, 2, 2); // green cap
+    ctx.fillStyle = '#d6d3d1';         ctx.fillRect(ox-2, oy+4, 2, 4); // left leg
+    ctx.fillStyle = '#d6d3d1';         ctx.fillRect(ox+2, oy+4, 2, 4); // right leg
+    // Arm reaching down to crop
+    ctx.fillStyle = '#c49a6c';         ctx.fillRect(ox+3, oy+1, 3, 2); // arm
+  }
 }
 
 // ── Pixel-art sprites ─────────────────────────────────────
