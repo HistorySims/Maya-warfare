@@ -149,7 +149,7 @@ select {
 }
 #bot, #panel { touch-action: auto; }
 @media (max-width: 700px) { select { font-size: 16px; } }
-input[type=range] { width: 100%; accent-color: var(--jade-lt); }
+input[type=range] { width: 100%; accent-color: var(--jade-lt); touch-action: manipulation; }
 .infobox {
   background: #0d1a14;
   border: 1px solid var(--border);
@@ -389,8 +389,8 @@ const HOME = { tx:60, ty:60 };
 const SIGNS = CITY_DEFS.map(c => {
   const dx = c.tx - HOME.tx, dy = c.ty - HOME.ty;
   const len = Math.sqrt(dx*dx + dy*dy);
-  const tx = HOME.tx + Math.round(dx/len * 3);
-  const ty = HOME.ty + Math.round(dy/len * 3);
+  const tx = HOME.tx + Math.round(dx/len * 5);
+  const ty = HOME.ty + Math.round(dy/len * 5);
   return { city: c, tx, ty, px: tx*T + T/2, py: ty*T + T/2,
            dist: Math.round(len) };
 });
@@ -679,14 +679,14 @@ function showSignPopup(sign) {
 }
 
 function confirmMarch() {
+  const sign = _pendingSign;   // save before closeSignPopup() nulls it
   closeSignPopup();
-  if (!_pendingSign) return;
+  if (!sign) return;
   const slS = document.getElementById('sl-s');
   const slP = document.getElementById('sl-p');
   const s   = slS ? +slS.value : Math.min(3, G.homeSoldiers);
   const por = slP ? +slP.value : Math.min(3, Math.max(0, G.farmers - 2));
-  const liveCity = G.cities.find(x => x.id === _pendingSign.city.id);
-  _pendingSign = null;
+  const liveCity = G.cities.find(x => x.id === sign.city.id);
   doMarch(liveCity, s, por);
 }
 
@@ -1434,43 +1434,62 @@ function drawSigns(cx, cy) {
 function drawFarmers(cx, cy) {
   if (G.phase !== 'planning') return;
 
+  const t  = Date.now() / 1000;   // seconds — drives all animation
   const ps = G.pledgedSoldiers || 0;
   const pp = G.pledgedPorters  || 0;
   // Farmers staying on plots = total farmers minus those pledged as porters
   const farmersOnPlots = Math.max(0, G.farmers - pp);
 
-  // Draw farmers on plots (only as many as are actually staying)
+  // ── Farmers on their plots ──
+  // Each one has a unique phase so they move independently
   let placed = 0;
   for (let i = 0; i < G.farms.length; i++) {
     if (placed >= farmersOnPlots) break;
     const f = G.farms[i];
     if (fogHides(f.tx, f.ty)) continue;
     placed++;
-    const ox = f.tx*T - cx + ((i * 17) & 7) + 8;
-    const oy = f.ty*T - cy + ((i * 11) & 5) + 22;
-    ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.fillRect(ox-2, oy+7, 6, 2);
-    ctx.fillStyle = '#d6d3d1';         ctx.fillRect(ox-1, oy-2, 4, 6);
-    ctx.fillStyle = '#c49a6c';         ctx.fillRect(ox,   oy-5, 3, 4);
-    ctx.fillStyle = '#4ade80';         ctx.fillRect(ox+1, oy-7, 2, 2);
-    ctx.fillStyle = '#d6d3d1';         ctx.fillRect(ox-2, oy+4, 2, 4);
-    ctx.fillStyle = '#d6d3d1';         ctx.fillRect(ox+2, oy+4, 2, 4);
-    ctx.fillStyle = '#c49a6c';         ctx.fillRect(ox+3, oy+1, 3, 2);
+    // Base position, deterministic per plot
+    const bx = f.tx*T - cx + ((i * 17) & 7) + 8;
+    const by = f.ty*T - cy + ((i * 11) & 5) + 22;
+    // Wander: each farmer has unique speed & phase so they look independent
+    const ph  = i * 2.399;  // golden-angle phase spread
+    const ox  = bx + Math.sin(t * 0.55 + ph)       * 3;
+    const oy  = by + Math.cos(t * 0.70 + ph + 1.1) * 2;
+    // Working bob: lean forward/back in a slow rhythm
+    const bob = Math.sin(t * 1.8 + ph) > 0 ? 1 : 0;  // 0 or 1px vertical bob
+    ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.fillRect(ox-2, oy+7+bob, 6, 2);
+    ctx.fillStyle = '#d6d3d1';         ctx.fillRect(ox-1, oy-2+bob, 4, 6);
+    ctx.fillStyle = '#c49a6c';         ctx.fillRect(ox,   oy-5+bob, 3, 4);
+    ctx.fillStyle = '#4ade80';         ctx.fillRect(ox+1, oy-7+bob, 2, 2);
+    ctx.fillStyle = '#d6d3d1';         ctx.fillRect(ox-2, oy+4,     2, 4);
+    ctx.fillStyle = '#d6d3d1';         ctx.fillRect(ox+2, oy+4,     2, 4);
+    // Arm swings down toward crop on the bob
+    ctx.fillStyle = '#c49a6c';         ctx.fillRect(ox+3, oy+1+bob, 3, 2);
   }
 
   const pcx = G.px - cx, pcy = G.py - cy;
 
-  // Pledged soldiers cluster behind/beside player (soldier sprites, awaiting march)
+  // ── Pledged soldiers: slow orbit + individual bob ──
+  // Orbit direction reverses so it feels like milling around, not marching
+  const soldierOrbit = t * 0.28;
   for (let i = 0; i < ps; i++) {
-    const angle = (i / Math.max(ps, 1)) * Math.PI * 2 + 0.8;
-    const r = 18 + (i % 3) * 12;
-    drawSpriteSoldier(pcx + Math.cos(angle) * r, pcy + Math.sin(angle) * r + 8, false, 1);
+    const angle = (i / Math.max(ps, 1)) * Math.PI * 2 + soldierOrbit + 0.8;
+    const r   = 20 + (i % 3) * 11;
+    const ph  = i * 1.618;
+    const wx  = pcx + Math.cos(angle) * r + Math.sin(t * 0.9 + ph) * 2;
+    const wy  = pcy + Math.sin(angle) * r + Math.cos(t * 0.7 + ph) * 1.5 + 8;
+    drawSpriteSoldier(wx, wy, false, 1);
   }
 
-  // Pledged porters cluster on the other side (porter sprites, left their plots)
+  // ── Pledged porters: slower, opposite drift ──
+  const porterOrbit = -t * 0.20;
   for (let i = 0; i < pp; i++) {
-    const angle = (i / Math.max(pp, 1)) * Math.PI * 2 + 2.5;
-    const r = 18 + (i % 3) * 12;
-    drawSpritePorter(pcx + Math.cos(angle) * r, pcy + Math.sin(angle) * r + 8);
+    const angle = (i / Math.max(pp, 1)) * Math.PI * 2 + porterOrbit + 2.5;
+    const r   = 20 + (i % 3) * 11;
+    const ph  = i * 2.618;
+    const wx  = pcx + Math.cos(angle) * r + Math.sin(t * 0.8 + ph) * 2;
+    const wy  = pcy + Math.sin(angle) * r + Math.cos(t * 0.6 + ph) * 1.5 + 8;
+    drawSpritePorter(wx, wy);
   }
 }
 
