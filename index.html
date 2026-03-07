@@ -220,6 +220,33 @@ input[type=range] { width: 100%; accent-color: var(--jade-lt); touch-action: man
   100% { opacity: 0; transform: translateY(-38px); }
 }
 
+/* ── Recruit +/- buttons ── */
+.recruit-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  font-size: .72rem;
+}
+.recruit-row label { color: var(--muted); font-size: .63rem; letter-spacing: .04em; flex: 1; }
+.recruit-val { font-weight: 700; color: var(--jade-lt); min-width: 28px; text-align: center; font-size: .9rem; }
+.rbtn {
+  background: #1e3a2e;
+  border: 1px solid var(--border);
+  color: var(--jade-lt);
+  font-family: inherit;
+  font-size: 1.1rem;
+  width: 28px; height: 28px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.rbtn:hover { background: var(--jade); color: #fff; }
+.rbtn:disabled { opacity: .3; cursor: not-allowed; }
+.cost-note { font-size: .6rem; color: var(--muted); margin-top: 2px; line-height: 1.5; }
+
 /* ── Road sign popup ── */
 #sign-popup {
   display: none;
@@ -374,7 +401,14 @@ const WW = 120;         // world width  (tiles)
 const WH = 120;         // world height (tiles)
 const FOG  = 9;         // visibility radius (tiles)
 const DAYS = 80;        // days per dry season
+const RAINY_DAYS = 20;  // days per rainy season
 const DAY_MS = 1800;    // real ms per game day
+// Tiles/day at full road speed (T*0.075 px/frame * 60fps / T / (1000/DAY_MS)) ≈ 8
+const TILES_PER_DAY = 8;
+// Food costs per unit per day on the march
+const FOOD_PER_SOLDIER = 1;
+const FOOD_PER_PORTER  = 1;
+const FOOD_PER_PORTER_CARRY = 30;
 
 // City definitions
 const CITY_DEFS = [
@@ -385,15 +419,23 @@ const CITY_DEFS = [
 ];
 const HOME = { tx:60, ty:60 };
 
-// Road signs — placed 3 tiles from HOME toward each city along the sacbe
+// Road signs — placed 5 tiles from HOME toward each city along the sacbe
 const SIGNS = CITY_DEFS.map(c => {
   const dx = c.tx - HOME.tx, dy = c.ty - HOME.ty;
   const len = Math.sqrt(dx*dx + dy*dy);
   const tx = HOME.tx + Math.round(dx/len * 5);
   const ty = HOME.ty + Math.round(dy/len * 5);
+  const tilesDist = Math.round(len);
+  const daysDist  = Math.max(1, Math.round(tilesDist / TILES_PER_DAY));
   return { city: c, tx, ty, px: tx*T + T/2, py: ty*T + T/2,
-           dist: Math.round(len) };
+           dist: tilesDist, days: daysDist };
 });
+
+// Cisterns — stone water basins near home village
+const CISTERN_DEFS = [
+  { tx: HOME.tx - 5, ty: HOME.ty + 3 },
+  { tx: HOME.tx + 6, ty: HOME.ty + 2 },
+];
 
 // ═══════════════════════════════════════════════════════════
 //  STATE
@@ -464,10 +506,20 @@ function mkState() {
     // narrative
     introShown: false,
 
-    // planning-phase pledge tracking (slider state before march)
-    pledgedSoldiers: 0,
-    pledgedPorters:  0,
+    // planning-phase pledge tracking
+    pledgedSoldiers: 3,
+    pledgedPorters:  3,
     homeFarmers:     14,   // farmers who stayed behind during last march
+
+    // seasons
+    isRainy: false,
+
+    // cisterns — fill during rainy season
+    cisterns: CISTERN_DEFS.map(d => ({ tx: d.tx, ty: d.ty, water: 0, maxWater: 10 })),
+
+    // farmer bucket animation: [{fx,fy, destX,destY, phase:'toCistern'|'toCrop', t}]
+    farmerBuckets: [],
+    bucketTimer: 0,
   };
 }
 
@@ -567,8 +619,8 @@ function panelUpdate() {
   else if (G.phase === 'combat')    renderCombat(p);
   else if (G.phase === 'transition') {
     p.innerHTML = `<div style="font-size:.78rem;color:var(--muted);padding:6px 0">
-      <div style="font-size:.9rem;color:var(--teal);margin-bottom:6px">&#127783; The rains come…</div>
-      The jungle drinks. The corn is counted.<br>The dry season will return.
+      <div style="font-size:.9rem;color:var(--teal);margin-bottom:6px">&#9728; The dry season returns…</div>
+      The corn is counted. The soldiers train.<br>A new campaign season begins.
     </div>`;
   }
 }
@@ -576,43 +628,56 @@ function panelUpdate() {
 function renderPlanning(p) {
   const maxSol = G.homeSoldiers;
   const maxPor = Math.max(0, G.farmers - 2);
+  // Clamp current pledges to current maxes
+  G.pledgedSoldiers = clamp(G.pledgedSoldiers, 0, maxSol);
+  G.pledgedPorters  = clamp(G.pledgedPorters,  0, maxPor);
+
+  const ps = G.pledgedSoldiers, pp = G.pledgedPorters;
+  const farmersLeft = G.farmers - pp;
   const fullCorn = G.farms.filter(f => f.growth >= 2).length;
-  const estHarv  = Math.round(fullCorn * G.farmers * 0.75);
+  const estHarv  = Math.round(fullCorn * farmersLeft * 0.75);
+  const foodPacked = pp * FOOD_PER_PORTER_CARRY + 10;
+  const dailyUse   = ps * FOOD_PER_SOLDIER + pp * FOOD_PER_PORTER;
+  const supplyDays = dailyUse > 0 ? Math.floor(foodPacked / dailyUse) : '∞';
+
+  const leftNote = farmersLeft < 4
+    ? `<span style="color:#b91c1c"> ⚠ Too few farmers!</span>` : '';
+  const seasonNote = G.isRainy
+    ? `<div style="color:#06b6d4;font-size:.65rem;margin-bottom:5px">&#9730; Rainy season — no marching. Cisterns are filling.</div>` : '';
 
   p.innerHTML = `
-    <div class="row">
-      <label>WARRIORS TO BRING: <span id="sl-sv">${Math.min(3,maxSol)}</span> / ${maxSol}</label>
-      <input type="range" id="sl-s" min="0" max="${maxSol}" value="${Math.min(3,maxSol)}" oninput="planStats()">
+    ${seasonNote}
+    <div class="recruit-row">
+      <label>WARRIORS<br><span style="font-size:.58rem">1 food/day each</span></label>
+      <button class="rbtn" onclick="recruitChange('soldier',-1)" ${ps<=0?'disabled':''}>−</button>
+      <span class="recruit-val">${ps}</span>
+      <button class="rbtn" onclick="recruitChange('soldier',1)" ${ps>=maxSol?'disabled':''}>+</button>
+      <span style="font-size:.6rem;color:var(--muted)">/ ${maxSol}</span>
     </div>
-    <div class="row">
-      <label>PORTERS (food carriers): <span id="sl-pv">${Math.min(3,maxPor)}</span> / ${maxPor}</label>
-      <input type="range" id="sl-p" min="0" max="${maxPor}" value="${Math.min(3,maxPor)}" oninput="planStats()">
+    <div class="recruit-row">
+      <label>PORTERS<br><span style="font-size:.58rem">1 food/day, carries ${FOOD_PER_PORTER_CARRY}</span></label>
+      <button class="rbtn" onclick="recruitChange('porter',-1)" ${pp<=0?'disabled':''}>−</button>
+      <span class="recruit-val">${pp}</span>
+      <button class="rbtn" onclick="recruitChange('porter',1)" ${pp>=maxPor?'disabled':''}>+</button>
+      <span style="font-size:.6rem;color:var(--muted)">/ ${maxPor}</span>
     </div>
-    <div class="infobox" id="pstats"></div>
-    <div style="font-size:.6rem;color:var(--muted);margin-top:4px">Walk to a road sign to begin your campaign.</div>
+    <div class="infobox">
+      Food packed: <span>${foodPacked}</span> &nbsp; Daily use: <span>${dailyUse}/day</span><br>
+      Supply lasts: <span>${supplyDays} days</span><br>
+      Farmers home: <span>${farmersLeft}</span>${leftNote} &nbsp; Est. harvest: <span>+${estHarv}</span>
+    </div>
+    <div style="font-size:.6rem;color:var(--muted);margin-top:4px">Walk to a road sign to march.</div>
   `;
-  planStats();
 }
 
-function planStats() {
-  const slS = document.getElementById('sl-s');
-  const slP = document.getElementById('sl-p');
-  if (!slS || !slP) return;
-  G.pledgedSoldiers = +slS.value;
-  G.pledgedPorters  = +slP.value;
-  document.getElementById('sl-sv').textContent = slS.value;
-  document.getElementById('sl-pv').textContent = slP.value;
-  // Update harvest estimate with current farmers left behind
-  const farmersLeft = G.farmers - G.pledgedPorters;
-  const fullCorn = G.farms.filter(f => f.growth >= 2).length;
-  const estHarv  = Math.round(fullCorn * (farmersLeft + G.pledgedSoldiers * 0) * 0.75);
-  const box = document.getElementById('pstats');
-  if (box) {
-    const leftNote = farmersLeft < 4
-      ? `<span style="color:#b91c1c"> ⚠ Too few farmers at home!</span>` : '';
-    box.innerHTML = `Farmers staying home: <span>${farmersLeft}</span>${leftNote}<br>
-      Est. harvest: <span>+${Math.round(fullCorn * farmersLeft * 0.75)} food</span>`;
+function recruitChange(type, delta) {
+  if (G.isRainy) return;  // no recruiting during rain
+  if (type === 'soldier') {
+    G.pledgedSoldiers = clamp(G.pledgedSoldiers + delta, 0, G.homeSoldiers);
+  } else {
+    G.pledgedPorters = clamp(G.pledgedPorters + delta, 0, Math.max(0, G.farmers - 2));
   }
+  renderPlanning(document.getElementById('panel'));
 }
 
 function renderMarch(p) {
@@ -638,13 +703,16 @@ function renderCombat(p) {
   const enAlive  = G.enemies.filter(e => e.alive).length;
   const city     = G.combatCity;
   const wallNote = city?.status === 'rebellious'
-    ? `<br><span style="color:#b91c1c">Kill zone active — walls channel your warriors!</span>` : '';
+    ? `<br><span style="color:#b91c1c">Double walls — kill zone active!</span>` : '';
 
   p.innerHTML = `
     <div class="infobox">
       Your warriors: <span>${solAlive}</span><br>
       Enemy defenders: <span style="color:#b91c1c">${enAlive}</span><br>
       Your HP: <span style="color:#14b8a6">${G.pHp} / ${G.pMaxHp}</span>${wallNote}
+    </div>
+    <div style="font-size:.62rem;color:var(--muted);margin-bottom:6px">
+      Tap the STRIKE button or tap enemies to attack.
     </div>
     <button class="btn danger" onclick="doRetreat()">&#8592; FLEE</button>
   `;
@@ -657,37 +725,37 @@ function renderCombat(p) {
 let _pendingSign = null;  // sign object waiting for player confirmation
 
 function showSignPopup(sign) {
+  if (G.isRainy) return;  // no marching during rainy season
   _pendingSign = sign;
-  const slS = document.getElementById('sl-s');
-  const slP = document.getElementById('sl-p');
-  const s   = slS ? +slS.value : Math.min(3, G.homeSoldiers);
-  const por = slP ? +slP.value : Math.min(3, Math.max(0, G.farmers - 2));
-  const food = por * 22 + 15;
+  const s   = G.pledgedSoldiers;
+  const por = G.pledgedPorters;
+  const food = por * FOOD_PER_PORTER_CARRY + 10;
+  const dailyUse = s * FOOD_PER_SOLDIER + por * FOOD_PER_PORTER;
+  const supplyDays = dailyUse > 0 ? Math.floor(food / dailyUse) : 99;
   const c    = sign.city;
   const liveCity = G.cities.find(x => x.id === c.id);
   const statusText = { independent:'Independent', vassal:'Your vassal', rebellious:'REBELLIOUS' }[liveCity.status] || '';
   const statusCol  = liveCity.status === 'rebellious' ? 'color:#b91c1c' : liveCity.status === 'vassal' ? 'color:#14b8a6' : '';
-  const wallWarn   = liveCity.status === 'rebellious' ? '<br><span style="color:#b91c1c">⚠ Fortified — expect wall casualties</span>' : '';
+  const wallWarn   = liveCity.status === 'rebellious' ? '<br><span style="color:#b91c1c">⚠ Fortified — expect heavy losses</span>' : '';
+  const foodWarn   = supplyDays < sign.days * 2 ? `<br><span style="color:#d97706">⚠ Supply for ${supplyDays} days — bring more porters?</span>` : '';
 
   document.getElementById('sign-title').textContent = `Road to ${c.name}`;
   document.getElementById('sign-body').innerHTML = `
-    <span style="${statusCol}">${statusText}</span> &nbsp;·&nbsp; ~${sign.dist} tiles<br>
+    <span style="${statusCol}">${statusText}</span><br>
+    ~<strong>${sign.days} days</strong> away (${sign.dist} tiles)<br>
     Warriors: <strong>${s}</strong> &nbsp; Porters: <strong>${por}</strong><br>
-    Food packed: <strong>${food}</strong>${wallWarn}
+    Food packed: <strong>${food}</strong> &nbsp; Used: <strong>${dailyUse}/day</strong><br>
+    Supply lasts: <strong>${supplyDays} days</strong> each way${wallWarn}${foodWarn}
   `;
   document.getElementById('sign-popup').classList.add('visible');
 }
 
 function confirmMarch() {
-  const sign = _pendingSign;   // save before closeSignPopup() nulls it
+  const sign = _pendingSign;
   closeSignPopup();
   if (!sign) return;
-  const slS = document.getElementById('sl-s');
-  const slP = document.getElementById('sl-p');
-  const s   = slS ? +slS.value : Math.min(3, G.homeSoldiers);
-  const por = slP ? +slP.value : Math.min(3, Math.max(0, G.farmers - 2));
   const liveCity = G.cities.find(x => x.id === sign.city.id);
-  doMarch(liveCity, s, por);
+  doMarch(liveCity, G.pledgedSoldiers, G.pledgedPorters);
 }
 
 function closeSignPopup() {
@@ -705,7 +773,7 @@ function doMarch(city, s, por) {
   G.pledgedPorters  = 0;
   G.marchSoldiers = s;
   G.marchPorters  = por;
-  G.marchFood     = por * 22 + 15;
+  G.marchFood     = por * FOOD_PER_PORTER_CARRY + 10;
   G.marchTarget   = city;
   G.phase         = 'marching';
 
@@ -785,76 +853,29 @@ function conquestVictory(city) {
 }
 
 function arriveHome() {
-  // Survivors return to their roles — soldiers to garrison, porters back to fields
+  // Survivors return — soldiers to garrison, porters back to fields
   const retSol = G.trail.filter(u => u.type==='soldier' && u.alive).length;
   const retPor = G.trail.filter(u => u.type==='porter'  && u.alive).length;
   G.homeSoldiers += retSol;
-  G.farmers      += retPor;   // porters rejoin the farming pool
+  G.farmers      += retPor;
   G.trail = [];
   G.enemies = [];
   G.marchTarget = null;
+  G.homeFarmers = G.farmers;
 
-  // Harvest: all farmers + returning soldiers pitch in
-  // (G.farmers already includes retPor after the line above)
-  const fullCorn   = G.farms.filter(f => f.growth >= 2).length;
-  const harvesters = G.farmers + retSol;
-  const harvest    = Math.round(fullCorn * harvesters * 0.75);
-  G.food = Math.min(G.maxFood, G.food + harvest);
+  const returnNote = retPor > 0 ? ` ${retPor} porters returned.` : '';
+  log(`Army returns home.${returnNote} The rains will decide the harvest.`, '#e7e0d2');
 
-  const popBefore = G.population;
-  const surplus   = G.food - G.population * 10;
-  if (surplus > 20) {
-    const g = Math.floor(Math.random()*2)+1;
-    G.population += g; G.farmers += g;
-  } else if (surplus < -20) {
-    const loss = Math.floor(Math.random()*2)+1;
-    G.population = Math.max(8, G.population - loss);
-    G.farmers    = Math.max(4, G.farmers - loss);
-  }
-
-  G.trans = { harvest, popBefore, popAfter: G.population,
-              vassals: G.cities.filter(c=>c.status==='vassal').length };
-  G.transAcc = 0;
-  G.phase    = 'transition';
-
-  const returnNote = retPor > 0 ? ` ${retPor} porters join the harvest.` : '';
-  log(`Returned home.${returnNote} Harvest: +${harvest} food. Pop: ${popBefore}→${G.population}.`, '#ca8a04');
-  spawnFloat(`+${harvest}`, '#ca8a04', cv.width/2, cv.height/3);
+  // After arriving home during dry season, keep planning until rainy season triggers
+  G.phase = 'planning';
   panelUpdate();
 }
 
 function endTransition() {
-  G.season++;
-  document.getElementById('snum').textContent = G.season;
-
-  // Reset farms — rainy season growth is capped by how many farmers stayed home.
-  // Each farmer can tend roughly one plot; untended plots start bare and stall.
-  const tended = Math.min(G.homeFarmers, G.farms.length);
-  G.farms.forEach((f, i) => {
-    f.growth = 0;
-    if (i < tended && Math.random() < .55) f.growth = 1;          // tended: good sprout chance
-    else if (i >= tended && Math.random() < .15) f.growth = 1;    // untended: scrubby regrowth only
-  });
-  G.farms.forEach(f => {
-    if (f.growth === 1 && Math.random() < .45) f.growth = 2;      // some sprouts reach corn
-  });
-  // Reset homeFarmers for next season (full workforce until next march)
-  G.homeFarmers = G.farmers;
-
+  // Transition animation done — start a new dry season
   G.daysLeft = DAYS;
   G.dayAcc   = 0;
-
-  // Rebuild soldiers from population
-  const newSol = Math.floor(G.population * 0.3);
-  if (newSol > G.homeSoldiers) {
-    const diff = newSol - G.homeSoldiers;
-    G.homeSoldiers += diff;
-    G.farmers      = Math.max(4, G.farmers - diff);
-  }
-
-  scriptedEvents();
-
-  G.phase = 'planning';
+  G.phase    = 'planning';
   log(`Dry Season ${G.season} begins. The sun rises over the jungle.`, '#14b8a6');
   panelUpdate();
 }
@@ -929,41 +950,16 @@ function update(dt) {
   // ── Trail follow ──
   trailFollow();
 
-  // ── Day tick (marching + returning) ──
-  if (G.phase === 'marching' || G.phase === 'returning') {
-    G.dayAcc += dt;
-    if (G.dayAcc >= DAY_MS) {
-      G.dayAcc -= DAY_MS;
-      G.daysLeft--;
+  // ── Day tick (always — seasons never stop) ──
+  G.dayAcc += dt;
+  if (G.dayAcc >= DAY_MS) {
+    G.dayAcc -= DAY_MS;
+    tickDay();
+  }
 
-      // Food consumption
-      if (G.phase === 'marching' && G.marchFood > 0) {
-        const alive = G.trail.filter(u=>u.alive).length;
-        const consume = Math.ceil(alive * 0.25);
-        G.marchFood = Math.max(0, G.marchFood - consume);
-
-        if (G.marchFood <= 0) {
-          // Send porters home first
-          const p = G.trail.find(u => u.type==='porter' && u.alive);
-          if (p) {
-            p.alive = false;
-            log('Porter exhausted — turned back.', '#78350f');
-          } else {
-            // Soldiers start deserting
-            const sol = G.trail.find(u => u.type==='soldier' && u.alive);
-            if (sol) { sol.alive = false; log('A warrior deserts — no food.', '#b91c1c'); }
-          }
-        }
-      }
-
-      if (G.daysLeft === 30) log('The rains are two months away. Consider your position.', '#d97706');
-      if (G.daysLeft === 15) log('⚠ The rains approach! Return home now!', '#b91c1c');
-      if (G.daysLeft <= 0) {
-        log('The rains have arrived. Your march is cut short!', '#b91c1c');
-        G.food = Math.max(0, G.food - 15); // penalty
-        doRetreat();
-      }
-    }
+  // ── Rainy-season cistern + bucket update ──
+  if (G.isRainy) {
+    updateFarmerBuckets(dt);
   }
 
   // ── Sign proximity (planning phase only) ──
@@ -1004,8 +1000,17 @@ function update(dt) {
   hudUpdate();
 }
 
+function getSpeedMult() {
+  const tx = Math.floor(G.px / T), ty = Math.floor(G.py / T);
+  const dxH = tx - HOME.tx, dyH = ty - HOME.ty;
+  if (dxH*dxH + dyH*dyH < 64) return 1.0;       // home clearing — full speed
+  if (onRoad(tx, ty)) return G.isRainy ? 0.42 : 1.0;  // mud on roads during rain
+  return 0.28;                                    // jungle is slow
+}
+
 function movePlayer(dt) {
-  const spd = T * 0.075;
+  const base = T * 0.075;
+  const spd  = base * getSpeedMult();
   let dx = 0, dy = 0;
 
   if (G.keys['ArrowLeft']  || G.keys['KeyA']) dx -= spd;
@@ -1119,6 +1124,161 @@ function updateCombat(dt) {
   }
 }
 
+// ── Day tick ──────────────────────────────────────────────
+function tickDay() {
+  G.daysLeft--;
+
+  if (G.isRainy) {
+    // Cisterns fill during rain
+    for (const c of G.cisterns) {
+      if (c.water < c.maxWater) c.water = Math.min(c.maxWater, c.water + 1 + (Math.random() < 0.5 ? 1 : 0));
+    }
+    if (G.daysLeft <= 0) {
+      endRainySeason();
+    }
+    return;
+  }
+
+  // ── Dry-season food consumption when marching ──
+  if (G.phase === 'marching' && G.marchFood >= 0) {
+    const alive   = G.trail.filter(u => u.alive).length;
+    const consume = alive;   // 1 food/day per unit
+    G.marchFood   = Math.max(0, G.marchFood - consume);
+    if (G.marchFood === 0) {
+      const por = G.trail.find(u => u.type === 'porter' && u.alive);
+      if (por) { por.alive = false; log('A porter turns back — out of food.', '#78350f'); }
+      else {
+        const sol = G.trail.find(u => u.type === 'soldier' && u.alive);
+        if (sol) { sol.alive = false; log('A warrior deserts — no food left.', '#b91c1c'); }
+      }
+    }
+  }
+
+  if (G.daysLeft === 30) log('The rains are a month away. Consider your position.', '#d97706');
+  if (G.daysLeft === 15) log('⚠ Rains approach! Return home soon!', '#b91c1c');
+  if (G.daysLeft <= 0) {
+    if (G.phase === 'marching' || G.phase === 'combat') {
+      log('The rains arrive! Your march is cut short!', '#b91c1c');
+      G.food = Math.max(0, G.food - 15);
+      doRetreat();
+    }
+    startRainySeason();
+  }
+}
+
+function startRainySeason() {
+  G.isRainy   = true;
+  G.daysLeft  = RAINY_DAYS;
+  G.dayAcc    = 0;
+  // Reset cisterns — they'll fill over the rainy days
+  for (const c of G.cisterns) c.water = 0;
+  G.farmerBuckets = [];
+  // Teleport player home if they're still out
+  G.px = HOME.tx * T + T/2;
+  G.py = HOME.ty * T + T/2;
+  G.phase = 'planning';
+  G.trail = [];
+  G.enemies = [];
+  G.marchTarget = null;
+  log('The rains have come. The jungle drinks deep.', '#06b6d4');
+  document.getElementById('hud-season').innerHTML =
+    '&#9730; Rainy Season &nbsp; <span id="snum">' + G.season + '</span>';
+  panelUpdate();
+}
+
+function endRainySeason() {
+  G.isRainy = false;
+  G.season++;
+
+  // Harvest
+  const fullCorn   = G.farms.filter(f => f.growth >= 2).length;
+  const harvesters = G.farmers + G.homeSoldiers;
+  const harvest    = Math.round(fullCorn * harvesters * 0.75);
+  G.food = Math.min(G.maxFood, G.food + harvest);
+
+  // Population change
+  const popBefore = G.population;
+  const surplus   = G.food - G.population * 10;
+  if (surplus > 20) {
+    const g = Math.floor(Math.random()*2)+1;
+    G.population += g; G.farmers += g;
+  } else if (surplus < -20) {
+    const loss = Math.floor(Math.random()*2)+1;
+    G.population = Math.max(8, G.population - loss);
+    G.farmers    = Math.max(4, G.farmers - loss);
+  }
+
+  G.trans = { harvest, popBefore, popAfter: G.population,
+              vassals: G.cities.filter(c=>c.status==='vassal').length };
+  G.transAcc = 0;
+  G.phase    = 'transition';
+
+  // Grow farms for next season
+  const tended = Math.min(G.homeFarmers, G.farms.length);
+  G.farms.forEach((f, i) => {
+    f.growth = 0;
+    if (i < tended && Math.random() < .55) f.growth = 1;
+    else if (i >= tended && Math.random() < .15) f.growth = 1;
+  });
+  G.farms.forEach(f => { if (f.growth === 1 && Math.random() < .45) f.growth = 2; });
+  G.homeFarmers = G.farmers;
+
+  // Rebuild soldiers
+  const newSol = Math.floor(G.population * 0.3);
+  if (newSol > G.homeSoldiers) {
+    const diff = newSol - G.homeSoldiers;
+    G.homeSoldiers += diff;
+    G.farmers = Math.max(4, G.farmers - diff);
+  }
+
+  scriptedEvents();
+
+  log(`Dry Season ${G.season} begins. Harvest: +${harvest} food. Pop: ${popBefore}→${G.population}.`, '#ca8a04');
+  spawnFloat(`+${harvest}`, '#ca8a04', cv.width/2, cv.height/3);
+  document.getElementById('hud-season').innerHTML =
+    '&#9728; Dry Season &nbsp; <span id="snum">' + G.season + '</span>';
+  panelUpdate();
+}
+
+// Farmer bucket animation — farmers walk to cisterns during rain, then to crops
+function updateFarmerBuckets(dt) {
+  G.bucketTimer = (G.bucketTimer || 0) + dt;
+  // Spawn a new bucket run every 4 seconds if any cistern has water
+  if (G.bucketTimer > 4000) {
+    G.bucketTimer = 0;
+    const hasCisternWater = G.cisterns.some(c => c.water > 0);
+    if (hasCisternWater && G.farmerBuckets.length < 3) {
+      // Pick a cistern with water
+      const cist = G.cisterns.find(c => c.water > 0);
+      // Pick a farm plot
+      const farm = G.farms[Math.floor(Math.random() * G.farms.length)];
+      G.farmerBuckets.push({
+        startX: HOME.tx * T + T/2,
+        startY: HOME.ty * T + T/2,
+        midX: cist.tx * T + T/2,
+        midY: cist.ty * T + T/2,
+        endX: farm.tx * T + T/2,
+        endY: farm.ty * T + T/2,
+        phase: 'toCistern',  // toCistern → toCrop → done
+        t: 0,
+        cist,
+      });
+    }
+  }
+
+  // Update each bucket carrier
+  G.farmerBuckets = G.farmerBuckets.filter(b => {
+    b.t += dt / 2500;
+    if (b.phase === 'toCistern' && b.t >= 1) {
+      b.t = 0;
+      b.phase = 'toCrop';
+      if (b.cist.water > 0) b.cist.water--;
+    }
+    if (b.phase === 'toCrop' && b.t >= 1) return false;  // done, remove
+    return true;
+  });
+}
+
 function gameOver() {
   G.phase = 'gameover';
   document.getElementById('go').style.display = 'flex';
@@ -1174,35 +1334,55 @@ function render() {
   // ── Farm plots ──
   for (const f of G.farms) {
     if (fogHides(f.tx, f.ty)) continue;
-    const fx = f.tx*T - cx + 6, fy = f.ty*T - cy + 6;
-    // Dirt base
+    const fx = f.tx*T - cx + 2, fy = f.ty*T - cy + 2;
+    // Fence border
+    ctx.fillStyle = '#5c3317';
+    ctx.fillRect(fx, fy, 28, 28);
+    // Dirt field
     ctx.fillStyle = '#7c4a1e';
-    ctx.fillRect(fx, fy, 20, 20);
+    ctx.fillRect(fx+3, fy+3, 22, 22);
+    // Dirt texture rows
+    ctx.fillStyle = '#8b5430';
+    ctx.fillRect(fx+3, fy+9,  22, 1);
+    ctx.fillRect(fx+3, fy+15, 22, 1);
+    ctx.fillRect(fx+3, fy+21, 22, 1);
+
     if (f.growth === 0) {
-      // Bare: dirt texture dots
+      // Bare: clods of dirt
       ctx.fillStyle = '#5c3317';
-      ctx.fillRect(fx+3,  fy+5,  2, 2);
-      ctx.fillRect(fx+10, fy+12, 2, 2);
-      ctx.fillRect(fx+15, fy+6,  2, 2);
+      ctx.fillRect(fx+5,  fy+6,  3, 2);
+      ctx.fillRect(fx+13, fy+13, 3, 2);
+      ctx.fillRect(fx+19, fy+7,  3, 2);
     } else if (f.growth === 1) {
-      // Sprouts: two small green shoots
+      // Sprouts: small green shoots in rows
       ctx.fillStyle = '#4ade80';
-      ctx.fillRect(fx+5,  fy+9, 2, 8);
-      ctx.fillRect(fx+13, fy+9, 2, 8);
-      // Leaf tips
-      ctx.fillRect(fx+3,  fy+9, 2, 2);
-      ctx.fillRect(fx+11, fy+9, 2, 2);
-    } else if (f.growth >= 2) {
-      // Mature corn: 3 tall stalks with ears
+      ctx.fillRect(fx+5,  fy+7, 2, 11);  ctx.fillRect(fx+3,  fy+7, 2, 3);
+      ctx.fillRect(fx+12, fy+7, 2, 11);  ctx.fillRect(fx+10, fy+7, 2, 3);
+      ctx.fillRect(fx+19, fy+7, 2, 11);  ctx.fillRect(fx+17, fy+7, 2, 3);
+      ctx.fillStyle = '#86efac';
+      ctx.fillRect(fx+4,  fy+7, 2, 2);   ctx.fillRect(fx+11, fy+7, 2, 2);
+      ctx.fillRect(fx+18, fy+7, 2, 2);
+    } else {
+      // Mature corn: 3 tall stalks with golden ears
+      ctx.fillStyle = '#4d7c0f';
+      ctx.fillRect(fx+5,  fy+4, 3, 18);
+      ctx.fillRect(fx+12, fy+2, 3, 20);
+      ctx.fillRect(fx+19, fy+4, 3, 18);
+      // Leaves
       ctx.fillStyle = '#65a30d';
-      ctx.fillRect(fx+3,  fy+4, 2, 14);
-      ctx.fillRect(fx+9,  fy+2, 2, 16);
-      ctx.fillRect(fx+15, fy+4, 2, 14);
-      // Corn ears
+      ctx.fillRect(fx+3,  fy+6, 5, 2);   ctx.fillRect(fx+6,  fy+11,5, 2);
+      ctx.fillRect(fx+10, fy+5, 5, 2);   ctx.fillRect(fx+13, fy+10,5, 2);
+      ctx.fillRect(fx+17, fy+6, 5, 2);   ctx.fillRect(fx+20, fy+11,5, 2);
+      // Corn ears (golden)
       ctx.fillStyle = '#ca8a04';
-      ctx.fillRect(fx+2,  fy+6, 3, 3);
-      ctx.fillRect(fx+8,  fy+4, 3, 3);
-      ctx.fillRect(fx+14, fy+6, 3, 3);
+      ctx.fillRect(fx+3,  fy+8,  5, 4);
+      ctx.fillRect(fx+10, fy+6,  5, 4);
+      ctx.fillRect(fx+17, fy+8,  5, 4);
+      // Ear detail
+      ctx.fillStyle = '#eab308';
+      ctx.fillRect(fx+4,  fy+9,  3, 2);
+      ctx.fillRect(fx+11, fy+7,  3, 2);
+      ctx.fillRect(fx+18, fy+9,  3, 2);
     }
   }
 
@@ -1243,8 +1423,20 @@ function render() {
     // (hp bar drawn inside drawSpritePlayer)
   }
 
+  // ── Cisterns ──
+  drawCisterns(cx, cy);
+
+  // ── Bucket-carrying farmers (rainy season) ──
+  drawBucketFarmers(cx, cy);
+
   // ── Fog of war ──
   drawFog(W, H);
+
+  // ── Rain overlay ──
+  if (G.isRainy) drawRain(W, H);
+
+  // ── Strike button (combat only) ──
+  if (G.phase === 'combat') drawStrikeButton(W, H);
 
   // ── Direction arrow ──
   if (G.marchTarget && (G.phase==='marching' || G.phase==='returning')) {
@@ -1260,10 +1452,12 @@ function render() {
 
 function tileCol(tx, ty) {
   if (tx < 0 || ty < 0 || tx >= WW || ty >= WH) return '#050708';
-  if (onRoad(tx, ty)) return '#b8a87a';
+  if (onRoad(tx, ty)) {
+    return (G && G.isRainy) ? '#5a4830' : '#b8a87a';   // mud during rainy season
+  }
   const dx = tx - HOME.tx, dy = ty - HOME.ty;
-  if (dx*dx + dy*dy < 64) return '#162a1a';  // clearing near home
-  return '#0f1a10';
+  if (dx*dx + dy*dy < 64) return G && G.isRainy ? '#0d2015' : '#162a1a';
+  return G && G.isRainy ? '#0b1a0c' : '#0f1a10';        // jungle is darker in rain
 }
 
 function onRoad(tx, ty) {
@@ -1307,85 +1501,125 @@ function drawFog(W, H) {
 
 function drawHomeCity(cx, cy) {
   const hx = HOME.tx*T - cx, hy = HOME.ty*T - cy;
-  // Visible even at fog edge if player is nearby (it's home base)
   if (fogHides(HOME.tx, HOME.ty) && wpDist(G.px,G.py,HOME.tx*T,HOME.ty*T) > FOG*T*1.4) return;
 
-  // Ground clearing
+  // Ground plaza — bigger clearing
   ctx.fillStyle = '#0d2218';
+  ctx.fillRect(hx - T*3, hy - T*3, T*7, T*7);
+  // Stone plaza pavement
+  ctx.fillStyle = '#1a2d20';
   ctx.fillRect(hx - T*2, hy - T*2, T*5, T*5);
 
-  // 5-step pyramid — tan stone tones, widest at base
-  ctx.fillStyle = '#7a6848'; ctx.fillRect(hx+1,  hy+22, 30, 6);  // layer 1 base
-  ctx.fillStyle = '#927f5e'; ctx.fillRect(hx+4,  hy+17, 24, 6);  // layer 2
-  ctx.fillStyle = '#a39070'; ctx.fillRect(hx+7,  hy+12, 18, 6);  // layer 3
-  ctx.fillStyle = '#b4a07a'; ctx.fillRect(hx+10, hy+7,  12, 6);  // layer 4
-  ctx.fillStyle = '#c4b08a'; ctx.fillRect(hx+13, hy+2,   6, 6);  // layer 5 top
-  // Doorway at base
-  ctx.fillStyle = '#1a0d00'; ctx.fillRect(hx+13, hy+25,  6, 4);
+  // Houses around plaza — 4 small thatched huts
+  const huts = [
+    { ox: -T*2+2, oy: -T+4 }, { ox: T+10, oy: -T+4 },
+    { ox: -T*2+2, oy: T+8  }, { ox: T+10, oy: T+8  },
+  ];
+  for (const h of huts) {
+    const hux = hx + h.ox, huy = hy + h.oy;
+    ctx.fillStyle = '#5c3317'; ctx.fillRect(hux,    huy+12, 18, 10);  // walls
+    ctx.fillStyle = '#92400e'; ctx.fillRect(hux-2,  huy+7,  22, 6);   // roof overhang
+    ctx.fillStyle = '#78350f'; ctx.fillRect(hux+3,  huy+1,  12, 8);   // roof peak
+    ctx.fillStyle = '#1a0d00'; ctx.fillRect(hux+7,  huy+14, 5,  8);   // door
+  }
+
+  // 7-step pyramid — wider and taller
+  ctx.fillStyle = '#5a4e38'; ctx.fillRect(hx-10, hy+28, 52, 8);  // base
+  ctx.fillStyle = '#6b5e46'; ctx.fillRect(hx-7,  hy+21, 46, 8);
+  ctx.fillStyle = '#7a6848'; ctx.fillRect(hx-4,  hy+14, 40, 8);
+  ctx.fillStyle = '#927f5e'; ctx.fillRect(hx-1,  hy+7,  34, 8);
+  ctx.fillStyle = '#a39070'; ctx.fillRect(hx+3,  hy+1,  26, 7);
+  ctx.fillStyle = '#b4a07a'; ctx.fillRect(hx+7,  hy-5,  18, 7);
+  ctx.fillStyle = '#c8b890'; ctx.fillRect(hx+11, hy-10, 10, 6);  // top
+  // Temple room at peak
+  ctx.fillStyle = '#d4c49a'; ctx.fillRect(hx+10, hy-16, 12, 7);
+  ctx.fillStyle = '#e8dab4'; ctx.fillRect(hx+12, hy-18, 8,  3);  // roof crest
+  // Doorway
+  ctx.fillStyle = '#1a0d00'; ctx.fillRect(hx+13, hy+30,  6, 6);
+  // Jade flag on top
+  ctx.fillStyle = '#14b8a6'; ctx.fillRect(hx+16, hy-24, 2,  8);
+  ctx.fillStyle = '#0d9488'; ctx.fillRect(hx+17, hy-24, 6,  5);
 
   // Label
   ctx.fillStyle = '#14b8a6';
   ctx.font = 'bold 9px monospace';
   ctx.textAlign = 'center';
-  ctx.fillText('YOUR CITY', hx+T/2, hy+T+14);
+  ctx.fillText('YOUR CITY', hx+T/2, hy+T*2+6);
 }
 
 function drawCity(city, cx, cy) {
   const ox = city.tx*T - cx, oy = city.ty*T - cy;
-
-  // Ground
-  ctx.fillStyle = '#162018';
-  ctx.fillRect(ox - T, oy - T, T*3, T*3);
-
-  // 5-step pyramid tinted by status
   const colMap = { independent: city.col, vassal:'#0f766e', rebellious:'#7f1d1d' };
   const base = colMap[city.status] || city.col;
-  // Draw pyramid layers — darkest at base, lightest at top, all tinted by status hue
-  ctx.fillStyle = base;                   ctx.fillRect(ox+1,  oy+22, 30, 6);
-  ctx.fillStyle = 'rgba(255,255,255,.08)';ctx.fillRect(ox+1,  oy+22, 30, 6);
-  ctx.fillStyle = base;                   ctx.fillRect(ox+4,  oy+17, 24, 6);
-  ctx.fillStyle = 'rgba(255,255,255,.13)';ctx.fillRect(ox+4,  oy+17, 24, 6);
-  ctx.fillStyle = base;                   ctx.fillRect(ox+7,  oy+12, 18, 6);
-  ctx.fillStyle = 'rgba(255,255,255,.20)';ctx.fillRect(ox+7,  oy+12, 18, 6);
-  ctx.fillStyle = base;                   ctx.fillRect(ox+10, oy+7,  12, 6);
-  ctx.fillStyle = 'rgba(255,255,255,.28)';ctx.fillRect(ox+10, oy+7,  12, 6);
-  ctx.fillStyle = base;                   ctx.fillRect(ox+13, oy+2,   6, 6);
-  ctx.fillStyle = 'rgba(255,255,255,.36)';ctx.fillRect(ox+13, oy+2,   6, 6);
-  // Doorway at base
-  ctx.fillStyle = '#1a0d00'; ctx.fillRect(ox+13, oy+25, 6, 4);
 
-  // Walls for rebellious — thick fillRect segments, gate gap on south side
-  if (city.status === 'rebellious') {
-    const wx = ox - T + 2, wy = oy - T + 2, wsz = T*3 - 4;
-    // Outer wall (dark brown stone)
-    ctx.fillStyle = '#78350f';
-    ctx.fillRect(wx,        wy,        wsz, 5);           // top
-    ctx.fillRect(wx,        wy+wsz-5,  wsz, 5);           // bottom
-    ctx.fillRect(wx,        wy,        5,   wsz);          // left
-    ctx.fillRect(wx+wsz-5,  wy,        5,   wsz);          // right
-    // Gate gap — overwrite center of bottom wall with ground color
-    ctx.fillStyle = '#162018';
-    ctx.fillRect(wx + Math.floor(wsz/2) - 8, wy+wsz-5, 16, 5);
+  // Ground plaza
+  ctx.fillStyle = '#162018';
+  ctx.fillRect(ox - T*2, oy - T*2, T*5, T*5);
+  ctx.fillStyle = '#1a2a1e';
+  ctx.fillRect(ox - T,   oy - T,   T*3, T*3);
 
-    // Inner wall (lighter amber stone)
-    const iwx = ox - T/2 + 4, iwy = oy - T/2 + 4, iwsz = T*2 - 8;
-    ctx.fillStyle = '#a16207';
-    ctx.fillRect(iwx,         iwy,         iwsz, 4);
-    ctx.fillRect(iwx,         iwy+iwsz-4,  iwsz, 4);
-    ctx.fillRect(iwx,         iwy,         4,    iwsz);
-    ctx.fillRect(iwx+iwsz-4,  iwy,         4,    iwsz);
-    // Inner gate gap — same axis as outer
-    ctx.fillStyle = '#162018';
-    ctx.fillRect(iwx + Math.floor(iwsz/2) - 6, iwy+iwsz-4, 12, 4);
+  // 4 small houses around the temple
+  const cHuts = [
+    { hx: -T+2,  hy: -T+2  },
+    { hx: T+12,  hy: -T+2  },
+    { hx: -T+2,  hy: T+10  },
+    { hx: T+12,  hy: T+10  },
+  ];
+  for (const h of cHuts) {
+    const hx2 = ox + h.hx, hy2 = oy + h.hy;
+    ctx.fillStyle = '#3d2a14'; ctx.fillRect(hx2,    hy2+10, 14, 8);
+    ctx.fillStyle = '#5c3d20'; ctx.fillRect(hx2-2,  hy2+6,  18, 5);
+    ctx.fillStyle = '#4a3018'; ctx.fillRect(hx2+3,  hy2+1,  8,  6);
+    ctx.fillStyle = '#1a0d00'; ctx.fillRect(hx2+5,  hy2+12, 4,  6);
   }
 
-  // Name + status icon
+  // 6-step pyramid
+  ctx.fillStyle = base;                    ctx.fillRect(ox-6,  oy+28, 44, 8);
+  ctx.fillStyle = 'rgba(0,0,0,.18)';       ctx.fillRect(ox-6,  oy+28, 44, 8);
+  ctx.fillStyle = base;                    ctx.fillRect(ox-3,  oy+21, 38, 8);
+  ctx.fillStyle = 'rgba(255,255,255,.08)'; ctx.fillRect(ox-3,  oy+21, 38, 8);
+  ctx.fillStyle = base;                    ctx.fillRect(ox+1,  oy+14, 30, 8);
+  ctx.fillStyle = 'rgba(255,255,255,.14)'; ctx.fillRect(ox+1,  oy+14, 30, 8);
+  ctx.fillStyle = base;                    ctx.fillRect(ox+4,  oy+8,  24, 7);
+  ctx.fillStyle = 'rgba(255,255,255,.20)'; ctx.fillRect(ox+4,  oy+8,  24, 7);
+  ctx.fillStyle = base;                    ctx.fillRect(ox+8,  oy+2,  16, 7);
+  ctx.fillStyle = 'rgba(255,255,255,.28)'; ctx.fillRect(ox+8,  oy+2,  16, 7);
+  ctx.fillStyle = base;                    ctx.fillRect(ox+11, oy-4,  10, 7);
+  ctx.fillStyle = 'rgba(255,255,255,.36)'; ctx.fillRect(ox+11, oy-4,  10, 7);
+  // Temple room at peak
+  ctx.fillStyle = base;                    ctx.fillRect(ox+9,  oy-10, 14, 7);
+  ctx.fillStyle = 'rgba(255,255,255,.22)'; ctx.fillRect(ox+9,  oy-10, 14, 7);
+  // Doorway
+  ctx.fillStyle = '#1a0d00'; ctx.fillRect(ox+14, oy+30, 4, 6);
+
+  // Walls for rebellious
+  if (city.status === 'rebellious') {
+    const wx = ox - T*2 + 3, wy = oy - T*2 + 3, wsz = T*5 - 6;
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(wx,       wy,       wsz, 6);
+    ctx.fillRect(wx,       wy+wsz-6, wsz, 6);
+    ctx.fillRect(wx,       wy,       6,   wsz);
+    ctx.fillRect(wx+wsz-6, wy,       6,   wsz);
+    ctx.fillStyle = '#162018';
+    ctx.fillRect(wx + Math.floor(wsz/2) - 10, wy+wsz-6, 20, 6);
+    // Inner wall
+    const iwx = ox - T + 4, iwy = oy - T + 4, iwsz = T*3 - 8;
+    ctx.fillStyle = '#a16207';
+    ctx.fillRect(iwx,          iwy,           iwsz, 5);
+    ctx.fillRect(iwx,          iwy+iwsz-5,    iwsz, 5);
+    ctx.fillRect(iwx,          iwy,           5,    iwsz);
+    ctx.fillRect(iwx+iwsz-5,   iwy,           5,    iwsz);
+    ctx.fillStyle = '#1a2a1e';
+    ctx.fillRect(iwx + Math.floor(iwsz/2) - 8, iwy+iwsz-5, 16, 5);
+  }
+
+  // Name + status
   const iconMap = { independent:'○', vassal:'◆', rebellious:'✗' };
   ctx.fillStyle = '#e7e0d2';
   ctx.font = '9px monospace'; ctx.textAlign = 'center';
-  ctx.fillText(city.name, ox+T/2, oy+T+12);
+  ctx.fillText(city.name, ox+T/2, oy+T*2+8);
   ctx.fillStyle = colMap[city.status] || '#e7e0d2';
-  ctx.fillText(iconMap[city.status]||'?', ox+T/2, oy+T+22);
+  ctx.fillText(iconMap[city.status]||'?', ox+T/2, oy+T*2+18);
 }
 
 // ── Road signs ────────────────────────────────────────────
@@ -1417,10 +1651,10 @@ function drawSigns(cx, cy) {
     ctx.textAlign = 'center';
     ctx.fillText(`${icon} ${sign.city.name}`, sx, sy - 8);
 
-    // Distance line
+    // Distance line — in days
     ctx.fillStyle = '#5c3d10';
     ctx.font = '6px monospace';
-    ctx.fillText(`~${sign.dist} tiles`, sx, sy - 1);
+    ctx.fillText(`~${sign.days} day${sign.days===1?'':'s'}`, sx, sy - 1);
 
     // Glow hint when near
     if (near) {
@@ -1457,14 +1691,17 @@ function drawFarmers(cx, cy) {
     const oy  = by + Math.cos(t * 0.70 + ph + 1.1) * 2;
     // Working bob: lean forward/back in a slow rhythm
     const bob = Math.sin(t * 1.8 + ph) > 0 ? 1 : 0;  // 0 or 1px vertical bob
-    ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.fillRect(ox-2, oy+7+bob, 6, 2);
-    ctx.fillStyle = '#d6d3d1';         ctx.fillRect(ox-1, oy-2+bob, 4, 6);
-    ctx.fillStyle = '#c49a6c';         ctx.fillRect(ox,   oy-5+bob, 3, 4);
-    ctx.fillStyle = '#4ade80';         ctx.fillRect(ox+1, oy-7+bob, 2, 2);
-    ctx.fillStyle = '#d6d3d1';         ctx.fillRect(ox-2, oy+4,     2, 4);
-    ctx.fillStyle = '#d6d3d1';         ctx.fillRect(ox+2, oy+4,     2, 4);
-    // Arm swings down toward crop on the bob
-    ctx.fillStyle = '#c49a6c';         ctx.fillRect(ox+3, oy+1+bob, 3, 2);
+    // Bigger farmer sprite with working animation
+    ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.fillRect(ox-3, oy+10+bob, 9, 3);
+    ctx.fillStyle = '#a8a29e';         ctx.fillRect(ox-3, oy+3,      4, 8); // legs
+    ctx.fillStyle = '#a8a29e';         ctx.fillRect(ox+1, oy+3,      4, 8);
+    ctx.fillStyle = '#c49a6c';         ctx.fillRect(ox-2, oy+11+bob, 4, 3); // sandals
+    ctx.fillStyle = '#e7e5e4';         ctx.fillRect(ox-3, oy-5,      8,10); // body
+    ctx.fillStyle = '#c49a6c';         ctx.fillRect(ox-1, oy-9+bob,  5, 5); // head
+    ctx.fillStyle = '#4ade80';         ctx.fillRect(ox,   oy-12+bob, 3, 3); // hat
+    ctx.fillStyle = '#c49a6c';         ctx.fillRect(ox-6, oy-3,      3, 5); // left arm
+    ctx.fillStyle = '#c49a6c';         ctx.fillRect(ox+5, oy-3+bob,  4, 3); // right arm working
+    ctx.fillStyle = '#78350f';         ctx.fillRect(ox+6, oy+1+bob,  2, 5); // tool handle
   }
 
   const pcx = G.px - cx, pcy = G.py - cy;
@@ -1493,103 +1730,307 @@ function drawFarmers(cx, cy) {
   }
 }
 
-// ── Pixel-art sprites ─────────────────────────────────────
+// ── Pixel-art sprites (bigger, more detailed) ─────────────
 function drawSpritePlayer(sx, sy) {
   // Shadow
-  ctx.fillStyle = 'rgba(0,0,0,.35)';
-  ctx.fillRect(sx-6,  sy+8,  12, 3);
+  ctx.fillStyle = 'rgba(0,0,0,.38)';
+  ctx.fillRect(sx-9,  sy+14, 18, 4);
+  // Sandals / feet
+  ctx.fillStyle = '#7c5c2e';
+  ctx.fillRect(sx-6,  sy+11,  5, 3);
+  ctx.fillRect(sx+1,  sy+11,  5, 3);
   // Legs
-  ctx.fillStyle = '#5c3317';
-  ctx.fillRect(sx-4,  sy+5,   3, 5);
-  ctx.fillRect(sx+1,  sy+5,   3, 5);
-  // Loincloth
-  ctx.fillStyle = '#92400e';
-  ctx.fillRect(sx-4,  sy+2,   8, 4);
-  // Torso (tan with jaguar spots)
   ctx.fillStyle = '#c49a6c';
-  ctx.fillRect(sx-4,  sy-5,   8, 8);
+  ctx.fillRect(sx-5,  sy+4,   4, 8);
+  ctx.fillRect(sx+1,  sy+4,   4, 8);
+  // Loincloth / hip wrap
+  ctx.fillStyle = '#7c3aed';
+  ctx.fillRect(sx-6,  sy+2,  12, 4);
+  ctx.fillStyle = '#6d28d9';
+  ctx.fillRect(sx-3,  sy+5,   6, 3);   // fringe
+  // Torso — tan skin with jade necklace and jaguar spots
+  ctx.fillStyle = '#c49a6c';
+  ctx.fillRect(sx-5,  sy-7,  10, 10);
+  // Jaguar spots
   ctx.fillStyle = '#2d1508';
-  ctx.fillRect(sx-2,  sy-4,   2, 2);
-  ctx.fillRect(sx+1,  sy-2,   2, 2);
-  ctx.fillRect(sx-1,  sy+1,   2, 2);
+  ctx.fillRect(sx-3,  sy-6,   3, 3);
+  ctx.fillRect(sx+1,  sy-3,   3, 3);
+  ctx.fillRect(sx-2,  sy+1,   3, 3);
+  // Jade necklace
+  ctx.fillStyle = '#14b8a6';
+  ctx.fillRect(sx-4,  sy-7,  10, 2);
+  ctx.fillStyle = '#0d9488';
+  ctx.fillRect(sx-1,  sy-7,   2, 3);   // pendant
+  // Arms
+  ctx.fillStyle = '#c49a6c';
+  ctx.fillRect(sx-9,  sy-6,   4, 7);   // left arm
+  ctx.fillRect(sx+5,  sy-6,   4, 7);   // right arm
   // Head
   ctx.fillStyle = '#c49a6c';
-  ctx.fillRect(sx-3,  sy-10,  6, 6);
+  ctx.fillRect(sx-4,  sy-14,  8, 8);
+  // Eyes
+  ctx.fillStyle = '#1a0a00';
+  ctx.fillRect(sx-2,  sy-11,  2, 2);
+  ctx.fillRect(sx+1,  sy-11,  2, 2);
   // Jade ear spools
   ctx.fillStyle = '#14b8a6';
-  ctx.fillRect(sx-5,  sy-9,   2, 2);
-  ctx.fillRect(sx+3,  sy-9,   2, 2);
-  // Obsidian club
-  ctx.fillStyle = '#111827';
-  ctx.fillRect(sx+5,  sy-1,   2, 7);
-  ctx.fillStyle = '#374151';
-  ctx.fillRect(sx+4,  sy-3,   4, 3);
-  // Headdress — red base, green mid, bright green tall center, red side feathers
+  ctx.fillRect(sx-7,  sy-12,  3, 3);
+  ctx.fillRect(sx+4,  sy-12,  3, 3);
+  // Macuahuitl (obsidian club) — right hand
+  ctx.fillStyle = '#92400e'; ctx.fillRect(sx+8,  sy-3,   3,  12);  // handle
+  ctx.fillStyle = '#b45309'; ctx.fillRect(sx+7,  sy-8,   5,  10);  // blade body
+  ctx.fillStyle = '#111827'; ctx.fillRect(sx+5,  sy-7,   3,   4);  ctx.fillRect(sx+5, sy-1, 3, 4); // obsidian left
+  ctx.fillStyle = '#111827'; ctx.fillRect(sx+11, sy-7,   3,   4);  ctx.fillRect(sx+11,sy-1, 3, 4); // obsidian right
+  ctx.fillStyle = '#374151'; ctx.fillRect(sx+6,  sy-6,   2,   2);  // glint
+  // Headdress — quetzal feathers
   ctx.fillStyle = '#dc2626';
-  ctx.fillRect(sx-4,  sy-13,  8, 3);
+  ctx.fillRect(sx-5,  sy-17,  10, 4);   // red base
   ctx.fillStyle = '#16a34a';
-  ctx.fillRect(sx-3,  sy-16,  6, 3);
+  ctx.fillRect(sx-4,  sy-21,  8,  5);   // green mid
   ctx.fillStyle = '#4ade80';
-  ctx.fillRect(sx-1,  sy-20,  2, 4);
+  ctx.fillRect(sx-1,  sy-28,  3,  8);   // tall center feather
+  ctx.fillStyle = '#22c55e';
+  ctx.fillRect(sx-4,  sy-26,  3,  7);   // side feather left
+  ctx.fillRect(sx+2,  sy-26,  3,  7);   // side feather right
   ctx.fillStyle = '#ef4444';
-  ctx.fillRect(sx-4,  sy-18,  2, 3);
-  ctx.fillRect(sx+2,  sy-18,  2, 3);
+  ctx.fillRect(sx-6,  sy-24,  3,  5);   // red accent left
+  ctx.fillRect(sx+4,  sy-24,  3,  5);   // red accent right
   // HP bar
-  hpBar(sx-11, sy-24, 22, 4, G.pHp/G.pMaxHp, '#14b8a6');
+  hpBar(sx-14, sy-32, 28, 5, G.pHp/G.pMaxHp, '#14b8a6');
 }
 
 function drawSpriteSoldier(sx, sy, isEnemy, hpPct) {
-  const armorCol  = isEnemy ? '#ef4444' : '#f5f5f4';
-  const legCol    = isEnemy ? '#b91c1c' : '#d6d3d1';
-  const featherCol= isEnemy ? '#ef4444' : '#16a34a';
-  const barCol    = isEnemy ? '#b91c1c' : '#d6d3d1';
+  const skinCol   = '#c49a6c';
+  const armorCol  = isEnemy ? '#b91c1c' : '#e7e5e4';
+  const legCol    = isEnemy ? '#7f1d1d' : '#a8a29e';
+  const featherCol= isEnemy ? '#ef4444' : '#15803d';
+  const shieldCol = isEnemy ? '#991b1b' : '#92400e';
+  const barCol    = isEnemy ? '#ef4444' : '#a3e635';
   // Shadow
-  ctx.fillStyle = 'rgba(0,0,0,.3)';
-  ctx.fillRect(sx-4,  sy+7,   8, 2);
+  ctx.fillStyle = 'rgba(0,0,0,.32)';
+  ctx.fillRect(sx-6, sy+12, 12, 3);
+  // Feet
+  ctx.fillStyle = '#5c3317';
+  ctx.fillRect(sx-5, sy+9,   4, 3);
+  ctx.fillRect(sx+1, sy+9,   4, 3);
   // Legs
   ctx.fillStyle = legCol;
-  ctx.fillRect(sx-3,  sy+4,   2, 4);
-  ctx.fillRect(sx+1,  sy+4,   2, 4);
-  // Body / armor
+  ctx.fillRect(sx-4, sy+3,   3, 7);
+  ctx.fillRect(sx+1, sy+3,   3, 7);
+  // Armor / body
   ctx.fillStyle = armorCol;
-  ctx.fillRect(sx-3,  sy-4,   6, 9);
+  ctx.fillRect(sx-4, sy-6,   8, 10);
+  // Armor lines
+  ctx.fillStyle = 'rgba(0,0,0,.2)';
+  ctx.fillRect(sx-4, sy-2,   8,  1);
+  ctx.fillRect(sx-4, sy+2,   8,  1);
+  // Arms
+  ctx.fillStyle = skinCol;
+  ctx.fillRect(sx-7, sy-5,   3,  6);   // left
+  ctx.fillRect(sx+4, sy-5,   3,  6);   // right
+  // Shield (left arm)
+  ctx.fillStyle = shieldCol;
+  ctx.fillRect(sx-10,sy-4,   4,  8);
+  ctx.fillStyle = 'rgba(255,255,255,.15)';
+  ctx.fillRect(sx-10,sy-4,   4,  2);
   // Head
-  ctx.fillStyle = '#c49a6c';
-  ctx.fillRect(sx-2,  sy-8,   4, 5);
-  // Feather
+  ctx.fillStyle = skinCol;
+  ctx.fillRect(sx-3, sy-11,  6,  6);
+  // Eyes
+  ctx.fillStyle = '#1a0a00';
+  ctx.fillRect(sx-2, sy-9,   2,  1);
+  ctx.fillRect(sx+1, sy-9,   2,  1);
+  // Helmet / headband
+  ctx.fillStyle = armorCol;
+  ctx.fillRect(sx-3, sy-12,  6,  2);
+  // Feather plume
   ctx.fillStyle = featherCol;
-  ctx.fillRect(sx-1,  sy-11,  2, 4);
-  // Macuahuitl club
-  ctx.fillStyle = '#78350f';
-  ctx.fillRect(sx+4,  sy-1,   2, 6);
-  ctx.fillStyle = '#292524';
-  ctx.fillRect(sx+3,  sy-3,   3, 3);
+  ctx.fillRect(sx-1, sy-17,  3,  6);
+  ctx.fillRect(sx-3, sy-16,  2,  4);
+  ctx.fillRect(sx+2, sy-16,  2,  4);
+  // Macuahuitl (right hand)
+  ctx.fillStyle = '#92400e'; ctx.fillRect(sx+6,  sy-2,  2, 9);
+  ctx.fillStyle = '#b45309'; ctx.fillRect(sx+5,  sy-6,  4, 7);
+  ctx.fillStyle = '#111827';
+  ctx.fillRect(sx+3,  sy-5,  3, 3);
+  ctx.fillRect(sx+3,  sy-1,  3, 3);
+  ctx.fillRect(sx+8,  sy-5,  3, 3);
+  ctx.fillRect(sx+8,  sy-1,  3, 3);
   // HP bar
-  hpBar(sx-6, sy-14, 12, 3, hpPct, barCol);
+  hpBar(sx-8, sy-20, 16, 3, hpPct, barCol);
 }
 
 function drawSpritePorter(sx, sy) {
   // Shadow
   ctx.fillStyle = 'rgba(0,0,0,.3)';
-  ctx.fillRect(sx-4,  sy+7,   8, 2);
-  // Legs
-  ctx.fillStyle = '#d6d3d1';
-  ctx.fillRect(sx-2,  sy+4,   2, 5);
-  ctx.fillRect(sx+1,  sy+4,   2, 5);
-  // Body (shifted forward — bent posture)
-  ctx.fillStyle = '#f5f5f4';
-  ctx.fillRect(sx-1,  sy-3,   6, 8);
-  // Head (bent forward)
-  ctx.fillStyle = '#c49a6c';
-  ctx.fillRect(sx+1,  sy-7,   4, 5);
-  // Tumpline strap
+  ctx.fillRect(sx-5, sy+12, 12, 3);
+  // Feet
+  ctx.fillStyle = '#7c5c2e';
+  ctx.fillRect(sx-4, sy+10, 4, 3);
+  ctx.fillRect(sx+1, sy+10, 4, 3);
+  // Legs (forward lean)
+  ctx.fillStyle = '#a8a29e';
+  ctx.fillRect(sx-3, sy+4,  3, 7);
+  ctx.fillRect(sx+1, sy+4,  3, 7);
+  // Body (bent forward — heavy load)
+  ctx.fillStyle = '#e7e5e4';
+  ctx.fillRect(sx-1, sy-5,  7, 10);
+  // Torso detail
+  ctx.fillStyle = 'rgba(0,0,0,.12)';
+  ctx.fillRect(sx-1, sy,    7, 1);
+  // Tumpline strap across forehead
   ctx.fillStyle = '#8b7355';
-  ctx.fillRect(sx,    sy-2,   1, 4);
-  // Cargo bundle on back
+  ctx.fillRect(sx+2, sy-10, 4, 2);   // strap on forehead
+  ctx.fillRect(sx+3, sy-8,  2, 6);   // strap down back
+  // Head (angled forward)
+  ctx.fillStyle = '#c49a6c';
+  ctx.fillRect(sx+2, sy-9,  5, 5);   // head tilted right/forward
+  ctx.fillStyle = '#1a0a00';
+  ctx.fillRect(sx+3, sy-7,  1, 1);   // eye
+  // Big cargo bundle on back
   ctx.fillStyle = '#92400e';
-  ctx.fillRect(sx-6,  sy-4,   7, 7);
+  ctx.fillRect(sx-9, sy-5,  9, 10);
   ctx.fillStyle = '#78350f';
-  ctx.fillRect(sx-5,  sy-3,   5, 5);
+  ctx.fillRect(sx-8, sy-4,  7, 8);
+  // Bundle markings
+  ctx.fillStyle = '#d97706';
+  ctx.fillRect(sx-8, sy-1,  7, 1);   // rope line
+  ctx.fillRect(sx-5, sy-4,  1, 8);   // rope line
+  // Arms straining
+  ctx.fillStyle = '#c49a6c';
+  ctx.fillRect(sx-4, sy-4,  3, 5);   // left arm back/under
+  ctx.fillRect(sx+5, sy-4,  3, 5);   // right arm
+}
+
+// ── Cisterns ──────────────────────────────────────────────
+function drawCisterns(cx, cy) {
+  for (const c of G.cisterns) {
+    if (fogHides(c.tx, c.ty)) continue;
+    const sx = c.tx*T - cx + 4, sy = c.ty*T - cy + 4;
+    const sz = 24;
+    // Stone rim
+    ctx.fillStyle = '#6b5a3e';
+    ctx.fillRect(sx, sy, sz, sz);
+    ctx.fillStyle = '#4a3d28';
+    ctx.fillRect(sx+2, sy+2, sz-4, sz-4);
+    // Water level (blue, fills up)
+    const fillH = Math.round((c.water / c.maxWater) * (sz-4));
+    if (fillH > 0) {
+      ctx.fillStyle = G.isRainy ? '#1d4ed8' : '#1e40af';
+      ctx.fillRect(sx+2, sy+2+(sz-4-fillH), sz-4, fillH);
+      // Ripple on top of water
+      ctx.fillStyle = 'rgba(147,197,253,0.4)';
+      ctx.fillRect(sx+3, sy+2+(sz-4-fillH)+1, sz-6, 2);
+    }
+    // Rim highlight
+    ctx.fillStyle = '#92816a';
+    ctx.fillRect(sx, sy, sz, 3);
+    ctx.fillRect(sx, sy, 3, sz);
+    // Label
+    ctx.fillStyle = '#8fb3d4';
+    ctx.font = '6px monospace'; ctx.textAlign = 'center';
+    ctx.fillText(`${c.water}/${c.maxWater}`, sx+sz/2, sy+sz+8);
+  }
+}
+
+// ── Bucket-carrying farmers ────────────────────────────────
+function drawBucketFarmers(cx, cy) {
+  if (!G.isRainy) return;
+  for (const b of G.farmerBuckets) {
+    let fx, fy;
+    const t = clamp(b.t, 0, 1);
+    if (b.phase === 'toCistern') {
+      fx = b.startX + (b.midX - b.startX) * t;
+      fy = b.startY + (b.midY - b.startY) * t;
+    } else {
+      fx = b.midX + (b.endX - b.midX) * t;
+      fy = b.midY + (b.endY - b.midY) * t;
+    }
+    const sx = fx - cx, sy = fy - cy;
+    // Tiny farmer sprite
+    ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.fillRect(sx-3, sy+9, 8, 2);
+    ctx.fillStyle = '#d6d3d1';         ctx.fillRect(sx-2, sy-1, 5, 7);
+    ctx.fillStyle = '#c49a6c';         ctx.fillRect(sx-1, sy-4, 4, 4);
+    ctx.fillStyle = '#4ade80';         ctx.fillRect(sx,   sy-6, 2, 2);
+    // Bucket in hand
+    if (b.phase === 'toCrop') {
+      ctx.fillStyle = '#1d4ed8'; ctx.fillRect(sx+3, sy+1, 4, 4);  // water bucket
+      ctx.fillStyle = '#93c5fd'; ctx.fillRect(sx+3, sy+1, 4, 1);
+    } else {
+      ctx.fillStyle = '#6b5a3e'; ctx.fillRect(sx+3, sy+2, 4, 4);  // empty bucket
+    }
+  }
+}
+
+// ── Rain effect ────────────────────────────────────────────
+function drawRain(W, H) {
+  const t = Date.now();
+  ctx.strokeStyle = 'rgba(147,197,253,0.18)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let i = 0; i < 80; i++) {
+    const rx = ((i * 137 + t * 0.3) % (W + 20)) - 10;
+    const ry = ((i * 83  + t * 0.7) % (H + 30)) - 10;
+    ctx.moveTo(rx, ry); ctx.lineTo(rx - 2, ry + 10);
+  }
+  ctx.stroke();
+  // Blue-gray tint over whole screen
+  ctx.fillStyle = 'rgba(30,58,138,0.07)';
+  ctx.fillRect(0, 0, W, H);
+}
+
+// ── Strike button (combat) ─────────────────────────────────
+// Drawn bottom-right corner; returns its screen rect for click testing
+let _strikeBtnRect = null;
+
+function drawStrikeButton(W, H) {
+  const bw = 64, bh = 64;
+  const bx = W - bw - 16, by = H - bh - 16;
+  _strikeBtnRect = { x: bx, y: by, w: bw, h: bh };
+
+  const cd = clamp(G.atkCd / 550, 0, 1);
+  const ready = cd >= 1 || G.atkCd === 0;
+
+  // Background button
+  ctx.fillStyle = ready ? 'rgba(127,29,29,0.85)' : 'rgba(30,20,20,0.7)';
+  ctx.strokeStyle = ready ? '#ef4444' : '#4b1313';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.rect(bx, by, bw, bh);
+  ctx.fill(); ctx.stroke();
+
+  // Draw macuahuitl (obsidian club) pixel art, centered in button
+  const mx = bx + bw/2, my = by + bh/2;
+  // Handle (wooden)
+  ctx.fillStyle = '#92400e'; ctx.fillRect(mx-3, my-22, 6, 28);
+  ctx.fillStyle = '#78350f'; ctx.fillRect(mx-3, my-22, 2, 28);
+  // Blade body
+  ctx.fillStyle = '#b45309'; ctx.fillRect(mx-6, my-18, 12, 20);
+  // Obsidian flakes (dark, on sides)
+  ctx.fillStyle = '#111827';
+  ctx.fillRect(mx-9, my-16, 4, 5);   ctx.fillRect(mx-9, my-9,  4, 5);
+  ctx.fillRect(mx-9, my-2,  4, 5);
+  ctx.fillRect(mx+5, my-16, 4, 5);   ctx.fillRect(mx+5, my-9,  4, 5);
+  ctx.fillRect(mx+5, my-2,  4, 5);
+  // Obsidian glint
+  ctx.fillStyle = '#374151';
+  ctx.fillRect(mx-8, my-15, 2, 2);   ctx.fillRect(mx+6, my-15, 2, 2);
+  // Grip wrap
+  ctx.fillStyle = '#d97706'; ctx.fillRect(mx-3, my+4, 6, 3);
+
+  // Cooldown arc
+  if (!ready) {
+    ctx.strokeStyle = 'rgba(239,68,68,0.5)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(mx, my, 28, -Math.PI/2, -Math.PI/2 + cd * Math.PI * 2);
+    ctx.stroke();
+  }
+
+  // STRIKE label
+  ctx.fillStyle = ready ? '#fca5a5' : '#6b2020';
+  ctx.font = 'bold 8px monospace'; ctx.textAlign = 'center';
+  ctx.fillText('STRIKE', mx, by + bh - 5);
 }
 
 function hpBar(x, y, w, h, pct, col) {
@@ -1640,7 +2081,7 @@ function drawTransition(W, H) {
     ctx.fillStyle = '#e7e0d2';
     ctx.font = `bold ${Math.round(14 + p*4)}px Cinzel, serif`;
     ctx.textAlign = 'center';
-    ctx.fillText(`Dry Season ${G.season} Complete`, W/2, H/2 - 44);
+    ctx.fillText(`Season ${G.season - 1} Complete`, W/2, H/2 - 44);
     ctx.font = '13px Cinzel, serif';
     ctx.fillStyle = '#14b8a6';
     ctx.fillText(`Harvest: +${G.trans.harvest} food`, W/2, H/2 - 8);
@@ -1651,7 +2092,7 @@ function drawTransition(W, H) {
     ctx.font = '10px Cinzel, serif';
     ctx.fillStyle = '#8b7355';
     ctx.textAlign = 'center';
-    ctx.fillText('The dry season returns…', W/2, H/2 + 66);
+    ctx.fillText(`Dry Season ${G.season} begins…`, W/2, H/2 + 66);
   }
 }
 
@@ -1689,37 +2130,63 @@ function startGame() {
 
 document.getElementById('startBtn').addEventListener('click', startGame);
 
-// Click-to-attack on canvas
-cv.addEventListener('click', e => {
+// ── Helper: do a sword strike ─────────────────────────────
+function doStrike(sx, sy) {
   if (!G || G.phase !== 'combat') return;
-  const r   = cv.getBoundingClientRect();
-  const wx  = (e.clientX - r.left) * (cv.width / r.width)  + G.camX;
-  const wy  = (e.clientY - r.top)  * (cv.height / r.height) + G.camY;
+  // Strike button click?
+  if (_strikeBtnRect) {
+    const btn = _strikeBtnRect;
+    if (sx >= btn.x && sx <= btn.x+btn.w && sy >= btn.y && sy <= btn.y+btn.h) {
+      // Swing at nearest enemy regardless of distance (within reach)
+      const enAlive = G.enemies.filter(e => e.alive);
+      let nearest = null, nd = Infinity;
+      for (const en of enAlive) {
+        const d = wpDist(en.px, en.py, G.px, G.py);
+        if (d < nd) { nd = d; nearest = en; }
+      }
+      if (nearest && nd < T * 4) {
+        nearest.hp -= 12;
+        G.atkCd = 0;
+        spawnFloat('-12', '#ef4444',
+          nearest.px - G.camX, nearest.py - G.camY - 10);
+        if (nearest.hp <= 0) nearest.alive = false;
+      } else if (nearest) {
+        spawnFloat('Too far!', '#d97706', btn.x + btn.w/2, btn.y - 10);
+      }
+      return;
+    }
+  }
+  // Click on world — convert to world coords and hit-test enemies
+  const wx  = sx + G.camX;
+  const wy  = sy + G.camY;
   for (const en of G.enemies) {
     if (!en.alive) continue;
-    if (wpDist(en.px,en.py,wx,wy) < 20) {
-      en.hp -= 9; G.atkCd = 0;
+    if (wpDist(en.px,en.py,wx,wy) < 24) {
+      en.hp -= 10; G.atkCd = 0;
+      spawnFloat('-10', '#ef4444', sx, sy - 10);
       if (en.hp <= 0) en.alive = false;
       return;
     }
   }
+}
+
+// Click-to-attack on canvas
+cv.addEventListener('click', e => {
+  if (!G || G.phase !== 'combat') return;
+  const r  = cv.getBoundingClientRect();
+  const sx = (e.clientX - r.left) * (cv.width / r.width);
+  const sy = (e.clientY - r.top)  * (cv.height / r.height);
+  doStrike(sx, sy);
 });
 
 // Touch attack on canvas
 cv.addEventListener('touchend', e => {
   if (!G || G.phase !== 'combat') return;
-  const t = e.changedTouches[0];
-  const r = cv.getBoundingClientRect();
-  const wx = (t.clientX - r.left) * (cv.width / r.width)  + G.camX;
-  const wy = (t.clientY - r.top)  * (cv.height / r.height) + G.camY;
-  for (const en of G.enemies) {
-    if (!en.alive) continue;
-    if (wpDist(en.px,en.py,wx,wy) < 28) {
-      en.hp -= 9; G.atkCd = 0;
-      if (en.hp <= 0) en.alive = false;
-      return;
-    }
-  }
+  const t  = e.changedTouches[0];
+  const r  = cv.getBoundingClientRect();
+  const sx = (t.clientX - r.left) * (cv.width / r.width);
+  const sy = (t.clientY - r.top)  * (cv.height / r.height);
+  doStrike(sx, sy);
 }, { passive: true });
 
 // Keyboard
