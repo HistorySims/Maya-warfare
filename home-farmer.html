@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Maya Home Farmer</title>
+<style>
+  :root{--bg:#0b0f0c;--panel:#132017;--ink:#e8e0cd;--muted:#9ba58f;--jade:#1f9d7a;--warn:#e0a100;--bad:#d94a4a}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:Georgia,serif}
+  .wrap{max-width:980px;margin:0 auto;padding:18px}
+  h1{margin:.2rem 0 0;color:#59d3ad;letter-spacing:.08em}
+  .grid{display:grid;grid-template-columns:1.2fr .8fr;gap:14px;margin-top:14px}
+  .card{background:var(--panel);border:1px solid #254330;border-radius:8px;padding:14px}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .stat{background:#102015;border:1px solid #21412e;border-radius:6px;padding:8px;text-align:center}
+  .label{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+  .val{font-size:1.2rem;font-weight:700}
+  button,select,input{font:inherit}
+  .btn{background:var(--jade);color:#07150f;border:0;border-radius:6px;padding:8px 12px;cursor:pointer;font-weight:700}
+  .btn.alt{background:#2f5642;color:#d8ecdf}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:8px 0}
+  .log{font-family:monospace;background:#0d1911;border:1px solid #21412e;border-radius:6px;padding:8px;height:220px;overflow:auto}
+  .warn{color:var(--warn)} .bad{color:var(--bad)}
+  a{color:#76e6c2}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>MAYA HOME FARMER</h1>
+  <p>Raise food, train people, and prepare expeditions. Conquest is easy. Holding distant cities is not.</p>
+
+  <div class="stats" id="topStats"></div>
+
+  <div class="grid">
+    <section class="card">
+      <h3>Farm Actions</h3>
+      <div class="row"><span>Tend fields (+8 to +18 food)</span><button class="btn" onclick="tendFields()">TEND</button></div>
+      <div class="row"><span>Train militia (+1 soldier, -6 food)</span><button class="btn alt" onclick="trainMilitia()" id="trainBtn">TRAIN</button></div>
+      <div class="row"><span>Season planning (+1 day)</span><button class="btn alt" onclick="advanceHomeDay()">ADVANCE DAY</button></div>
+      <hr style="border-color:#21412e;opacity:.5">
+      <h3>Muster Expedition</h3>
+      <div class="row">
+        <label>Target city</label>
+        <select id="citySel">
+          <option value="Ox Witz">Ox Witz (near)</option>
+          <option value="Sak Nikte'">Sak Nikte' (medium)</option>
+          <option value="Ik' Naah">Ik' Naah (far)</option>
+        </select>
+      </div>
+      <div class="row">
+        <label>Path</label>
+        <select id="routeSel">
+          <option value="causeway">Stone Causeway (safer)</option>
+          <option value="river">River Route (balanced)</option>
+          <option value="jungle">Jungle Cut (fast attrition)</option>
+        </select>
+      </div>
+      <div class="row"><label>Send soldiers</label><input id="soldiersSend" type="number" min="1" value="6" style="width:110px"></div>
+      <div class="row"><label>Send porters</label><input id="portersSend" type="number" min="0" value="4" style="width:110px"></div>
+      <button class="btn" onclick="launchExpedition()">LAUNCH MAYA OREGON TRAIL</button>
+    </section>
+
+    <section class="card">
+      <h3>Council Log</h3>
+      <div id="log" class="log"></div>
+      <p style="margin-top:8px;font-size:.88rem;color:var(--muted)">Loop: <b>Home Farmer</b> → Trail Warrior → Battle Warrior → Trail Warrior (homebound) → Home Farmer.</p>
+    </section>
+  </div>
+</div>
+
+<script>
+const KEY = 'mayaThreeGameState';
+const CITY_DIST = { 'Ox Witz': 90, "Sak Nikte'": 140, "Ik' Naah": 190 };
+
+function defaultState(){
+  return {
+    game: 'home',
+    season: 1,
+    day: 1,
+    food: 220,
+    population: 30,
+    soldiers: 10,
+    porters: 8,
+    vassals: { 'Ox Witz': false, "Sak Nikte'": false, "Ik' Naah": false },
+    unrest: { 'Ox Witz': 0, "Sak Nikte'": 0, "Ik' Naah": 0 },
+    expedition: null,
+  };
+}
+
+function load(){
+  try { return JSON.parse(localStorage.getItem(KEY)) || defaultState(); }
+  catch { return defaultState(); }
+}
+function save(s){ localStorage.setItem(KEY, JSON.stringify(s)); }
+function log(msg, cls=''){
+  const el = document.getElementById('log');
+  const d = document.createElement('div');
+  d.className = cls;
+  d.textContent = '> ' + msg;
+  el.prepend(d);
+}
+
+let S = load();
+if (S.game !== 'home') S.game = 'home';
+
+function geoPressureTick(){
+  const distances = { 'Ox Witz': 1, "Sak Nikte'": 2, "Ik' Naah": 3 };
+  Object.keys(S.vassals).forEach(city => {
+    if (!S.vassals[city]) return;
+    S.unrest[city] += distances[city] + (Math.random() < 0.3 ? 1 : 0);
+    if (S.unrest[city] >= 8){
+      S.vassals[city] = false;
+      S.unrest[city] = 0;
+      log(`${city} has broken away. Distance and jungle routes made control impossible.`, 'bad');
+    }
+  });
+}
+
+function render(){
+  const vCount = Object.values(S.vassals).filter(Boolean).length;
+  document.getElementById('topStats').innerHTML = `
+    <div class="stat"><div class="label">Season / Day</div><div class="val">${S.season} / ${S.day}</div></div>
+    <div class="stat"><div class="label">Food</div><div class="val">${S.food}</div></div>
+    <div class="stat"><div class="label">People</div><div class="val">${S.population}</div></div>
+    <div class="stat"><div class="label">Soldiers</div><div class="val">${S.soldiers}</div></div>
+    <div class="stat"><div class="label">Porters</div><div class="val">${S.porters}</div></div>
+    <div class="stat"><div class="label">Vassals</div><div class="val">${vCount}</div></div>
+    <div class="stat"><div class="label">Unrest (near/med/far)</div><div class="val">${S.unrest['Ox Witz']}/${S.unrest["Sak Nikte'"]}/${S.unrest["Ik' Naah"]}</div></div>
+    <div class="stat"><div class="label">Mode</div><div class="val">Home Farmer</div></div>
+  `;
+  document.getElementById('trainBtn').disabled = S.food < 6;
+  save(S);
+}
+
+function tendFields(){
+  const gain = 8 + Math.floor(Math.random()*11);
+  S.food += gain;
+  log(`Farmers bring in ${gain} food.`);
+  render();
+}
+function trainMilitia(){
+  if (S.food < 6) return;
+  S.food -= 6;
+  S.soldiers += 1;
+  if (S.population > S.soldiers + S.porters) S.population -= 0;
+  log('A new warrior joins your host.');
+  render();
+}
+function advanceHomeDay(){
+  S.day += 1;
+  S.food = Math.max(0, S.food - Math.ceil((S.population + S.soldiers + S.porters) * 0.2));
+  geoPressureTick();
+  if (S.day > 30){ S.day = 1; S.season += 1; log(`Season ${S.season} begins.`); }
+  render();
+}
+
+function launchExpedition(){
+  const city = document.getElementById('citySel').value;
+  const route = document.getElementById('routeSel').value;
+  const soldiers = Number(document.getElementById('soldiersSend').value || 0);
+  const porters = Number(document.getElementById('portersSend').value || 0);
+  if (soldiers < 1 || soldiers > S.soldiers || porters < 0 || porters > S.porters){
+    log('Invalid muster numbers.', 'warn'); return;
+  }
+  const baseDist = CITY_DIST[city];
+  const routeMod = { causeway: 1.0, river: 0.92, jungle: 0.78 }[route];
+  const distance = Math.ceil(baseDist * routeMod);
+  const packedFood = Math.max(15, porters * 20 + 30);
+
+  S.soldiers -= soldiers;
+  S.porters -= porters;
+  S.expedition = {
+    target: city,
+    route,
+    leg: 'outbound',
+    distance,
+    distanceTotal: distance,
+    soldiers,
+    porters,
+    food: packedFood,
+    victories: 0,
+  };
+  S.game = 'trail';
+  save(S);
+  location.href = 'trail-warrior.html';
+}
+
+log('Council convened. Prepare your farms and choose a campaign path.');
+render();
+</script>
+</body>
+</html>
