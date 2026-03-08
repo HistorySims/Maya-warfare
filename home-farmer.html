@@ -1,930 +1,193 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>K’uhul Ajaw — Game 1: The Fields</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --jade: #0f766e;
-      --obsidian: #0b0b0c;
-      --corn: #ca8a04;
-      --water: #06b6d4;
-      --warn: #b91c1c;
-      --stone: #d5c8aa;
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      overflow: hidden;
-      font-family: "Cinzel", serif;
-      background: #091108;
-      color: #f3ead7;
-      touch-action: none;
-    }
-    canvas { display: block; width: 100vw; height: 100vh; }
-    .hud {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      background: linear-gradient(180deg, rgba(11,11,12,0.92), rgba(11,11,12,0.45));
-      padding: 10px 14px;
-      z-index: 5;
-      pointer-events: none;
-    }
-    .hud-top {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 13px;
-      letter-spacing: 0.06em;
-      margin-bottom: 6px;
-    }
-    .title { color: #6ee7b7; font-weight: 700; }
-    .chips { display: flex; flex-wrap: wrap; gap: 8px; }
-    .chip {
-      background: rgba(15,118,110,0.72);
-      border: 1px solid rgba(184,249,230,0.35);
-      border-radius: 999px;
-      padding: 4px 10px;
-      font-size: 12px;
-    }
-    .panel {
-      position: fixed;
-      left: 8px;
-      right: 8px;
-      bottom: 8px;
-      background: rgba(11,11,12,0.88);
-      border: 1px solid rgba(213,200,170,0.4);
-      border-radius: 12px;
-      padding: 10px;
-      z-index: 6;
-      max-width: 720px;
-      margin: 0 auto;
-    }
-    .panel h3 { margin: 0 0 8px; font-size: 14px; color: #a7f3d0; }
-    .grid { display: grid; grid-template-columns: 1fr auto; gap: 6px 10px; align-items: center; font-size: 12px; }
-    input[type="range"] { width: 150px; }
-    .log {
-      position: fixed;
-      left: 10px;
-      right: 10px;
-      bottom: 132px;
-      background: rgba(11,11,12,0.62);
-      border: 1px solid rgba(213,200,170,0.3);
-      border-radius: 8px;
-      padding: 5px 8px;
-      font-size: 12px;
-      min-height: 24px;
-      z-index: 6;
-      pointer-events: none;
-    }
-    .popup {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.55);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 10;
-      padding: 18px;
-    }
-    .popup-card {
-      width: min(560px, 95vw);
-      background: rgba(17,20,20,0.96);
-      border: 1px solid #5eead4;
-      border-radius: 12px;
-      padding: 14px;
-      font-size: 14px;
-    }
-    .popup-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
-    button {
-      background: var(--jade);
-      color: #eafff8;
-      border: 0;
-      border-radius: 7px;
-      padding: 7px 12px;
-      font-family: inherit;
-      cursor: pointer;
-    }
-    button.alt { background: #384240; }
-    @media (max-width: 640px) {
-      .panel { padding: 8px; }
-      .grid { grid-template-columns: 1fr; }
-      input[type="range"] { width: 100%; }
-      .log { bottom: 174px; }
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Maya Home Farmer</title>
+<style>
+  :root{--bg:#0b0f0c;--panel:#132017;--ink:#e8e0cd;--muted:#9ba58f;--jade:#1f9d7a;--warn:#e0a100;--bad:#d94a4a}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:Georgia,serif}
+  .wrap{max-width:980px;margin:0 auto;padding:18px}
+  h1{margin:.2rem 0 0;color:#59d3ad;letter-spacing:.08em}
+  .grid{display:grid;grid-template-columns:1.2fr .8fr;gap:14px;margin-top:14px}
+  .card{background:var(--panel);border:1px solid #254330;border-radius:8px;padding:14px}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .stat{background:#102015;border:1px solid #21412e;border-radius:6px;padding:8px;text-align:center}
+  .label{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+  .val{font-size:1.2rem;font-weight:700}
+  button,select,input{font:inherit}
+  .btn{background:var(--jade);color:#07150f;border:0;border-radius:6px;padding:8px 12px;cursor:pointer;font-weight:700}
+  .btn.alt{background:#2f5642;color:#d8ecdf}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:8px 0}
+  .log{font-family:monospace;background:#0d1911;border:1px solid #21412e;border-radius:6px;padding:8px;height:220px;overflow:auto}
+  .warn{color:var(--warn)} .bad{color:var(--bad)}
+  a{color:#76e6c2}
+</style>
 </head>
 <body>
-  <canvas id="game"></canvas>
-  <div class="hud">
-    <div class="hud-top">
-      <div class="title">K’UHUL AJAW</div>
-      <div id="seasonLabel"></div>
-    </div>
-    <div class="chips">
-      <div class="chip" id="foodChip">🌽 0</div>
-      <div class="chip" id="popChip">👥 0</div>
-      <div class="chip" id="waterChip">💧 0%</div>
-    </div>
-  </div>
+<div class="wrap">
+  <h1>MAYA HOME FARMER</h1>
+  <p>Raise food, train people, and prepare expeditions. Conquest is easy. Holding distant cities is not.</p>
 
-  <div class="log" id="logBox"></div>
+  <div class="stats" id="topStats"></div>
 
-  <div class="panel">
-    <h3>Army Drafting</h3>
-    <div class="grid">
-      <label>Soldiers: <span id="soldierVal">0</span></label>
-      <input id="soldierSlider" type="range" min="0" max="0" value="0" />
-      <label>Porters: <span id="porterVal">0</span></label>
-      <input id="porterSlider" type="range" min="0" max="0" value="0" />
-      <div id="farmersText">Farmers: 0</div>
-      <div id="harvestText">Estimated harvest: 0</div>
-      <div id="foodText">Food stores: 0</div>
-      <div id="waterText">Cistern: 0%</div>
-    </div>
-  </div>
-
-  <div class="popup" id="routePopup">
-    <div class="popup-card">
-      <div id="popupText"></div>
-      <div class="popup-actions">
-        <button class="alt" id="cancelBtn">Wait</button>
-        <button id="confirmBtn">Proceed</button>
+  <div class="grid">
+    <section class="card">
+      <h3>Farm Actions</h3>
+      <div class="row"><span>Tend fields (+8 to +18 food)</span><button class="btn" onclick="tendFields()">TEND</button></div>
+      <div class="row"><span>Train militia (+1 soldier, -6 food)</span><button class="btn alt" onclick="trainMilitia()" id="trainBtn">TRAIN</button></div>
+      <div class="row"><span>Season planning (+1 day)</span><button class="btn alt" onclick="advanceHomeDay()">ADVANCE DAY</button></div>
+      <hr style="border-color:#21412e;opacity:.5">
+      <h3>Muster Expedition</h3>
+      <div class="row">
+        <label>Target city</label>
+        <select id="citySel">
+          <option value="Ox Witz">Ox Witz (near)</option>
+          <option value="Sak Nikte'">Sak Nikte' (medium)</option>
+          <option value="Ik' Naah">Ik' Naah (far)</option>
+        </select>
       </div>
-    </div>
+      <div class="row">
+        <label>Path</label>
+        <select id="routeSel">
+          <option value="causeway">Stone Causeway (safer)</option>
+          <option value="river">River Route (balanced)</option>
+          <option value="jungle">Jungle Cut (fast attrition)</option>
+        </select>
+      </div>
+      <div class="row"><label>Send soldiers</label><input id="soldiersSend" type="number" min="1" value="6" style="width:110px"></div>
+      <div class="row"><label>Send porters</label><input id="portersSend" type="number" min="0" value="4" style="width:110px"></div>
+      <button class="btn" onclick="launchExpedition()">LAUNCH MAYA OREGON TRAIL</button>
+    </section>
+
+    <section class="card">
+      <h3>Council Log</h3>
+      <div id="log" class="log"></div>
+      <p style="margin-top:8px;font-size:.88rem;color:var(--muted)">Loop: <b>Home Farmer</b> → Trail Warrior → Battle Warrior → Trail Warrior (homebound) → Home Farmer.</p>
+    </section>
   </div>
+</div>
 
 <script>
-(() => {
-  const canvas = document.getElementById('game');
-  const ctx = canvas.getContext('2d');
+const KEY = 'mayaThreeGameState';
+const CITY_DIST = { 'Ox Witz': 90, "Sak Nikte'": 140, "Ik' Naah": 190 };
 
-  const state = {
-    worldWidth: 3600,
-    cameraX: 0,
-    dragging: false,
-    lastPointerX: 0,
-    pointerDownX: 0,
-    pointerMoved: false,
-    pop: 34,
-    food: 260,
-    cistern: 75,
-    seasonIndex: 1,
-    isRainy: false,
-    seasonTimer: 0,
-    dryDuration: 78,
-    rainyDuration: 24,
-    lastTs: 0,
-    logs: [],
-    floats: [],
-    people: [],
-    stelae: [],
-    fields: [],
-    houses: [],
-    marching: false,
-    popupRoute: null,
-    tributeGroup: null,
-    lowWaterFlag: false,
-    warnedRot: false,
-    savedState: null
+function defaultState(){
+  return {
+    game: 'home',
+    season: 1,
+    day: 1,
+    food: 220,
+    population: 30,
+    soldiers: 10,
+    porters: 8,
+    vassals: { 'Ox Witz': false, "Sak Nikte'": false, "Ik' Naah": false },
+    unrest: { 'Ox Witz': 0, "Sak Nikte'": 0, "Ik' Naah": 0 },
+    expedition: null,
   };
+}
 
-  const palette = {
-    sky1: '#9dd8f7', sky2: '#d5f2ff',
-    jungleDark: '#0f3b1e', jungleMid: '#1e6a35',
-    ground: '#b79f71', furrow: '#7a5f3a',
-    cornGreen: '#3c9a3b', cornGold: '#ca8a04', rotten: '#7a4d2a',
-    limestone: '#d9c7a2', stoneDark: '#a79575', water: '#06b6d4'
+function load(){
+  try { return JSON.parse(localStorage.getItem(KEY)) || defaultState(); }
+  catch { return defaultState(); }
+}
+function save(s){ localStorage.setItem(KEY, JSON.stringify(s)); }
+function log(msg, cls=''){
+  const el = document.getElementById('log');
+  const d = document.createElement('div');
+  d.className = cls;
+  d.textContent = '> ' + msg;
+  el.prepend(d);
+}
+
+let S = load();
+if (S.game !== 'home') S.game = 'home';
+
+function geoPressureTick(){
+  const distances = { 'Ox Witz': 1, "Sak Nikte'": 2, "Ik' Naah": 3 };
+  Object.keys(S.vassals).forEach(city => {
+    if (!S.vassals[city]) return;
+    S.unrest[city] += distances[city] + (Math.random() < 0.3 ? 1 : 0);
+    if (S.unrest[city] >= 8){
+      S.vassals[city] = false;
+      S.unrest[city] = 0;
+      log(`${city} has broken away. Distance and jungle routes made control impossible.`, 'bad');
+    }
+  });
+}
+
+function render(){
+  const vCount = Object.values(S.vassals).filter(Boolean).length;
+  document.getElementById('topStats').innerHTML = `
+    <div class="stat"><div class="label">Season / Day</div><div class="val">${S.season} / ${S.day}</div></div>
+    <div class="stat"><div class="label">Food</div><div class="val">${S.food}</div></div>
+    <div class="stat"><div class="label">People</div><div class="val">${S.population}</div></div>
+    <div class="stat"><div class="label">Soldiers</div><div class="val">${S.soldiers}</div></div>
+    <div class="stat"><div class="label">Porters</div><div class="val">${S.porters}</div></div>
+    <div class="stat"><div class="label">Vassals</div><div class="val">${vCount}</div></div>
+    <div class="stat"><div class="label">Unrest (near/med/far)</div><div class="val">${S.unrest['Ox Witz']}/${S.unrest["Sak Nikte'"]}/${S.unrest["Ik' Naah"]}</div></div>
+    <div class="stat"><div class="label">Mode</div><div class="val">Home Farmer</div></div>
+  `;
+  document.getElementById('trainBtn').disabled = S.food < 6;
+  save(S);
+}
+
+function tendFields(){
+  const gain = 8 + Math.floor(Math.random()*11);
+  S.food += gain;
+  log(`Farmers bring in ${gain} food.`);
+  render();
+}
+function trainMilitia(){
+  if (S.food < 6) return;
+  S.food -= 6;
+  S.soldiers += 1;
+  if (S.population > S.soldiers + S.porters) S.population -= 0;
+  log('A new warrior joins your host.');
+  render();
+}
+function advanceHomeDay(){
+  S.day += 1;
+  S.food = Math.max(0, S.food - Math.ceil((S.population + S.soldiers + S.porters) * 0.2));
+  geoPressureTick();
+  if (S.day > 30){ S.day = 1; S.season += 1; log(`Season ${S.season} begins.`); }
+  render();
+}
+
+function launchExpedition(){
+  const city = document.getElementById('citySel').value;
+  const route = document.getElementById('routeSel').value;
+  const soldiers = Number(document.getElementById('soldiersSend').value || 0);
+  const porters = Number(document.getElementById('portersSend').value || 0);
+  if (soldiers < 1 || soldiers > S.soldiers || porters < 0 || porters > S.porters){
+    log('Invalid muster numbers.', 'warn'); return;
+  }
+  const baseDist = CITY_DIST[city];
+  const routeMod = { causeway: 1.0, river: 0.92, jungle: 0.78 }[route];
+  const distance = Math.ceil(baseDist * routeMod);
+  const packedFood = Math.max(15, porters * 20 + 30);
+
+  S.soldiers -= soldiers;
+  S.porters -= porters;
+  S.expedition = {
+    target: city,
+    route,
+    leg: 'outbound',
+    distance,
+    distanceTotal: distance,
+    soldiers,
+    porters,
+    food: packedFood,
+    victories: 0,
   };
-
-  const city = { x: 1800, pyramidX: 1800, cisternX: 1940, cisternYOff: -28 };
-  const exits = [
-    { x: 420, name: 'Ox Witz', dist: 7, porters: 5 },
-    { x: 3180, name: 'K’an Tuun', dist: 11, porters: 9 }
-  ];
-
-  function log(msg) {
-    state.logs.unshift(msg);
-    state.logs = state.logs.slice(0, 3);
-    document.getElementById('logBox').textContent = state.logs[0] || '';
-  }
-
-  function terrainY(x) {
-    return canvas.height * 0.72 + Math.sin(x * 0.004) * 22 + Math.sin(x * 0.0013) * 30;
-  }
-
-  function setupWorld() {
-    state.fields = [
-      buildField(720, 1420, 6),
-      buildField(2150, 2860, 6)
-    ];
-    state.stelae = exits.map(e => ({ ...e, y: terrainY(e.x) - 74 }));
-    state.houses = [0, 1, 2, 3, 4].map(i => ({
-      x: 1630 + i * 62 + (i % 2) * 15,
-      y: terrainY(1640 + i * 62) - 38 - (i % 2) * 5
-    }));
-    state.people = [];
-    for (let i = 0; i < state.pop; i++) {
-      state.people.push({
-        id: i,
-        x: city.pyramidX + (Math.random() * 120 - 60),
-        y: terrainY(city.pyramidX),
-        role: 'farmer',
-        targetRole: 'farmer',
-        mode: 'idle',
-        taskNode: null,
-        speed: 26 + Math.random() * 14,
-        dir: 1,
-        bob: Math.random() * Math.PI,
-        carryingWater: false,
-        homeX: city.pyramidX + (Math.random() * 80 - 40)
-      });
-    }
-    log('A farmer has planted the eastern field.');
-  }
-
-  function buildField(start, end, rows) {
-    const f = { start, end, rows: [] };
-    for (let r = 0; r < rows; r++) {
-      const points = [];
-      const nodeCount = 16;
-      for (let n = 0; n < nodeCount; n++) {
-        const t = n / (nodeCount - 1);
-        const x = start + (end - start) * t;
-        const y = terrainY(x) - 18 - r * 11 + Math.sin((x + r * 25) * 0.008) * 2;
-        points.push({ x, y, planted: false, reservedBy: null, rotten: false });
-      }
-      f.rows.push(points);
-    }
-    return f;
-  }
-
-  function currentCropStage() {
-    if (state.isRainy) return 'rainy';
-    const p = state.seasonTimer / state.dryDuration;
-    const slow = state.cistern < 15 ? 0.62 : 1;
-    const adjusted = p * slow;
-    if (adjusted < 0.18) return 'bare';
-    if (adjusted < 0.44) return 'sprout';
-    if (adjusted < 0.76) return 'growing';
-    return 'harvestable';
-  }
-
-  function maxDraft() {
-    return Math.max(0, state.people.length - 2);
-  }
-
-  function applyDraftTargets() {
-    const s = +document.getElementById('soldierSlider').value;
-    const p = +document.getElementById('porterSlider').value;
-    let needSoldier = s;
-    let needPorter = p;
-    state.people.forEach(person => {
-      if (needSoldier > 0) { person.targetRole = 'soldier'; needSoldier--; }
-      else if (needPorter > 0) { person.targetRole = 'porter'; needPorter--; }
-      else person.targetRole = 'farmer';
-    });
-  }
-
-  function nearestAvailableNode(reverse = false) {
-    const rows = [];
-    for (const field of state.fields) {
-      for (const row of field.rows) rows.push(row);
-    }
-    for (const row of rows) {
-      const list = reverse ? [...row].reverse() : row;
-      for (const node of list) {
-        const stage = currentCropStage();
-        if (!reverse && !node.planted && !node.reservedBy && !node.rotten && stage !== 'rainy') return node;
-        if (reverse && node.planted && !node.reservedBy && stage === 'harvestable') return node;
-      }
-    }
-    return null;
-  }
-
-  function updatePeople(dt) {
-    const stage = currentCropStage();
-    let waterCarriersAssigned = 0;
-    const farmers = state.people.filter(p => p.role === 'farmer' || p.role === 'water');
-    const waterNeeded = state.cistern > 5 && !state.isRainy ? Math.min(2, Math.floor(farmers.length / 8) + 1) : 0;
-
-    for (const person of state.people) {
-      const desired = person.targetRole;
-      if (state.marching && (person.role === 'soldier' || person.role === 'porter')) {
-        const exit = state.popupRoute?.x ?? exits[0].x;
-        moveToward(person, exit, dt);
-        if ((exit < city.pyramidX && person.x < 120) || (exit > city.pyramidX && person.x > state.worldWidth - 120)) {
-          person.mode = 'gone';
-        }
-        continue;
-      }
-
-      if (person.mode === 'gone') continue;
-
-      if (desired !== person.role && desired !== 'farmer') {
-        person.mode = 'toPyramid';
-        moveToward(person, city.pyramidX + (desired === 'soldier' ? -70 : 70), dt);
-        if (Math.abs(person.x - (city.pyramidX + (desired === 'soldier' ? -70 : 70))) < 6) {
-          person.role = desired;
-          person.mode = 'formation';
-          person.taskNode = null;
-        }
-        continue;
-      }
-
-      if ((person.role === 'soldier' || person.role === 'porter') && desired === 'farmer') {
-        person.mode = 'toField';
-        moveToward(person, city.pyramidX + (Math.random() * 160 - 80), dt);
-        if (Math.abs(person.x - city.pyramidX) < 60) {
-          person.role = 'farmer';
-          person.mode = 'idle';
-        }
-        continue;
-      }
-
-      if (person.role === 'soldier' || person.role === 'porter') {
-        const offset = person.role === 'soldier' ? -140 : 100;
-        const idx = person.id % 8;
-        const targetX = city.pyramidX + offset + (idx % 4) * 16;
-        moveToward(person, targetX, dt, 12);
-        continue;
-      }
-
-      if (state.isRainy) {
-        moveToward(person, city.pyramidX + ((person.id % 6) - 3) * 18, dt, 16);
-        continue;
-      }
-
-      if (waterCarriersAssigned < waterNeeded && person.targetRole === 'farmer') {
-        person.role = 'water';
-        person.mode = person.mode === 'watering' ? 'watering' : 'toCistern';
-        waterCarriersAssigned++;
-      } else if (person.role === 'water') {
-        person.role = 'farmer';
-        person.carryingWater = false;
-      }
-
-      if (person.role === 'water') {
-        if (person.mode === 'toCistern') {
-          moveToward(person, city.cisternX, dt);
-          if (Math.abs(person.x - city.cisternX) < 8) {
-            person.carryingWater = state.cistern > 2;
-            if (person.carryingWater) state.cistern = Math.max(0, state.cistern - 0.03);
-            person.mode = 'toFieldWater';
-          }
-        } else {
-          const target = state.fields[Math.floor(person.id % state.fields.length)];
-          const wx = (target.start + target.end) * 0.5;
-          moveToward(person, wx, dt);
-          if (Math.abs(person.x - wx) < 10) {
-            person.mode = 'toCistern';
-            person.carryingWater = false;
-          }
-        }
-        continue;
-      }
-
-      if (stage === 'harvestable') {
-        if (!person.taskNode || !person.taskNode.planted) {
-          if (person.taskNode) person.taskNode.reservedBy = null;
-          person.taskNode = nearestAvailableNode(true);
-          if (person.taskNode) person.taskNode.reservedBy = person.id;
-        }
-        if (person.taskNode) {
-          moveToward(person, person.taskNode.x, dt);
-          if (Math.abs(person.x - person.taskNode.x) < 5) {
-            person.taskNode.planted = false;
-            person.taskNode.rotten = false;
-            person.taskNode.reservedBy = null;
-            person.taskNode = null;
-            const gain = 1 + (Math.random() < 0.15 ? 1 : 0);
-            state.food += gain;
-            if (Math.random() < 0.1) addFloat(person.x, terrainY(person.x) - 36, `+${gain} food`, '#facc15');
-          }
-        }
-      } else {
-        if (!person.taskNode || person.taskNode.planted) {
-          if (person.taskNode) person.taskNode.reservedBy = null;
-          person.taskNode = nearestAvailableNode(false);
-          if (person.taskNode) person.taskNode.reservedBy = person.id;
-        }
-        if (person.taskNode) {
-          moveToward(person, person.taskNode.x, dt);
-          if (Math.abs(person.x - person.taskNode.x) < 5) {
-            person.taskNode.planted = true;
-            person.taskNode.reservedBy = null;
-            person.taskNode = null;
-          }
-        } else {
-          moveToward(person, person.homeX, dt, 12);
-        }
-      }
-    }
-
-    state.people = state.people.filter(p => p.mode !== 'gone');
-  }
-
-  function moveToward(person, x, dt, speedOverride) {
-    const dx = x - person.x;
-    if (Math.abs(dx) < 0.6) return;
-    person.dir = Math.sign(dx);
-    const step = Math.sign(dx) * (speedOverride || person.speed) * dt;
-    person.x += Math.abs(step) > Math.abs(dx) ? dx : step;
-    person.y = terrainY(person.x);
-  }
-
-  function seasonUpdate(dt) {
-    state.seasonTimer += dt;
-
-    if (!state.isRainy) {
-      state.cistern = Math.max(0, state.cistern - dt * 0.45);
-      if (state.cistern < 18 && !state.lowWaterFlag) {
-        log('The cistern is running low.');
-        state.lowWaterFlag = true;
-      }
-      if (state.cistern > 20) state.lowWaterFlag = false;
-
-      if (state.cistern < 4 && Math.random() < 0.03) {
-        for (const field of state.fields) {
-          for (const row of field.rows) {
-            const node = row[Math.floor(Math.random() * row.length)];
-            if (node.planted) { node.rotten = true; node.planted = false; }
-          }
-        }
-      }
-
-      if (state.seasonTimer > state.dryDuration * 0.84 && !state.warnedRot) {
-        state.warnedRot = true;
-        log('Late dry season: harvest before the rains.');
-      }
-
-      if (state.seasonTimer >= state.dryDuration) {
-        state.isRainy = true;
-        state.seasonTimer = 0;
-        state.warnedRot = false;
-        for (const field of state.fields) {
-          for (const row of field.rows) {
-            for (const node of row) {
-              if (node.planted) {
-                node.planted = false;
-                node.rotten = true;
-              }
-              node.reservedBy = null;
-            }
-          }
-        }
-        log('Rainy season begins. Paths are muddy and blocked.');
-      }
-    } else {
-      state.cistern = Math.min(100, state.cistern + dt * 2.4);
-      if (Math.random() < 0.25) state.food = Math.max(0, state.food - 1);
-      if (state.seasonTimer > state.rainyDuration * 0.55 && Math.random() < 0.015) {
-        if (state.food > state.people.length * 5 && state.people.length < 58) {
-          const id = state.people.length;
-          state.people.push({ id, x: city.pyramidX, y: terrainY(city.pyramidX), role: 'farmer', targetRole: 'farmer', mode: 'idle', taskNode: null, speed: 30, dir: 1, bob: 0, homeX: city.pyramidX + (Math.random()*80-40)});
-          addFloat(city.pyramidX, terrainY(city.pyramidX)-80, '+1 pop', '#a7f3d0');
-        } else if (state.food < state.people.length * 2 && state.people.length > 10) {
-          state.people.pop();
-          addFloat(city.pyramidX, terrainY(city.pyramidX)-80, '-1 pop', '#fda4af');
-        }
-      }
-      if (state.seasonTimer >= state.rainyDuration) {
-        state.isRainy = false;
-        state.seasonTimer = 0;
-        state.seasonIndex += 1;
-        for (const field of state.fields) {
-          for (const row of field.rows) {
-            for (const node of row) node.rotten = false;
-          }
-        }
-        log(`Dry Season ${state.seasonIndex} begins.`);
-      }
-    }
-  }
-
-  function updateFloats(dt) {
-    state.floats.forEach(f => { f.y -= dt * 20; f.life -= dt; });
-    state.floats = state.floats.filter(f => f.life > 0);
-  }
-
-  function addFloat(x, y, text, color) {
-    state.floats.push({ x, y, text, color, life: 1.4 });
-  }
-
-  function triggerTribute(cityName = 'Ox Witz', foodBonus = 55) {
-    if (state.tributeGroup) return;
-    const fromLeft = Math.random() < 0.5;
-    const startX = fromLeft ? 40 : state.worldWidth - 40;
-    state.tributeGroup = { fromLeft, x: startX, target: city.pyramidX - 20, delivered: false, cityName, foodBonus, members: 4 + Math.floor(Math.random() * 2) };
-    log(`Tribute has arrived from ${cityName}!`);
-  }
-
-  function updateTribute(dt) {
-    if (!state.tributeGroup) return;
-    const t = state.tributeGroup;
-    const dir = Math.sign(t.target - t.x);
-    t.x += dir * 28 * dt;
-    if (Math.abs(t.target - t.x) < 8 && !t.delivered) {
-      t.delivered = true;
-      state.food += t.foodBonus;
-      addFloat(city.pyramidX, terrainY(city.pyramidX)-120, `+${t.foodBonus} tribute`, '#fca5a5');
-      setTimeout(() => state.tributeGroup = null, 2600);
-    }
-  }
-
-  function draw() {
-    const w = canvas.width;
-    const h = canvas.height;
-    ctx.clearRect(0, 0, w, h);
-
-    const grad = ctx.createLinearGradient(0, 0, 0, h);
-    grad.addColorStop(0, palette.sky2);
-    grad.addColorStop(1, palette.sky1);
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, w, h);
-
-    drawGround();
-    drawJungleEdges();
-    drawFields();
-    drawCity();
-    drawStelae();
-    drawPeople();
-    drawTribute();
-    drawWeather();
-    drawFloats();
-  }
-
-  function wx(x) { return x - state.cameraX; }
-
-  function drawGround() {
-    ctx.fillStyle = palette.ground;
-    ctx.beginPath();
-    ctx.moveTo(0, canvas.height);
-    for (let sx = 0; sx <= canvas.width; sx += 8) {
-      const worldX = sx + state.cameraX;
-      ctx.lineTo(sx, terrainY(worldX));
-    }
-    ctx.lineTo(canvas.width, canvas.height);
-    ctx.closePath();
-    ctx.fill();
-  }
-
-  function drawJungleEdges() {
-    [120, state.worldWidth - 120].forEach(edge => {
-      for (let i = 0; i < 16; i++) {
-        const x = edge + (edge < state.worldWidth / 2 ? i * 16 : -i * 16);
-        const sx = wx(x);
-        const y = terrainY(x) - 56 - (i % 3) * 7;
-        ctx.fillStyle = palette.jungleDark;
-        ctx.fillRect(sx - 2, y + 20, 5, 24);
-        ctx.fillStyle = i % 2 ? palette.jungleDark : palette.jungleMid;
-        ctx.beginPath();
-        ctx.arc(sx, y, 16, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    });
-  }
-
-  function drawFields() {
-    const stage = currentCropStage();
-    for (const field of state.fields) {
-      for (const row of field.rows) {
-        ctx.strokeStyle = palette.furrow;
-        ctx.lineWidth = 1.3;
-        ctx.beginPath();
-        row.forEach((n, i) => {
-          const sx = wx(n.x);
-          if (i === 0) ctx.moveTo(sx, n.y);
-          else ctx.lineTo(sx, n.y);
-        });
-        ctx.stroke();
-
-        for (const node of row) {
-          if (node.rotten) drawCropNode(node, 'rotten');
-          else if (node.planted) drawCropNode(node, stage === 'bare' ? 'sprout' : stage);
-        }
-      }
-    }
-  }
-
-  function drawCropNode(node, stage) {
-    const sx = wx(node.x);
-    const y = node.y;
-    if (stage === 'sprout') {
-      ctx.strokeStyle = '#3f9f46';
-      ctx.beginPath(); ctx.moveTo(sx, y); ctx.lineTo(sx, y - 5); ctx.stroke();
-      ctx.fillStyle = '#58b95e'; ctx.fillRect(sx + 1, y - 4, 2, 1);
-    } else if (stage === 'growing') {
-      ctx.strokeStyle = palette.cornGreen;
-      ctx.beginPath(); ctx.moveTo(sx, y); ctx.lineTo(sx, y - 10); ctx.stroke();
-      ctx.fillRect(sx - 3, y - 8, 3, 1); ctx.fillRect(sx + 1, y - 6, 3, 1);
-    } else if (stage === 'harvestable') {
-      ctx.strokeStyle = palette.cornGreen;
-      ctx.beginPath(); ctx.moveTo(sx, y); ctx.lineTo(sx, y - 14); ctx.stroke();
-      ctx.fillStyle = palette.cornGreen;
-      ctx.fillRect(sx - 4, y - 12, 4, 2); ctx.fillRect(sx + 1, y - 9, 4, 2);
-      ctx.fillStyle = palette.cornGold;
-      ctx.fillRect(sx + 1, y - 12, 3, 4);
-    } else if (stage === 'rotten') {
-      ctx.strokeStyle = palette.rotten;
-      ctx.beginPath(); ctx.moveTo(sx, y); ctx.lineTo(sx + 4, y - 10); ctx.stroke();
-      ctx.fillStyle = palette.rotten;
-      ctx.fillRect(sx + 2, y - 9, 2, 4);
-    }
-  }
-
-  function drawCity() {
-    const py = terrainY(city.pyramidX);
-    for (const house of state.houses) {
-      const sx = wx(house.x);
-      ctx.fillStyle = '#8a623b';
-      ctx.fillRect(sx - 10, house.y, 20, 12);
-      ctx.fillStyle = '#6b4628';
-      ctx.beginPath(); ctx.moveTo(sx - 12, house.y); ctx.lineTo(sx, house.y - 9); ctx.lineTo(sx + 12, house.y); ctx.closePath(); ctx.fill();
-    }
-
-    const levels = 5;
-    for (let i = 0; i < levels; i++) {
-      const width = 170 - i * 28;
-      const y = py - i * 15;
-      ctx.fillStyle = i % 2 ? palette.limestone : '#c7b28e';
-      ctx.fillRect(wx(city.pyramidX) - width / 2, y - 14, width, 14);
-    }
-    ctx.fillStyle = '#695640';
-    ctx.fillRect(wx(city.pyramidX) - 10, py - 14, 20, 14);
-
-    const cisY = terrainY(city.cisternX) + city.cisternYOff;
-    ctx.fillStyle = palette.stoneDark;
-    ctx.fillRect(wx(city.cisternX) - 36, cisY - 20, 72, 38);
-    ctx.fillStyle = '#3a4b57';
-    ctx.fillRect(wx(city.cisternX) - 30, cisY - 14, 60, 26);
-    const waterH = 24 * (state.cistern / 100);
-    ctx.fillStyle = palette.water;
-    ctx.fillRect(wx(city.cisternX) - 30, cisY + 12 - waterH, 60, waterH);
-  }
-
-  function drawStelae() {
-    for (const s of state.stelae) {
-      const sx = wx(s.x);
-      ctx.fillStyle = '#8c8c8c';
-      ctx.fillRect(sx - 6, s.y, 12, 54);
-      ctx.fillStyle = '#5f5f5f';
-      ctx.beginPath(); ctx.arc(sx, s.y + 12, 3, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#1f2937';
-      ctx.font = '11px Cinzel';
-      ctx.fillText(s.name, sx - 28, s.y - 5);
-      if (state.isRainy) {
-        ctx.fillStyle = 'rgba(6,182,212,0.55)';
-        ctx.fillRect(sx - 26, terrainY(s.x)-10, 52, 9);
-      }
-    }
-  }
-
-  function drawPerson(p) {
-    const sx = wx(p.x);
-    const y = p.y + Math.sin(p.bob + performance.now() * 0.008) * 1.4;
-    const isSoldier = p.role === 'soldier';
-    const isPorter = p.role === 'porter';
-    const isWater = p.role === 'water';
-
-    ctx.fillStyle = isSoldier ? '#ded7c3' : '#9c6f45';
-    ctx.fillRect(sx - 3, y - 12, 6, 10);
-    ctx.fillStyle = '#2f2217';
-    ctx.beginPath(); ctx.arc(sx, y - 14, 3, 0, Math.PI * 2); ctx.fill();
-
-    if (p.taskNode && (p.role === 'farmer')) {
-      ctx.strokeStyle = '#6b4f2e';
-      ctx.beginPath(); ctx.moveTo(sx, y - 8); ctx.lineTo(sx + p.dir * 3, y - 6); ctx.stroke();
-    }
-    if (isSoldier) {
-      ctx.fillStyle = '#111827';
-      ctx.fillRect(sx + 4, y - 11, 2, 9);
-      ctx.fillStyle = '#10b981';
-      ctx.fillRect(sx + 1, y - 18, 2, 4);
-    }
-    if (isPorter) {
-      ctx.fillStyle = '#6b4428';
-      ctx.fillRect(sx - 7, y - 12, 5, 6);
-      ctx.strokeStyle = '#d6c9a9';
-      ctx.beginPath(); ctx.moveTo(sx-1, y-15); ctx.lineTo(sx-6, y-9); ctx.stroke();
-    }
-    if (isWater && p.carryingWater) {
-      ctx.fillStyle = '#8da3ad';
-      ctx.beginPath(); ctx.arc(sx, y - 19, 3, 0, Math.PI * 2); ctx.fill();
-    }
-  }
-
-  function drawPeople() {
-    for (const p of state.people) {
-      if (p.mode === 'gone') continue;
-      drawPerson(p);
-    }
-  }
-
-  function drawTribute() {
-    if (!state.tributeGroup) return;
-    const t = state.tributeGroup;
-    for (let i = 0; i < t.members; i++) {
-      const x = t.x + (t.fromLeft ? -i * 18 : i * 18);
-      const sx = wx(x);
-      const y = terrainY(x);
-      const bob = Math.sin(performance.now() * 0.01 + i) * 2;
-      ctx.fillStyle = '#b45309';
-      ctx.fillRect(sx - 4, y - 14 + bob, 8, 12);
-      ctx.fillStyle = '#2f2217';
-      ctx.beginPath(); ctx.arc(sx, y - 16 + bob, 3, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = i % 2 ? '#16a34a' : '#dc2626';
-      ctx.fillRect(sx - 3, y - 22 + bob, 6, 3);
-      ctx.fillStyle = '#7c3aed';
-      ctx.fillRect(sx + 5, y - 13 + bob, 4, 6);
-    }
-  }
-
-  function drawWeather() {
-    if (!state.isRainy) return;
-    ctx.strokeStyle = 'rgba(6,182,212,0.45)';
-    for (let i = 0; i < 120; i++) {
-      const x = (i * 49 + performance.now() * 0.4) % canvas.width;
-      const y = (i * 29 + performance.now() * 0.6) % canvas.height;
-      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - 3, y + 10); ctx.stroke();
-    }
-  }
-
-  function drawFloats() {
-    ctx.font = '12px Cinzel';
-    for (const f of state.floats) {
-      const alpha = Math.max(0, f.life / 1.4);
-      ctx.fillStyle = f.color + Math.floor(alpha * 255).toString(16).padStart(2, '0');
-      ctx.fillText(f.text, wx(f.x), f.y);
-    }
-  }
-
-  function updateUI() {
-    const seasonText = state.isRainy
-      ? `Rainy Season ${state.seasonIndex}`
-      : `Dry Season ${state.seasonIndex} — Day ${Math.min(90, Math.floor((state.seasonTimer / state.dryDuration) * 90) + 1)}`;
-    document.getElementById('seasonLabel').textContent = seasonText;
-    document.getElementById('foodChip').textContent = `🌽 ${Math.floor(state.food)}`;
-    document.getElementById('popChip').textContent = `👥 ${state.people.length}`;
-    document.getElementById('waterChip').textContent = `💧 ${Math.floor(state.cistern)}%`;
-
-    const soldiers = state.people.filter(p => p.targetRole === 'soldier').length;
-    const porters = state.people.filter(p => p.targetRole === 'porter').length;
-    const farmers = state.people.length - soldiers - porters;
-    const planted = state.fields.flatMap(f => f.rows.flatMap(r => r)).filter(n => n.planted).length;
-    const est = Math.floor(planted * 0.8 + farmers * 2.5);
-
-    const max = maxDraft();
-    const sSlider = document.getElementById('soldierSlider');
-    const pSlider = document.getElementById('porterSlider');
-    sSlider.max = max;
-    pSlider.max = max;
-    if (+sSlider.value + +pSlider.value > max) pSlider.value = Math.max(0, max - +sSlider.value);
-
-    document.getElementById('soldierVal').textContent = soldiers;
-    document.getElementById('porterVal').textContent = porters;
-    document.getElementById('farmersText').textContent = `Farmers: ${farmers}`;
-    document.getElementById('harvestText').textContent = `Estimated harvest: ${est}`;
-    document.getElementById('foodText').textContent = `Food stores: ${Math.floor(state.food)}`;
-    document.getElementById('waterText').textContent = `Cistern: ${Math.floor(state.cistern)}%`;
-  }
-
-  function showRoutePopup(stela) {
-    state.popupRoute = stela;
-    const soldiers = state.people.filter(p => p.role === 'soldier').length;
-    const porters = state.people.filter(p => p.role === 'porter').length;
-    const txt = soldiers <= 0
-      ? `The road to ${stela.name}. ~${stela.dist} days march. You cannot march alone. Draft warriors first.`
-      : `The road to ${stela.name}. ~${stela.dist} days march. Recommended porters: ${stela.porters}. You have ${soldiers} soldiers and ${porters} porters. Proceed?`;
-    document.getElementById('popupText').textContent = txt;
-    document.getElementById('routePopup').style.display = 'flex';
-  }
-
-  function closePopup() {
-    document.getElementById('routePopup').style.display = 'none';
-    state.popupRoute = null;
-  }
-
-  function confirmMarch() {
-    const soldiers = state.people.filter(p => p.role === 'soldier').length;
-    if (soldiers <= 0) return closePopup();
-    state.marching = true;
-    log('War band mustered. They march toward the stela.');
-    saveGameState();
-    setTimeout(() => {
-      state.marching = false;
-      log('March complete. Transition to Game 2 can be invoked now.');
-      window.onTransitionToMarch?.(state.savedState);
-    }, 5000);
-    closePopup();
-  }
-
-  function saveGameState() {
-    state.savedState = {
-      seasonIndex: state.seasonIndex,
-      isRainy: state.isRainy,
-      seasonTimer: state.seasonTimer,
-      food: Math.floor(state.food),
-      cistern: state.cistern,
-      population: state.people.length,
-      fields: state.fields.map(f => f.rows.map(r => r.map(n => ({ planted: n.planted, rotten: n.rotten }))))
-    };
-    window.__game1SavedState = state.savedState;
-  }
-
-  function onPointerDown(e) {
-    state.dragging = true;
-    state.lastPointerX = (e.touches ? e.touches[0].clientX : e.clientX);
-    state.pointerDownX = state.lastPointerX;
-    state.pointerMoved = false;
-  }
-
-  function onPointerMove(e) {
-    if (!state.dragging) return;
-    const x = (e.touches ? e.touches[0].clientX : e.clientX);
-    const dx = x - state.lastPointerX;
-    state.lastPointerX = x;
-    if (Math.abs(x - state.pointerDownX) > 6) state.pointerMoved = true;
-    state.cameraX -= dx;
-    clampCamera();
-  }
-
-  function onPointerUp(e) {
-    const x = (e.changedTouches ? e.changedTouches[0].clientX : e.clientX);
-    const y = (e.changedTouches ? e.changedTouches[0].clientY : e.clientY);
-    if (state.dragging && !state.pointerMoved) {
-      const worldX = x + state.cameraX;
-      const hit = state.stelae.find(s => Math.abs(s.x - worldX) < 30 && Math.abs((s.y + 20) - y) < 70);
-      if (hit) showRoutePopup(hit);
-    }
-    state.dragging = false;
-  }
-
-  function clampCamera() {
-    const max = Math.max(0, state.worldWidth - canvas.width);
-    state.cameraX = Math.max(0, Math.min(max, state.cameraX));
-  }
-
-  function resize() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    clampCamera();
-  }
-
-  function tick(ts) {
-    if (!state.lastTs) state.lastTs = ts;
-    const dt = Math.min(0.04, (ts - state.lastTs) / 1000);
-    state.lastTs = ts;
-
-    seasonUpdate(dt);
-    updatePeople(dt);
-    updateTribute(dt);
-    updateFloats(dt);
-    applyDraftTargets();
-    draw();
-    updateUI();
-
-    requestAnimationFrame(tick);
-  }
-
-  window.addEventListener('resize', resize);
-  canvas.addEventListener('mousedown', onPointerDown);
-  canvas.addEventListener('mousemove', onPointerMove);
-  window.addEventListener('mouseup', onPointerUp);
-  canvas.addEventListener('touchstart', onPointerDown, { passive: true });
-  canvas.addEventListener('touchmove', onPointerMove, { passive: true });
-  canvas.addEventListener('touchend', onPointerUp, { passive: true });
-
-  document.getElementById('soldierSlider').addEventListener('input', () => {
-    const s = +document.getElementById('soldierSlider').value;
-    const p = +document.getElementById('porterSlider').value;
-    const max = maxDraft();
-    if (s + p > max) document.getElementById('porterSlider').value = Math.max(0, max - s);
-    applyDraftTargets();
-  });
-  document.getElementById('porterSlider').addEventListener('input', () => {
-    const s = +document.getElementById('soldierSlider').value;
-    const p = +document.getElementById('porterSlider').value;
-    const max = maxDraft();
-    if (s + p > max) document.getElementById('soldierSlider').value = Math.max(0, max - p);
-    applyDraftTargets();
-  });
-
-  document.getElementById('cancelBtn').onclick = closePopup;
-  document.getElementById('confirmBtn').onclick = confirmMarch;
-
-  window.triggerTributeArrival = triggerTribute;
-
-  setupWorld();
-  resize();
-  requestAnimationFrame(tick);
-})();
+  S.game = 'trail';
+  save(S);
+  location.href = 'trail-warrior.html';
+}
+
+log('Council convened. Prepare your farms and choose a campaign path.');
+render();
 </script>
 </body>
 </html>
