@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Maya Trail Warrior</title>
+<style>
+  body{margin:0;background:#14100a;color:#efe2c8;font-family:Georgia,serif}
+  .wrap{max-width:920px;margin:0 auto;padding:18px}
+  .card{background:#221a10;border:1px solid #4e3e22;border-radius:8px;padding:12px;margin:10px 0}
+  .row{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+  .big{font-size:1.3rem;color:#f6ca6f}
+  .btn{background:#b47e2c;color:#1e1207;border:none;border-radius:6px;padding:10px 14px;font-weight:700;cursor:pointer}
+  .log{font-family:monospace;height:250px;overflow:auto;background:#1b140c;border:1px solid #4e3e22;border-radius:6px;padding:8px}
+  .bad{color:#ff7d7d}.warn{color:#ffd166}.ok{color:#8be9ae}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>MAYA TRAIL WARRIOR</h1>
+  <p>Oregon-trail campaign travel. Geography drains food, morale, and bodies.</p>
+
+  <div class="card" id="stats"></div>
+  <div class="card">
+    <div class="row">
+      <button class="btn" onclick="advanceDay()">ADVANCE TRAIL DAY</button>
+      <button class="btn" onclick="forage()">FORAGE (RISKY)</button>
+      <button class="btn" onclick="retreatNow()">ABORT & RETURN HOME</button>
+    </div>
+  </div>
+  <div class="card"><div id="log" class="log"></div></div>
+</div>
+
+<script>
+const KEY='mayaThreeGameState';
+function load(){try{return JSON.parse(localStorage.getItem(KEY));}catch{return null}}
+function save(s){localStorage.setItem(KEY,JSON.stringify(s))}
+function log(msg,c=''){const el=document.getElementById('log');const d=document.createElement('div');d.className=c;d.textContent='> '+msg;el.prepend(d)}
+let S=load();
+if(!S||!S.expedition){ location.href='home-farmer.html'; }
+S.game='trail';
+
+const routeCfg={
+  causeway:{daily:14,food:1.0,attrition:0.03,label:'Stone Causeway'},
+  river:{daily:17,food:1.15,attrition:0.05,label:'River Route'},
+  jungle:{daily:20,food:1.35,attrition:0.08,label:'Jungle Cut'}
+};
+
+function render(){
+  const e=S.expedition, r=routeCfg[e.route];
+  document.getElementById('stats').innerHTML=`
+    <div class="row"><div class="big">${e.leg==='outbound'?'Outbound to '+e.target:'Homebound through the jungle'}</div><div>${r.label}</div></div>
+    <div class="row"><div>Distance: <b>${e.distance}</b> / ${e.distanceTotal}</div><div>Food: <b>${e.food}</b></div></div>
+    <div class="row"><div>Soldiers: <b>${e.soldiers}</b></div><div>Porters: <b>${e.porters}</b></div></div>
+    <div class="row"><div>Season ${S.season} Day ${S.day}</div><div>Game: Trail Warrior</div></div>
+  `;
+  save(S);
+}
+
+function oneAttrition(r){
+  if(Math.random()<r.attrition){
+    if(S.expedition.porters>0){S.expedition.porters--;log('A porter was lost to exhaustion and mud.', 'bad');}
+    else if(S.expedition.soldiers>0){S.expedition.soldiers--;log('A warrior collapsed on the trail.', 'bad');}
+  }
+}
+
+function consumeFood(r){
+  const units=S.expedition.soldiers+S.expedition.porters;
+  const used=Math.max(1,Math.ceil(units*r.food));
+  S.expedition.food-=used;
+  if(S.expedition.food<0){
+    S.expedition.food=0;
+    if(S.expedition.porters>0){S.expedition.porters--;log('Starvation: one porter died.', 'bad');}
+    else if(S.expedition.soldiers>0){S.expedition.soldiers--;log('Starvation: one soldier died.', 'bad');}
+  }
+}
+
+function advanceDay(){
+  const e=S.expedition, r=routeCfg[e.route];
+  S.day += 1;
+  if(S.day>30){S.day=1;S.season+=1;log(`Season ${S.season} begins on the march.`, 'warn');}
+  e.distance=Math.max(0,e.distance-r.daily);
+  consumeFood(r);
+  oneAttrition(r);
+
+  if(e.soldiers<=0){
+    log('Your host is gone. Survivors limp home in shame.', 'bad');
+    S.soldiers += 1; S.porters += Math.max(0,e.porters);
+    S.expedition=null; S.game='home'; save(S); location.href='home-farmer.html'; return;
+  }
+
+  if(e.distance===0 && e.leg==='outbound'){
+    log(`You reached ${e.target}. Launching Maya Dynasty Warriors...`, 'ok');
+    S.game='battle'; save(S); location.href='battle-warrior.html'; return;
+  }
+  if(e.distance===0 && e.leg==='homebound'){
+    log('You made it home. The farms await.', 'ok');
+    S.soldiers += e.soldiers; S.porters += e.porters;
+    S.expedition = null; S.game='home';
+    save(S); location.href='home-farmer.html'; return;
+  }
+
+  render();
+}
+
+function forage(){
+  const r=routeCfg[S.expedition.route];
+  if(Math.random()<0.45){
+    const gain=12+Math.floor(Math.random()*22);
+    S.expedition.food += gain;
+    log(`Forage success: +${gain} food.`, 'ok');
+  } else {
+    log('Forage failed. Ambush in the undergrowth.', 'bad');
+    oneAttrition(r);
+  }
+  render();
+}
+
+function retreatNow(){
+  const e=S.expedition;
+  e.leg='homebound';
+  e.distance=e.distanceTotal;
+  log('Retreat ordered. The long road home begins.', 'warn');
+  render();
+}
+
+log('Trail begun. Every day away from home weakens control.');
+render();
+</script>
+</body>
+</html>

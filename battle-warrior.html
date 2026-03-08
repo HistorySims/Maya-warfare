@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Maya Battle Warrior</title>
+<style>
+  body{margin:0;background:#0d0d12;color:#eee8da;font-family:Georgia,serif}
+  .wrap{max-width:980px;margin:0 auto;padding:16px}
+  .hud{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;background:#171722;border:1px solid #2d2d45;border-radius:8px;padding:10px}
+  #arena{margin-top:12px;background:#12121a;border:1px solid #2d2d45;border-radius:8px;height:420px;position:relative;overflow:hidden}
+  .enemy{position:absolute;width:24px;height:24px;border-radius:50%;background:#d04c4c;cursor:pointer}
+  .hero{position:absolute;left:48%;bottom:16px;width:34px;height:34px;border-radius:50%;background:#5ed4b1}
+  .btn{background:#5b67ff;color:white;border:none;border-radius:6px;padding:8px 12px;cursor:pointer;font-weight:700}
+  .log{font-family:monospace;height:140px;overflow:auto;background:#13131d;border:1px solid #2d2d45;border-radius:6px;padding:8px;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>MAYA BATTLE WARRIOR</h1>
+  <p>Dynasty-style battle burst. Win, then survive the return trail.</p>
+  <div class="hud" id="hud"></div>
+  <button class="btn" onclick="playerStrike()">STRIKE NEAREST</button>
+  <div id="arena"><div class="hero"></div></div>
+  <div id="log" class="log"></div>
+</div>
+
+<script>
+const KEY='mayaThreeGameState';
+function load(){try{return JSON.parse(localStorage.getItem(KEY));}catch{return null}}
+function save(s){localStorage.setItem(KEY,JSON.stringify(s))}
+function log(msg){const el=document.getElementById('log');const d=document.createElement('div');d.textContent='> '+msg;el.prepend(d)}
+let S=load();
+if(!S||!S.expedition){location.href='home-farmer.html'}
+S.game='battle';
+
+let playerHp=30;
+let enemies=[];
+const arena=document.getElementById('arena');
+
+function spawn(){
+  const base=5 + (S.expedition.target==="Ik' Naah"?3:S.expedition.target==="Sak Nikte'"?2:0);
+  for(let i=0;i<base;i++){
+    const e={hp:8+Math.floor(Math.random()*6),x:30+Math.random()*900,y:25+Math.random()*300,id:Math.random().toString(36).slice(2)};
+    enemies.push(e);
+  }
+  drawEnemies();
+}
+
+function drawEnemies(){
+  [...arena.querySelectorAll('.enemy')].forEach(n=>n.remove());
+  enemies.forEach(e=>{
+    const n=document.createElement('div');
+    n.className='enemy';
+    n.style.left=e.x+'px'; n.style.top=e.y+'px';
+    n.title='HP '+e.hp;
+    n.onclick=()=>{e.hp-=6; log('You cleave an enemy.'); tick();};
+    arena.appendChild(n);
+  });
+}
+
+function playerStrike(){
+  if(!enemies.length) return;
+  enemies[0].hp -= 7;
+  log('Strike landed.');
+  tick();
+}
+
+function enemyTurn(){
+  const pressure=Math.max(1,Math.floor(enemies.length/2));
+  playerHp-=pressure;
+  if(Math.random()<0.35 && S.expedition.soldiers>0){S.expedition.soldiers--; log('A warrior fell in the melee.');}
+}
+
+function tick(){
+  enemies=enemies.filter(e=>e.hp>0);
+  if(enemies.length===0){
+    log('City taken. But now comes the hard part: keeping it.');
+    S.vassals[S.expedition.target]=true;
+    S.unrest[S.expedition.target]=Math.max(0,S.unrest[S.expedition.target]-2);
+    S.expedition.leg='homebound';
+    S.expedition.distance=S.expedition.distanceTotal;
+    S.expedition.food += 25;
+    S.game='trail';
+    save(S);
+    setTimeout(()=>location.href='trail-warrior.html',700);
+    return;
+  }
+  enemyTurn();
+  if(playerHp<=0 || S.expedition.soldiers<=0){
+    log('Defeat. The campaign collapses.');
+    S.expedition=null;
+    S.game='home';
+    S.food=Math.max(0,S.food-35);
+    save(S);
+    setTimeout(()=>location.href='home-farmer.html',900);
+    return;
+  }
+  drawEnemies();
+  render();
+}
+
+function render(){
+  document.getElementById('hud').innerHTML=`
+    <div>Target: <b>${S.expedition.target}</b></div>
+    <div>Player HP: <b>${playerHp}</b></div>
+    <div>Your soldiers: <b>${S.expedition.soldiers}</b></div>
+    <div>Enemy count: <b>${enemies.length}</b></div>
+    <div>Phase: <b>Battle Warrior</b></div>
+  `;
+  save(S);
+}
+
+spawn();
+render();
+log('Click enemies or use STRIKE NEAREST. Victory sends you to the return trail.');
+</script>
+</body>
+</html>
