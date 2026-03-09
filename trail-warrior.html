@@ -1,131 +1,1619 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Maya Trail Warrior</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>K'uhul Ajaw — The March</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&display=swap" rel="stylesheet">
 <style>
-  body{margin:0;background:#14100a;color:#efe2c8;font-family:Georgia,serif}
-  .wrap{max-width:920px;margin:0 auto;padding:18px}
-  .card{background:#221a10;border:1px solid #4e3e22;border-radius:8px;padding:12px;margin:10px 0}
-  .row{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
-  .big{font-size:1.3rem;color:#f6ca6f}
-  .btn{background:#b47e2c;color:#1e1207;border:none;border-radius:6px;padding:10px 14px;font-weight:700;cursor:pointer}
-  .log{font-family:monospace;height:250px;overflow:auto;background:#1b140c;border:1px solid #4e3e22;border-radius:6px;padding:8px}
-  .bad{color:#ff7d7d}.warn{color:#ffd166}.ok{color:#8be9ae}
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0b0b0c;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    font-family: 'Cinzel', serif;
+    overflow: hidden;
+  }
+
+  #game-container {
+    position: relative;
+    width: 800px;
+    height: 480px;
+    max-width: 100vw;
+    overflow: hidden;
+    border: 2px solid #0f766e;
+    box-shadow: 0 0 40px rgba(15,118,110,0.4);
+  }
+
+  @media (max-width: 820px) {
+    #game-container {
+      width: 100vw;
+      height: calc(100vw * 0.6);
+    }
+  }
+
+  canvas#main-canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* HUD */
+  #hud {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    padding: 7px 10px;
+    background: linear-gradient(to bottom, rgba(11,11,12,0.92) 70%, transparent);
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    flex-wrap: wrap;
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  .hud-item {
+    font-size: 11px;
+    color: #e7e0d2;
+    font-family: 'Cinzel', serif;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+
+  .hud-item span { color: #ca8a04; }
+  .hud-item.danger span { color: #b91c1c; }
+  .hud-item.warn span { color: #f59e0b; }
+
+  #progress-bar-wrap {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 5px;
+    background: rgba(0,0,0,0.5);
+    z-index: 10;
+  }
+  #progress-bar {
+    height: 100%;
+    background: linear-gradient(to right, #0f766e, #22c55e);
+    transition: width 0.6s ease;
+  }
+
+  /* RAIN WARNING */
+  #rain-banner {
+    position: absolute;
+    top: 44px; left: 50%; transform: translateX(-50%);
+    background: rgba(30,58,138,0.88);
+    color: #bfdbfe;
+    font-family: 'Cinzel', serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 4px 14px;
+    border-radius: 2px;
+    z-index: 15;
+    display: none;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  /* ─── EVENT CARD ─── */
+  #event-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.6);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 20;
+  }
+
+  #event-card {
+    background: #f5f0e1;
+    border: 3px solid #5c3d11;
+    border-radius: 4px;
+    max-width: 370px;
+    width: 90%;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.75);
+  }
+
+  #event-red-bar { height: 6px; background: #b91c1c; }
+
+  #event-card-inner { padding: 16px 18px 14px; }
+
+  #event-title {
+    font-family: 'Cinzel', serif;
+    font-weight: 900;
+    font-size: 13px;
+    color: #2d1506;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid #c4b48a;
+    padding-bottom: 6px;
+  }
+
+  #event-desc {
+    font-family: Georgia, serif;
+    font-size: 12px;
+    color: #3d2208;
+    line-height: 1.6;
+    margin-bottom: 13px;
+  }
+
+  #event-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .ev-btn {
+    flex: 1;
+    min-width: 110px;
+    padding: 8px 10px;
+    border: none;
+    border-radius: 3px;
+    font-family: 'Cinzel', serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    text-transform: uppercase;
+    line-height: 1.3;
+    transition: filter 0.1s;
+  }
+  .ev-btn:hover { filter: brightness(1.15); }
+  .ev-btn:disabled { opacity: 0.6; cursor: default; }
+  .ev-btn.safe    { background: #0f766e; color: #e7e0d2; }
+  .ev-btn.risky   { background: #b45309; color: #fff; }
+  .ev-btn.neutral { background: #5c3d11; color: #e7e0d2; }
+
+  #event-result {
+    margin-top: 10px;
+    padding: 8px 10px;
+    background: rgba(92,61,17,0.1);
+    border-left: 3px solid #b91c1c;
+    font-family: Georgia, serif;
+    font-size: 11px;
+    color: #2d1506;
+    line-height: 1.5;
+    display: none;
+  }
+
+  /* ─── CAMP SCREEN ─── */
+  #camp-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 20;
+  }
+
+  #camp-card {
+    background: #110e08;
+    border: 2px solid #ca8a04;
+    border-radius: 4px;
+    padding: 18px 22px 16px;
+    max-width: 330px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 0 50px rgba(202,138,4,0.35);
+  }
+
+  #camp-title {
+    font-family: 'Cinzel', serif;
+    font-weight: 900;
+    color: #ca8a04;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+  }
+
+  #camp-fire-canvas {
+    display: block;
+    margin: 0 auto 10px;
+  }
+
+  #camp-stats {
+    font-family: Georgia, serif;
+    font-size: 12px;
+    color: #e7e0d2;
+    line-height: 2;
+    margin-bottom: 10px;
+    text-align: left;
+  }
+  #camp-stats .lbl  { color: #a0917a; }
+  #camp-stats .val  { color: #e7e0d2; font-weight: bold; }
+  #camp-stats .warn { color: #f59e0b; font-weight: bold; }
+  #camp-stats .bad  { color: #b91c1c; font-weight: bold; }
+
+  #camp-warning {
+    font-family: Georgia, serif;
+    font-size: 11px;
+    color: #b91c1c;
+    border: 1px solid #b91c1c;
+    border-radius: 3px;
+    padding: 7px;
+    margin-bottom: 12px;
+    display: none;
+  }
+
+  #camp-btn {
+    background: #0f766e;
+    color: #e7e0d2;
+    border: none;
+    padding: 9px 26px;
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: 3px;
+  }
+  #camp-btn:hover { background: #0d9488; }
+
+  /* ─── END / GAME OVER ─── */
+  #end-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.82);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 30;
+  }
+
+  #end-card {
+    background: #f5f0e1;
+    border: 3px solid #5c3d11;
+    border-radius: 4px;
+    max-width: 390px;
+    width: 92%;
+    overflow: hidden;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.85);
+  }
+
+  #end-top-bar { height: 6px; background: #0f766e; }
+  #end-top-bar.fail { background: #b91c1c; }
+
+  #end-inner { padding: 18px 22px 16px; text-align: center; }
+
+  #end-title {
+    font-family: 'Cinzel', serif;
+    font-weight: 900;
+    font-size: 16px;
+    color: #2d1506;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 7px;
+  }
+
+  #end-sub {
+    font-family: Georgia, serif;
+    font-size: 12px;
+    color: #5c3d11;
+    font-style: italic;
+    line-height: 1.6;
+    margin-bottom: 14px;
+  }
+
+  #end-stats {
+    font-family: Georgia, serif;
+    font-size: 12px;
+    color: #3d2208;
+    line-height: 2;
+    text-align: left;
+    padding: 10px 12px;
+    background: rgba(92,61,17,0.07);
+    border-radius: 3px;
+    margin-bottom: 16px;
+  }
+
+  #end-btn {
+    background: #0f766e;
+    color: #e7e0d2;
+    border: none;
+    padding: 10px 28px;
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: 3px;
+  }
+  #end-btn:hover { background: #0d9488; }
+  #end-btn.fail { background: #b91c1c; }
+  #end-btn.fail:hover { background: #dc2626; }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <h1>MAYA TRAIL WARRIOR</h1>
-  <p>Oregon-trail campaign travel. Geography drains food, morale, and bodies.</p>
 
-  <div class="card" id="stats"></div>
-  <div class="card">
-    <div class="row">
-      <button class="btn" onclick="advanceDay()">ADVANCE TRAIL DAY</button>
-      <button class="btn" onclick="forage()">FORAGE (RISKY)</button>
-      <button class="btn" onclick="retreatNow()">ABORT & RETURN HOME</button>
+<div id="game-container">
+  <canvas id="main-canvas" width="800" height="480"></canvas>
+
+  <!-- HUD -->
+  <div id="hud">
+    <div class="hud-item" id="hud-food">🌽 Food: <span id="v-food">80</span></div>
+    <div class="hud-item" id="hud-soldiers">⚔️ Soldiers: <span id="v-soldiers">6</span></div>
+    <div class="hud-item" id="hud-porters">📦 Porters: <span id="v-porters">4</span></div>
+    <div class="hud-item">📅 Day <span id="v-day">1</span> of <span id="v-total">15</span></div>
+    <div class="hud-item" id="hud-season">☀️ Season: <span id="v-season">60</span>d left</div>
+  </div>
+
+  <div id="rain-banner">⛈ The Rains Are Here</div>
+
+  <!-- EVENT CARD -->
+  <div id="event-overlay">
+    <div id="event-card">
+      <div id="event-red-bar"></div>
+      <div id="event-card-inner">
+        <div id="event-title">Title</div>
+        <div id="event-desc">Description.</div>
+        <div id="event-buttons"></div>
+        <div id="event-result"></div>
+      </div>
     </div>
   </div>
-  <div class="card"><div id="log" class="log"></div></div>
+
+  <!-- CAMP SCREEN -->
+  <div id="camp-overlay">
+    <div id="camp-card">
+      <div id="camp-title">Camp — Night <span id="v-camp-day">1</span></div>
+      <canvas id="camp-fire-canvas" width="90" height="65"></canvas>
+      <div id="camp-stats"></div>
+      <div id="camp-warning"></div>
+      <button id="camp-btn">Continue March</button>
+    </div>
+  </div>
+
+  <!-- ARRIVAL / GAME OVER -->
+  <div id="end-overlay">
+    <div id="end-card">
+      <div id="end-top-bar"></div>
+      <div id="end-inner">
+        <div id="end-title">Title</div>
+        <div id="end-sub">Subtitle</div>
+        <div id="end-stats"></div>
+        <button id="end-btn">Continue</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="progress-bar-wrap"><div id="progress-bar" style="width:0%"></div></div>
 </div>
 
 <script>
-const KEY='mayaThreeGameState';
-function load(){try{return JSON.parse(localStorage.getItem(KEY));}catch{return null}}
-function save(s){localStorage.setItem(KEY,JSON.stringify(s))}
-function log(msg,c=''){const el=document.getElementById('log');const d=document.createElement('div');d.className=c;d.textContent='> '+msg;el.prepend(d)}
-let S=load();
-if(!S||!S.expedition){ location.href='home-farmer.html'; }
-S.game='trail';
-
-const routeCfg={
-  causeway:{daily:14,food:1.0,attrition:0.03,label:'Stone Causeway'},
-  river:{daily:17,food:1.15,attrition:0.05,label:'River Route'},
-  jungle:{daily:20,food:1.35,attrition:0.08,label:'Jungle Cut'}
+'use strict';
+// ─────────────────────────────────────────────
+//  STARTING STATE  (hardcoded; wire to Game 1 later)
+// ─────────────────────────────────────────────
+const MARCH_INIT = {
+  soldiers:       6,
+  porters:        4,
+  food:           80,
+  destination:    "Ox Witz",
+  distanceDays:   15,
+  isReturnTrip:   false,
+  seasonDaysLeft: 60,
 };
 
-function render(){
-  const e=S.expedition, r=routeCfg[e.route];
-  document.getElementById('stats').innerHTML=`
-    <div class="row"><div class="big">${e.leg==='outbound'?'Outbound to '+e.target:'Homebound through the jungle'}</div><div>${r.label}</div></div>
-    <div class="row"><div>Distance: <b>${e.distance}</b> / ${e.distanceTotal}</div><div>Food: <b>${e.food}</b></div></div>
-    <div class="row"><div>Soldiers: <b>${e.soldiers}</b></div><div>Porters: <b>${e.porters}</b></div></div>
-    <div class="row"><div>Season ${S.season} Day ${S.day}</div><div>Game: Trail Warrior</div></div>
+// ─────────────────────────────────────────────
+//  CANVAS
+// ─────────────────────────────────────────────
+const canvas = document.getElementById('main-canvas');
+const ctx    = canvas.getContext('2d');
+const W = 800, H = 480;
+
+const cfCanvas = document.getElementById('camp-fire-canvas');
+const cfCtx    = cfCanvas.getContext('2d');
+
+// ─────────────────────────────────────────────
+//  LAYOUT CONSTANTS
+// ─────────────────────────────────────────────
+const ROAD_Y      = Math.floor(H * 0.615);  // top edge of road
+const ROAD_H      = H - ROAD_Y;
+const WALK_Y      = ROAD_Y + 20;            // feet baseline for sprites
+
+// ─────────────────────────────────────────────
+//  SEEDED PSEUDO-RANDOM (deterministic scenery)
+// ─────────────────────────────────────────────
+function sr(n) {
+  const s = Math.sin(n * 9301.0 + 49297.0) * 23423.4;
+  return s - Math.floor(s);
+}
+
+// ─────────────────────────────────────────────
+//  PARALLAX LAYER DATA
+// ─────────────────────────────────────────────
+function buildLayer(seed, count, minGap, maxGap) {
+  const items = [];
+  let x = 0;
+  for (let i = 0; i < count; i++) {
+    x += minGap + sr(seed + i * 7) * (maxGap - minGap);
+    items.push({
+      x,
+      scale: 0.6 + sr(seed + i * 13) * 0.7,
+      type:  Math.floor(sr(seed + i * 3) * 5),
+    });
+  }
+  return { items, width: x + maxGap };
+}
+
+const FAR  = buildLayer(1, 55, 60,  130);
+const MID  = buildLayer(2, 75, 50,  110);
+const NEAR = buildLayer(3, 45, 70,  150);
+
+const FAR_SPD  = 0.18;
+const MID_SPD  = 0.38;
+const NEAR_SPD = 0.72;
+
+let farX = 0, midX = 0, nearX = 0;
+
+// ─────────────────────────────────────────────
+//  STARS
+// ─────────────────────────────────────────────
+const STARS = Array.from({ length: 90 }, (_, i) => ({
+  x:     sr(i * 11)  * W,
+  y:     sr(i * 17)  * ROAD_Y * 0.92,
+  r:     0.5 + sr(i * 23) * 1.6,
+  phase: sr(i * 7)   * Math.PI * 2,
+}));
+
+// ─────────────────────────────────────────────
+//  GAME STATE
+// ─────────────────────────────────────────────
+const G = {
+  soldiers:      MARCH_INIT.soldiers,
+  porters:       MARCH_INIT.porters,
+  food:          MARCH_INIT.food,
+  day:           1,
+  seasonLeft:    MARCH_INIT.seasonDaysLeft,
+  distanceDays:  MARCH_INIT.distanceDays,
+  destination:   MARCH_INIT.destination,
+  isReturn:      MARCH_INIT.isReturnTrip,
+
+  paused:        false,
+  gameOver:      false,
+  arrived:       false,
+  raining:       false,
+  rainWarned:    false,
+  starving:      false,
+
+  dayFrac:       0,      // 0..1 progress through current day
+  nextCamp:      0,      // day number of next camp
+  sinceEvent:    0,      // days since last event
+  nextEventIn:   0,      // days until next event
+
+  thirstDays:    0,      // extra food cost from dehydration
+  cenoteFreeDays:0,      // no extra food cost (found cenote)
+  porterDesertCD:0,      // countdown to possible porter desertion
+  wounded:       false,  // return trip slow
+  injured:       0,      // soldiers injured
+  tradeWeapons:  false,
+  campAnim:      0,
+};
+
+function secPerDay() {
+  let s = 4.5;
+  if (G.raining)  s *= 1.6;
+  if (G.wounded)  s *= 1.35;
+  return s;
+}
+
+function foodPerDay() {
+  let base = (G.soldiers + G.porters + 1) * 0.5;
+  if (G.raining)          base *= 2;
+  if (G.thirstDays > 0)   base *= 1.5;
+  if (G.cenoteFreeDays>0) base  = 0;
+  return base;
+}
+
+// ─────────────────────────────────────────────
+//  HUD
+// ─────────────────────────────────────────────
+function updateHUD() {
+  document.getElementById('v-food').textContent     = Math.ceil(G.food);
+  document.getElementById('v-soldiers').textContent = G.soldiers;
+  document.getElementById('v-porters').textContent  = G.porters;
+  document.getElementById('v-day').textContent      = G.day;
+  document.getElementById('v-total').textContent    = G.distanceDays;
+  document.getElementById('v-season').textContent   = G.seasonLeft;
+
+  const fh = document.getElementById('hud-food');
+  fh.className = 'hud-item' + (G.food < 15 ? ' danger' : G.food < 30 ? ' warn' : '');
+
+  const sh = document.getElementById('hud-soldiers');
+  sh.className = 'hud-item' + (G.soldiers <= 2 ? ' danger' : G.soldiers <= 4 ? ' warn' : '');
+
+  const seh = document.getElementById('hud-season');
+  seh.className = 'hud-item' + (G.seasonLeft <= 10 ? ' danger' : G.seasonLeft <= 20 ? ' warn' : '');
+
+  const pct = Math.min(1, (G.day - 1) / G.distanceDays);
+  document.getElementById('progress-bar').style.width = (pct * 100).toFixed(1) + '%';
+}
+
+// ─────────────────────────────────────────────
+//  ADVANCE A DAY
+// ─────────────────────────────────────────────
+function advanceDay() {
+  G.day++;
+  G.seasonLeft--;
+
+  if (G.thirstDays > 0)    G.thirstDays--;
+  if (G.cenoteFreeDays > 0) G.cenoteFreeDays--;
+
+  // Porter desertion countdown
+  if (G.porterDesertCD > 0) {
+    G.porterDesertCD--;
+    if (G.porterDesertCD === 0 && Math.random() < 0.4 && G.porters > 0) {
+      showAutoEvent(
+        "A Porter Vanishes",
+        "He feared the omen. In the pre-dawn darkness he slipped into the jungle, taking a bundle with him.",
+        () => { G.porters = Math.max(0, G.porters - 1); G.food = Math.max(0, G.food - 6); }
+      );
+      return;
+    }
+  }
+
+  // Food
+  const eaten = foodPerDay();
+  G.food = Math.max(0, G.food - eaten);
+
+  // Starvation cascade
+  if (G.food <= 0 && !G.starving) {
+    G.starving = true;
+    showAutoEvent(
+      "The Army Starves",
+      "There is nothing left to eat. Soldiers begin to desert in the night.",
+      () => { G.soldiers = Math.max(0, G.soldiers - 1); }
+    );
+    return;
+  } else if (G.food <= 0 && G.starving) {
+    G.soldiers = Math.max(0, G.soldiers - 1);
+  }
+
+  // Season warnings
+  if (!G.raining && G.seasonLeft === 10 && !G.rainWarned) {
+    G.rainWarned = true;
+    showBanner("⛈ The Rains Approach! — 10 days of dry season remain", 7000);
+  }
+  if (!G.raining && G.seasonLeft <= 0) {
+    G.raining = true;
+    document.getElementById('rain-banner').style.display = 'block';
+    showAutoEvent(
+      "The Rains Begin",
+      "The first drops fall. Within an hour the road is a river of mud. The porters can barely stand. Everything is twice as hard from here.",
+      () => {}
+    );
+    return;
+  }
+
+  updateHUD();
+  if (checkDeath()) return;
+
+  // Arrival?
+  if (G.day > G.distanceDays) { doArrive(); return; }
+
+  G.sinceEvent++;
+
+  // Camp check
+  if (G.day >= G.nextCamp) {
+    G.nextCamp = G.day + 3 + Math.floor(Math.random() * 2);
+    showCamp();
+    return;
+  }
+
+  // Event check
+  if (G.sinceEvent >= G.nextEventIn) {
+    G.sinceEvent = 0;
+    G.nextEventIn = 2 + Math.floor(Math.random() * 3);
+    triggerEvent();
+  }
+}
+
+function checkDeath() {
+  if (G.soldiers <= 0 && !G.gameOver) {
+    G.gameOver = true;
+    doGameOver();
+    return true;
+  }
+  return false;
+}
+
+function losePorter(n = 1) {
+  const lost = Math.min(G.porters, n);
+  G.porters = Math.max(0, G.porters - lost);
+  G.food    = Math.max(0, G.food - lost * 8);
+}
+
+// ─────────────────────────────────────────────
+//  EVENTS
+// ─────────────────────────────────────────────
+function showAutoEvent(title, desc, onClose) {
+  G.paused = true;
+  const ov = document.getElementById('event-overlay');
+  document.getElementById('event-title').textContent = title;
+  document.getElementById('event-desc').textContent  = desc;
+  const btns = document.getElementById('event-buttons');
+  btns.innerHTML = '';
+  document.getElementById('event-result').style.display = 'none';
+
+  const btn = makeBtn('Continue', 'neutral', () => {
+    onClose();
+    ov.style.display = 'none';
+    G.paused = false;
+    updateHUD();
+    checkDeath();
+  });
+  btns.appendChild(btn);
+  ov.style.display = 'flex';
+}
+
+function showChoiceEvent(title, desc, choices) {
+  G.paused = true;
+  const ov = document.getElementById('event-overlay');
+  document.getElementById('event-title').textContent = title;
+  document.getElementById('event-desc').textContent  = desc;
+  const btns = document.getElementById('event-buttons');
+  btns.innerHTML = '';
+  const resultEl = document.getElementById('event-result');
+  resultEl.style.display = 'none';
+
+  choices.forEach(c => {
+    const btn = makeBtn(c.label, c.cls || 'neutral', () => {
+      btns.querySelectorAll('button').forEach(b => { b.disabled = true; });
+      const txt = c.act();
+      resultEl.textContent = txt;
+      resultEl.style.display = 'block';
+      updateHUD();
+      setTimeout(() => {
+        ov.style.display = 'none';
+        G.paused = false;
+        checkDeath();
+      }, 2400);
+    });
+    btns.appendChild(btn);
+  });
+  ov.style.display = 'flex';
+}
+
+function makeBtn(label, cls, fn) {
+  const b = document.createElement('button');
+  b.className = 'ev-btn ' + cls;
+  b.textContent = label;
+  b.addEventListener('click', fn);
+  return b;
+}
+
+// ─────────────────────────────────────────────
+//  EVENT POOL
+// ─────────────────────────────────────────────
+const EVENTS_OUT = [
+  // ── HEAT & EXHAUSTION ──
+  function evtBurningRoad() {
+    showChoiceEvent(
+      "The Burning Road",
+      "The sun beats down on the sacbe. There is no shade. Your porters stagger beneath their loads — two have already fallen and risen again.",
+      [
+        { label: "Push On", cls: "risky", act() {
+          losePorter(1);
+          return "You drive the column. A porter collapses and does not rise. His bundle is split among those who remain.";
+        }},
+        { label: "Make Shade Camp", cls: "safe", act() {
+          G.food = Math.max(0, G.food - foodPerDay());
+          return "You call a halt beneath the ceiba trees. A day is lost, but your porters survive.";
+        }},
+      ]
+    );
+  },
+
+  function evtPorterDown() {
+    showAutoEvent(
+      "Porter Down",
+      "A porter collapses face-first on the road. He cannot stand. His food bundle spills across the sacbe stones.",
+      () => { losePorter(1); }
+    );
+  },
+
+  function evtThirst() {
+    showChoiceEvent(
+      "Thirst",
+      "The water gourds are nearly empty. A soldier spotted a cenote off the trail — fresh water — but it means leaving the sacbe.",
+      [
+        { label: "Detour to Cenote", cls: "safe", act() {
+          G.food = Math.max(0, G.food - foodPerDay() * 0.5);
+          G.cenoteFreeDays = 2;
+          return "The cool water revives your column. Half a day is lost, but for two days you need no extra water.";
+        }},
+        { label: "Stay on the Road", cls: "risky", act() {
+          G.thirstDays = 2;
+          return "You press on without water. Food consumption rises sharply for two days.";
+        }},
+      ]
+    );
+  },
+
+  // ── TERRAIN ──
+  function evtRiver() {
+    showChoiceEvent(
+      "The River",
+      "A swollen river blocks the road. The water is fast and chest-deep. Fallen trees upstream offer a possible crossing.",
+      [
+        { label: "Ford the River", cls: "risky", act() {
+          if (Math.random() < 0.3) {
+            G.soldiers = Math.max(0, G.soldiers - 1);
+            G.food = Math.max(0, G.food - 10);
+            return "The current takes a soldier. You watch him disappear downstream. Ten days of food washes away.";
+          }
+          return "Your column crosses safely, chest-deep in cold water. The porters barely keep the bundles dry.";
+        }},
+        { label: "Fallen Tree Bridge", cls: "safe", act() {
+          G.food = Math.max(0, G.food - foodPerDay());
+          return "It takes most of the day to find and cross the log bridge. Safe — but a day is lost.";
+        }},
+      ]
+    );
+  },
+
+  function evtMud() {
+    showAutoEvent(
+      "Mud Season",
+      "The trail dips into lowlands. The ground is soft. Every step sinks ankle-deep. The porters struggle to keep their bundles from the mire.",
+      () => { G.food = Math.max(0, G.food - foodPerDay()); }
+    );
+  },
+
+  function evtOvergrown() {
+    showAutoEvent(
+      "Overgrown Trail",
+      "The jungle has swallowed the sacbe. Vines and roots smother the stones. Your soldiers hack through with their macuahuitl for hours.",
+      () => { G.food = Math.max(0, G.food - foodPerDay() * 0.5); }
+    );
+  },
+
+  // ── ENCOUNTERS ──
+  function evtTrader() {
+    showChoiceEvent(
+      "The Trader",
+      "A merchant on the road offers dried fish and maize cakes. He wants obsidian blades in trade — two of your soldiers' weapons.",
+      [
+        { label: "Trade Weapons", cls: "risky", act() {
+          G.food = Math.min(G.food + 20, 9999);
+          G.tradeWeapons = true;
+          return "You trade the blades. Twenty days of food changes hands. Your soldiers grip their remaining weapons nervously.";
+        }},
+        { label: "Decline", cls: "safe", act() {
+          return "You pass the merchant by. A wise lord does not weaken his army before battle.";
+        }},
+      ]
+    );
+  },
+
+  function evtShrine() {
+    showChoiceEvent(
+      "Abandoned Shrine",
+      "Your scouts find a crumbling shrine off the trail. Ancient offerings may be cached inside. The stones are dark with old incense.",
+      [
+        { label: "Search It", cls: "risky", act() {
+          if (Math.random() < 0.7) {
+            G.food = Math.min(G.food + 12, 9999);
+            return "Inside: dried maize and smoked meat sealed in clay vessels. A gift from the ancestors — twelve days of food.";
+          }
+          G.soldiers = Math.max(0, G.soldiers - 1);
+          return "Something stirs in the shadows. A soldier cries out — a fer-de-lance had nested in the dark. He will not march further.";
+        }},
+        { label: "Pass By", cls: "safe", act() {
+          return "You leave the shrine undisturbed. Some things are better left alone in the jungle.";
+        }},
+      ]
+    );
+  },
+
+  function evtJaguar() {
+    showAutoEvent(
+      "Jaguar",
+      "A jaguar stalks the camp at night. Its eyes glow in the firelight. Your soldiers grip their clubs until dawn.",
+      () => {
+        if (Math.random() < 0.4) {
+          G.injured = Math.min(G.soldiers, G.injured + 1);
+        }
+      }
+    );
+  },
+
+  function evtScouts() {
+    const dLeft = Math.max(1, G.distanceDays - G.day);
+    const intel = Math.random() < 0.5
+      ? "few defenders — the city seems lightly guarded"
+      : "heavy fortifications along the walls and smoke from many cook-fires";
+    showAutoEvent(
+      "Scouts Return",
+      `Your forward scouts report back. ${G.destination} is ${dLeft} days ahead. They saw ${intel}.`,
+      () => {}
+    );
+  },
+
+  // ── MORALE ──
+  function evtGrumbling() {
+    showChoiceEvent(
+      "Grumbling",
+      "The soldiers mutter around the fire. They are far from home, the food is thin, and one asks loudly how much further you intend to march.",
+      [
+        { label: "Share Extra Rations", cls: "safe", act() {
+          G.food = Math.max(0, G.food - 5);
+          return "You share five days of food among the men. The grumbling stops. They call your name in praise around the fire.";
+        }},
+        { label: "Remind Them of Glory", cls: "risky", act() {
+          if (Math.random() < 0.25) {
+            G.soldiers = Math.max(0, G.soldiers - 1);
+            return "Your speech falls flat. By morning, one soldier is gone — slipped into the jungle before dawn.";
+          }
+          return "You speak of jade and captives and the glory of your lineage. The soldiers pound their clubs on the ground. They will march.";
+        }},
+      ]
+    );
+  },
+
+  function evtDesertion() {
+    showAutoEvent(
+      "Desertion",
+      "In the morning, a soldier is gone. His sleeping mat is cold. He took food with him — and left nothing behind.",
+      () => {
+        G.soldiers = Math.max(0, G.soldiers - 1);
+        G.food     = Math.max(0, G.food - 5);
+      }
+    );
+  },
+
+  function evtOmen() {
+    showChoiceEvent(
+      "Omen",
+      "A quetzal bird crosses your path from right to left — a bad omen. Your porters whisper fearfully and slow their pace.",
+      [
+        { label: "Perform a Ritual", cls: "safe", act() {
+          G.food = Math.max(0, G.food - foodPerDay() * 0.5);
+          return "You halt the column and perform the rites. The porters are calmed. Half a day is lost, but spirits are steady.";
+        }},
+        { label: "Ignore It", cls: "risky", act() {
+          if (Math.random() < 0.4) {
+            G.porterDesertCD = 2;
+            return "The porters are unsettled. You push on — but they murmur all day, and one looks back toward home.";
+          }
+          return "Nothing happens. The men relax by nightfall. Perhaps omens are just birds.";
+        }},
+      ]
+    );
+  },
+];
+
+const EVENTS_RETURN = [
+  function evtWounded() {
+    showAutoEvent(
+      "The Wounded",
+      "Your injured soldiers slow the march. Carrying those who cannot walk costs extra food and precious time.",
+      () => { G.wounded = true; }
+    );
+  },
+
+  function evtAlmostHome() {
+    showAutoEvent(
+      "Almost Home",
+      "Through the thinning jungle you can smell cook-fires and hear distant dogs. Home is close. Your soldiers quicken their step.",
+      () => {}
+    );
+  },
+
+  function evtReturnExhaustion() {
+    showAutoEvent(
+      "Exhaustion",
+      "The column staggers. Men who were proud warriors now stumble like old men. The return road is twice as hard as the journey out.",
+      () => { G.food = Math.max(0, G.food - foodPerDay()); }
+    );
+  },
+
+  function evtReturnGrumbling() {
+    showChoiceEvent(
+      "Grumbling",
+      "The soldiers mutter around the fire. They are wounded, hungry, and far from home. One says: 'Why did we march at all?'",
+      [
+        { label: "Share Rations", cls: "safe", act() {
+          G.food = Math.max(0, G.food - 5);
+          return "You share what little is left. The men eat in silence, but they will march tomorrow.";
+        }},
+        { label: "Speak of Glory", cls: "risky", act() {
+          if (Math.random() < 0.35) {
+            G.soldiers = Math.max(0, G.soldiers - 1);
+            return "A soldier disappears that night. He wanted no more glory — only home.";
+          }
+          return "You speak of the captives taken, the city humbled. The men nod slowly. They will march.";
+        }},
+      ]
+    );
+  },
+];
+
+function triggerEvent() {
+  const pool = G.isReturn
+    ? [...EVENTS_RETURN, ...EVENTS_OUT.slice(0, 7)]
+    : EVENTS_OUT;
+  pool[Math.floor(Math.random() * pool.length)]();
+}
+
+// ─────────────────────────────────────────────
+//  CAMP SCREEN
+// ─────────────────────────────────────────────
+function showCamp() {
+  G.paused = true;
+  document.getElementById('v-camp-day').textContent = G.day;
+
+  const dLeft = Math.max(0, G.distanceDays - G.day + 1);
+  const destWord = G.isReturn ? 'days to home' : `days to ${G.destination}`;
+
+  const cls = (v, warnV, badV) =>
+    v <= badV ? 'bad' : v <= warnV ? 'warn' : 'val';
+
+  document.getElementById('camp-stats').innerHTML = `
+    <div><span class="lbl">Day: </span><span class="val">${G.day} of ${G.distanceDays}</span></div>
+    <div><span class="lbl">Soldiers: </span><span class="${cls(G.soldiers,3,1)}">${G.soldiers}</span></div>
+    <div><span class="lbl">Porters: </span><span class="${cls(G.porters,2,0)}">${G.porters}</span></div>
+    <div><span class="lbl">Food: </span><span class="${cls(G.food,25,10)}">${Math.ceil(G.food)}</span></div>
+    <div><span class="lbl">Distance: </span><span class="val">${dLeft} ${destWord}</span></div>
+    <div><span class="lbl">Dry season: </span><span class="${cls(G.seasonLeft,20,10)}">${G.seasonLeft} days left</span></div>
   `;
-  save(S);
-}
 
-function oneAttrition(r){
-  if(Math.random()<r.attrition){
-    if(S.expedition.porters>0){S.expedition.porters--;log('A porter was lost to exhaustion and mud.', 'bad');}
-    else if(S.expedition.soldiers>0){S.expedition.soldiers--;log('A warrior collapsed on the trail.', 'bad');}
-  }
-}
-
-function consumeFood(r){
-  const units=S.expedition.soldiers+S.expedition.porters;
-  const used=Math.max(1,Math.ceil(units*r.food));
-  S.expedition.food-=used;
-  if(S.expedition.food<0){
-    S.expedition.food=0;
-    if(S.expedition.porters>0){S.expedition.porters--;log('Starvation: one porter died.', 'bad');}
-    else if(S.expedition.soldiers>0){S.expedition.soldiers--;log('Starvation: one soldier died.', 'bad');}
-  }
-}
-
-function advanceDay(){
-  const e=S.expedition, r=routeCfg[e.route];
-  S.day += 1;
-  if(S.day>30){S.day=1;S.season+=1;log(`Season ${S.season} begins on the march.`, 'warn');}
-  e.distance=Math.max(0,e.distance-r.daily);
-  consumeFood(r);
-  oneAttrition(r);
-
-  if(e.soldiers<=0){
-    log('Your host is gone. Survivors limp home in shame.', 'bad');
-    S.soldiers += 1; S.porters += Math.max(0,e.porters);
-    S.expedition=null; S.game='home'; save(S); location.href='home-farmer.html'; return;
-  }
-
-  if(e.distance===0 && e.leg==='outbound'){
-    log(`You reached ${e.target}. Launching Maya Dynasty Warriors...`, 'ok');
-    S.game='battle'; save(S); location.href='battle-warrior.html'; return;
-  }
-  if(e.distance===0 && e.leg==='homebound'){
-    log('You made it home. The farms await.', 'ok');
-    S.soldiers += e.soldiers; S.porters += e.porters;
-    S.expedition = null; S.game='home';
-    save(S); location.href='home-farmer.html'; return;
-  }
-
-  render();
-}
-
-function forage(){
-  const r=routeCfg[S.expedition.route];
-  if(Math.random()<0.45){
-    const gain=12+Math.floor(Math.random()*22);
-    S.expedition.food += gain;
-    log(`Forage success: +${gain} food.`, 'ok');
+  const warn = document.getElementById('camp-warning');
+  if (G.food < 10) {
+    warn.textContent = 'Your men are starving. You may not reach your destination.';
+    warn.style.display = 'block';
+  } else if (G.porters === 0) {
+    warn.textContent = 'No porters remain. Your soldiers carry what food is left, but it will not last.';
+    warn.style.display = 'block';
   } else {
-    log('Forage failed. Ambush in the undergrowth.', 'bad');
-    oneAttrition(r);
+    warn.style.display = 'none';
   }
-  render();
+
+  document.getElementById('camp-overlay').style.display = 'flex';
 }
 
-function retreatNow(){
-  const e=S.expedition;
-  e.leg='homebound';
-  e.distance=e.distanceTotal;
-  log('Retreat ordered. The long road home begins.', 'warn');
-  render();
+document.getElementById('camp-btn').addEventListener('click', () => {
+  document.getElementById('camp-overlay').style.display = 'none';
+  G.paused = false;
+});
+
+// ─────────────────────────────────────────────
+//  ARRIVAL
+// ─────────────────────────────────────────────
+function doArrive() {
+  G.arrived = true;
+  G.paused  = true;
+
+  const bar  = document.getElementById('end-top-bar');
+  bar.className = '';
+
+  document.getElementById('end-title').textContent = G.isReturn
+    ? 'Home'
+    : `You Have Reached ${G.destination}`;
+
+  document.getElementById('end-sub').textContent = G.isReturn
+    ? 'Home. Your people watch from the fields as your army returns. The long march is done.'
+    : `You have reached ${G.destination}. Your army stands at the tree line, exhausted but ready.`;
+
+  document.getElementById('end-stats').innerHTML = `
+    <div>⚔️ Soldiers remaining: <strong>${G.soldiers}</strong></div>
+    <div>📦 Porters remaining:  <strong>${G.porters}</strong></div>
+    <div>🌽 Food remaining:     <strong>${Math.ceil(G.food)}</strong></div>
+    <div>📅 Days marched:       <strong>${G.day}</strong></div>
+    ${G.tradeWeapons ? '<div style="color:#b45309;margin-top:4px">⚠️ Soldier weapons were traded on the road</div>' : ''}
+    ${G.raining      ? '<div style="color:#3b82f6;margin-top:4px">🌧 Arrived during the rains</div>' : ''}
+  `;
+
+  const btn = document.getElementById('end-btn');
+  btn.className = '';
+  btn.textContent = G.isReturn ? 'Enter the City' : 'Prepare for Battle';
+
+  document.getElementById('end-overlay').style.display = 'flex';
+
+  btn.onclick = () => {
+    const exportState = {
+      soldiers:     G.soldiers,
+      porters:      G.porters,
+      food:         Math.ceil(G.food),
+      destination:  G.destination,
+      daysMarch:    G.day,
+      tradeWeapons: G.tradeWeapons,
+      injured:      G.injured,
+      raining:      G.raining,
+      isReturn:     G.isReturn,
+    };
+    console.log('[March] Export state ->', exportState);
+    if (typeof window.onMarchComplete === 'function') window.onMarchComplete(exportState);
+    document.getElementById('end-overlay').style.display = 'none';
+    resetGame();
+  };
 }
 
-log('Trail begun. Every day away from home weakens control.');
-render();
+// ─────────────────────────────────────────────
+//  GAME OVER
+// ─────────────────────────────────────────────
+function doGameOver() {
+  G.paused = true;
+  document.getElementById('end-top-bar').className = 'fail';
+  document.getElementById('end-title').textContent = 'Your Warriors Are Gone';
+  document.getElementById('end-sub').textContent =
+    'You stand alone in the jungle. Your dynasty has ended. The jungle reclaims your name.';
+  document.getElementById('end-stats').innerHTML = `
+    <div>📅 Days marched: <strong>${G.day}</strong></div>
+    <div>🌽 Food remaining: <strong>${Math.ceil(G.food)}</strong></div>
+  `;
+  const btn = document.getElementById('end-btn');
+  btn.className = 'fail';
+  btn.textContent = 'Begin Again';
+  btn.onclick = () => {
+    document.getElementById('end-overlay').style.display = 'none';
+    resetGame();
+  };
+  document.getElementById('end-overlay').style.display = 'flex';
+}
+
+// ─────────────────────────────────────────────
+//  RESET
+// ─────────────────────────────────────────────
+function resetGame() {
+  Object.assign(G, {
+    soldiers:       MARCH_INIT.soldiers,
+    porters:        MARCH_INIT.porters,
+    food:           MARCH_INIT.food,
+    day:            1,
+    seasonLeft:     MARCH_INIT.seasonDaysLeft,
+    distanceDays:   MARCH_INIT.distanceDays,
+    destination:    MARCH_INIT.destination,
+    isReturn:       MARCH_INIT.isReturnTrip,
+    paused:         false,
+    gameOver:       false,
+    arrived:        false,
+    raining:        false,
+    rainWarned:     false,
+    starving:       false,
+    dayFrac:        0,
+    nextCamp:       3 + Math.floor(Math.random() * 2),
+    sinceEvent:     0,
+    nextEventIn:    2 + Math.floor(Math.random() * 3),
+    thirstDays:     0,
+    cenoteFreeDays: 0,
+    porterDesertCD: 0,
+    wounded:        false,
+    injured:        0,
+    tradeWeapons:   false,
+  });
+  document.getElementById('rain-banner').style.display = 'none';
+  updateHUD();
+}
+
+function showBanner(msg, ms) {
+  const el = document.getElementById('rain-banner');
+  el.textContent = msg;
+  el.style.display = 'block';
+  setTimeout(() => { el.style.display = 'none'; }, ms);
+}
+
+// ─────────────────────────────────────────────
+//  DRAWING — BACKGROUND LAYERS
+// ─────────────────────────────────────────────
+function drawSky(night) {
+  const top = night ? '#04060e' : (G.raining ? '#2a3a4a' : '#3d6e52');
+  const bot = night ? '#0d120d' : (G.raining ? '#1a2e1a' : '#2a5018');
+  const grd = ctx.createLinearGradient(0, 0, 0, ROAD_Y);
+  grd.addColorStop(0, top);
+  grd.addColorStop(1, bot);
+  ctx.fillStyle = grd;
+  ctx.fillRect(0, 0, W, ROAD_Y);
+}
+
+function treeColor(base, hi) {
+  return { base, hi };
+}
+
+const COLORS = {
+  far:  treeColor('#1a3a1a', '#234a23'),
+  mid:  treeColor('#2d5016', '#3d6620'),
+  near: treeColor('#3a7d32', '#4a8f3a'),
+};
+
+function drawTree(x, groundY, h, type, col) {
+  ctx.fillStyle = col.base;
+  ctx.beginPath();
+  switch (type % 5) {
+    case 0: // Round dome
+      ctx.arc(x, groundY - h * 0.55, h * 0.52, 0, Math.PI);
+      ctx.rect(x - h * 0.52, groundY - h * 0.55, h * 1.04, h * 0.55);
+      break;
+    case 1: // Layered canopy
+      ctx.moveTo(x, groundY - h);
+      ctx.lineTo(x + h * 0.45, groundY - h * 0.55);
+      ctx.lineTo(x + h * 0.65, groundY);
+      ctx.lineTo(x - h * 0.65, groundY);
+      ctx.lineTo(x - h * 0.45, groundY - h * 0.55);
+      break;
+    case 2: // Wide ceiba
+      ctx.ellipse(x, groundY - h * 0.58, h * 0.78, h * 0.52, 0, 0, Math.PI * 2);
+      break;
+    case 3: // Pointed
+      ctx.moveTo(x, groundY - h);
+      ctx.lineTo(x + h * 0.38, groundY);
+      ctx.lineTo(x - h * 0.38, groundY);
+      break;
+    case 4: // Asymmetric
+      ctx.moveTo(x - h * 0.2, groundY - h);
+      ctx.lineTo(x + h * 0.55, groundY - h * 0.4);
+      ctx.lineTo(x + h * 0.6,  groundY);
+      ctx.lineTo(x - h * 0.6,  groundY);
+      break;
+  }
+  ctx.fill();
+  // Canopy highlight
+  ctx.fillStyle = col.hi;
+  ctx.beginPath();
+  ctx.ellipse(x - h * 0.12, groundY - h * 0.72, h * 0.16, h * 0.12, 0, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawVine(x, topY, len, col) {
+  ctx.strokeStyle = col;
+  ctx.lineWidth = 1.2;
+  for (let i = 0; i < 3; i++) {
+    const vx = x + i * 7 - 7;
+    ctx.beginPath();
+    ctx.moveTo(vx, topY);
+    ctx.bezierCurveTo(vx - 4, topY + len * 0.3, vx + 3, topY + len * 0.65, vx - 2, topY + len);
+    ctx.stroke();
+  }
+}
+
+function drawFern(x, y, sz, type) {
+  ctx.fillStyle = type % 2 === 0 ? '#3a7d32' : '#2e6b28';
+  ctx.beginPath();
+  for (let i = 0; i < 5; i++) {
+    const a = (i / 4) * Math.PI - Math.PI / 2;
+    const r = sz * (0.4 + i * 0.12);
+    ctx.ellipse(x + Math.cos(a) * r * 0.45, y - sz * 0.25 + Math.sin(a) * r * 0.18,
+      r * 0.32, r * 0.11, a, 0, Math.PI * 2);
+  }
+  ctx.fill();
+}
+
+function drawLayer(layer, offset, layerWidth, groundY, ht, col, drawVines) {
+  for (const item of layer.items) {
+    const x = ((item.x - offset % layerWidth) % layerWidth + layerWidth) % layerWidth;
+    if (x > W + ht * 1.5) continue;
+    drawTree(x, groundY, ht * item.scale, item.type, col);
+    if (drawVines && (item.type === 1 || item.type === 3)) {
+      drawVine(x + 8, groundY - ht * item.scale * 0.7, ht * item.scale * 0.35, '#1c3e0e');
+    }
+  }
+}
+
+function drawRoad() {
+  const grd = ctx.createLinearGradient(0, ROAD_Y, 0, H);
+  grd.addColorStop(0, '#c4b48a');
+  grd.addColorStop(0.5, '#b8a87e');
+  grd.addColorStop(1, '#a89464');
+  ctx.fillStyle = grd;
+  ctx.fillRect(0, ROAD_Y, W, ROAD_H);
+
+  // Stone block pattern
+  ctx.strokeStyle = 'rgba(160,146,100,0.55)';
+  ctx.lineWidth = 1;
+  const bw = 50, bh = 22;
+  const off = nearX % (bw * 2);
+  for (let row = 0; row < ROAD_H; row += bh) {
+    const shift = (Math.floor(row / bh) % 2) * bw / 2;
+    for (let col = -bw * 2 + shift; col < W + bw; col += bw) {
+      ctx.strokeRect(col - off, ROAD_Y + row, bw, bh);
+    }
+  }
+
+  // Road top edge shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.2)';
+  ctx.fillRect(0, ROAD_Y, W, 3);
+}
+
+function drawNearFoliage() {
+  for (const item of NEAR.items) {
+    const x = ((item.x - nearX % NEAR.width) % NEAR.width + NEAR.width) % NEAR.width;
+    if (x > W + 40) continue;
+    drawFern(x, ROAD_Y + 2, 18 * item.scale, item.type);
+  }
+}
+
+function drawRain() {
+  if (!G.raining) return;
+  ctx.save();
+  ctx.globalAlpha = 0.3;
+  ctx.strokeStyle = '#a0d8ef';
+  ctx.lineWidth = 1;
+  const t = G.campAnim * 30;
+  for (let i = 0; i < 90; i++) {
+    const x = (sr(i * 17) * W + t * 0.5) % W;
+    const y = (sr(i * 23) * H + t * 4)   % H;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x - 2, y + 13);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawStars(t) {
+  for (const s of STARS) {
+    const a = 0.3 + Math.sin(t * 1.4 + s.phase) * 0.35;
+    ctx.fillStyle = `rgba(255,255,220,${a.toFixed(2)})`;
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+// ─────────────────────────────────────────────
+//  CAMPFIRE DRAWING
+// ─────────────────────────────────────────────
+function drawCampfire(c, cx, cy, t, scale) {
+  // Logs
+  c.fillStyle = '#5c3d11';
+  c.save();
+  c.translate(cx, cy + 4 * scale);
+  c.rotate(0.4); c.fillRect(-18 * scale, -2 * scale, 36 * scale, 5 * scale);
+  c.rotate(-0.8); c.fillRect(-18 * scale, -2 * scale, 36 * scale, 5 * scale);
+  c.restore();
+
+  // Glow
+  const gr = (18 + Math.sin(t * 3.1) * 3 + Math.sin(t * 7.3) * 2) * scale;
+  const grd = c.createRadialGradient(cx, cy, 2 * scale, cx, cy, gr * 2.2);
+  grd.addColorStop(0, 'rgba(255,180,40,0.38)');
+  grd.addColorStop(1, 'rgba(255,80,0,0)');
+  c.fillStyle = grd;
+  c.beginPath();
+  c.ellipse(cx, cy, gr * 2.2, gr * 1.4, 0, 0, Math.PI * 2);
+  c.fill();
+
+  // Flames
+  const fh = (20 + Math.sin(t * 4.2) * 4 + Math.sin(t * 9.1) * 2) * scale;
+  function fl(dx, h, col) {
+    c.fillStyle = col;
+    c.beginPath();
+    c.moveTo(cx + dx - 6 * scale, cy);
+    c.bezierCurveTo(
+      cx + dx - 8 * scale, cy - h * 0.4,
+      cx + dx - 2 * scale, cy - h * 0.75,
+      cx + dx,             cy - h);
+    c.bezierCurveTo(
+      cx + dx + 2 * scale, cy - h * 0.75,
+      cx + dx + 8 * scale, cy - h * 0.4,
+      cx + dx + 6 * scale, cy);
+    c.fill();
+  }
+  fl(-5 * scale, fh * 0.65, 'rgba(160,50,0,0.85)');
+  fl( 5 * scale, fh * 0.7,  'rgba(200,70,0,0.8)');
+  fl( 0,         fh,        'rgba(255,140,0,0.92)');
+  fl( 0,         fh * 0.48, 'rgba(255,215,50,0.95)');
+
+  // Embers
+  for (let i = 0; i < 6; i++) {
+    const ex = cx + Math.sin(t * 2.1 + i * 2.0) * 9 * scale;
+    const ey = cy - (10 + Math.sin(t * 3.1 + i * 1.7) * 15) * scale;
+    const ea = 0.3 + Math.sin(t * 5 + i) * 0.35;
+    c.fillStyle = `rgba(255,170,0,${ea.toFixed(2)})`;
+    c.beginPath();
+    c.arc(ex, ey, 1.5 * scale, 0, Math.PI * 2);
+    c.fill();
+  }
+}
+
+// Small campfire card widget
+function animateCampCard(t) {
+  cfCtx.clearRect(0, 0, 90, 65);
+  drawCampfire(cfCtx, 45, 50, t, 1);
+}
+
+// ─────────────────────────────────────────────
+//  SPRITE DRAWING
+// ─────────────────────────────────────────────
+const PARTY_X = 250;  // fixed party X on screen
+
+function bob(t, freq, amp, offset) {
+  return Math.sin(t * freq + (offset || 0)) * amp;
+}
+
+function shadow(x, y) {
+  ctx.save();
+  ctx.globalAlpha = 0.22;
+  ctx.fillStyle = '#000';
+  ctx.beginPath();
+  ctx.ellipse(x, WALK_Y + 2, 9, 3.5, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+// Player: K'uhul Ajaw
+function drawPlayer(x, t) {
+  const by = WALK_Y + bob(t, 6, 3);
+  shadow(x, WALK_Y);
+
+  const ls = Math.sin(t * 6) * 5;
+
+  // Legs
+  ctx.fillStyle = '#7c5c2a';
+  ctx.save(); ctx.translate(x - 3, by + 16); ctx.rotate(ls * 0.14);
+  ctx.fillRect(-3, 0, 6, 14); ctx.restore();
+  ctx.save(); ctx.translate(x + 3, by + 16); ctx.rotate(-ls * 0.14);
+  ctx.fillRect(-3, 0, 6, 14); ctx.restore();
+
+  // Sandals
+  ctx.fillStyle = '#4a2e0e';
+  ctx.fillRect(x - 8, by + 28, 7, 3);
+  ctx.fillRect(x + 1, by + 28, 7, 3);
+
+  // Jaguar pelt body
+  ctx.fillStyle = '#c4892a';
+  ctx.beginPath(); ctx.roundRect(x - 9, by + 4, 18, 16, 3); ctx.fill();
+
+  // Spots
+  ctx.fillStyle = '#5c3a0a';
+  for (let i = 0; i < 4; i++) {
+    ctx.beginPath(); ctx.arc(x - 5 + i * 4, by + 10, 1.5, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // Tunic top
+  ctx.fillStyle = '#166534';
+  ctx.beginPath(); ctx.roundRect(x - 8, by + 2, 16, 8, 2); ctx.fill();
+
+  // Arms
+  const as = Math.sin(t * 6) * 7;
+  ctx.fillStyle = '#c4892a';
+  // Left arm + club
+  ctx.save(); ctx.translate(x - 10, by + 5); ctx.rotate(as * 0.08);
+  ctx.fillRect(-3, 0, 6, 10);
+  ctx.fillStyle = '#1a1a2e'; ctx.fillRect(-2, 10, 4, 9);
+  ctx.restore();
+  // Right arm
+  ctx.save(); ctx.translate(x + 10, by + 5); ctx.rotate(-as * 0.08);
+  ctx.fillStyle = '#c4892a'; ctx.fillRect(-3, 0, 6, 10);
+  ctx.restore();
+
+  // Head
+  ctx.fillStyle = '#c4892a';
+  ctx.beginPath(); ctx.ellipse(x, by - 1, 8, 9, 0, 0, Math.PI * 2); ctx.fill();
+
+  // Headdress base band
+  ctx.fillStyle = '#166534';
+  ctx.beginPath(); ctx.ellipse(x, by - 9, 10, 4.5, 0, 0, Math.PI * 2); ctx.fill();
+
+  // Feathers
+  const feathers = [
+    [-7, '#15803d', 4, 21],
+    [-3, '#16a34a', 4, 26],
+    [ 0, '#b91c1c', 5, 30],
+    [ 3, '#16a34a', 4, 26],
+    [ 7, '#15803d', 4, 21],
+  ];
+  for (const [dx, col, fw, fh] of feathers) {
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    ctx.ellipse(x + dx, by - 9 - fh * 0.5, fw * 0.5, fh * 0.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#0a2e0a'; ctx.lineWidth = 0.7;
+    ctx.beginPath(); ctx.moveTo(x + dx, by - 9); ctx.lineTo(x + dx, by - 9 - fh); ctx.stroke();
+  }
+
+  // Face
+  ctx.fillStyle = '#2d1506';
+  ctx.beginPath();
+  ctx.arc(x - 3, by - 2, 1.5, 0, Math.PI * 2);
+  ctx.arc(x + 3, by - 2, 1.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Jade nose ornament
+  ctx.fillStyle = '#0f766e';
+  ctx.beginPath(); ctx.arc(x, by + 1.5, 2, 0, Math.PI * 2); ctx.fill();
+}
+
+function drawSoldier(x, y, t, idx) {
+  const by = y + bob(t, 6, 2.5, idx * 0.8);
+  shadow(x, y);
+
+  const ls = Math.sin(t * 6 + idx * 0.7) * 4;
+  ctx.fillStyle = '#8b6914';
+  ctx.save(); ctx.translate(x - 2, by + 12); ctx.rotate(ls * 0.12);
+  ctx.fillRect(-2, 0, 5, 11); ctx.restore();
+  ctx.save(); ctx.translate(x + 2, by + 12); ctx.rotate(-ls * 0.12);
+  ctx.fillRect(-2, 0, 5, 11); ctx.restore();
+
+  // Cotton armor
+  ctx.fillStyle = '#e7e0d2';
+  ctx.beginPath(); ctx.roundRect(x - 7, by + 2, 14, 12, 2); ctx.fill();
+  ctx.fillStyle = '#166534';
+  ctx.fillRect(x - 7, by + 7, 14, 3);
+
+  // Arms + macuahuitl
+  const as = Math.sin(t * 6 + idx * 0.6) * 5;
+  ctx.fillStyle = '#c4892a';
+  ctx.save(); ctx.translate(x - 8, by + 4); ctx.rotate(as * 0.06);
+  ctx.fillRect(-2, 0, 5, 8);
+  ctx.fillStyle = '#3a2808'; ctx.fillRect(-1, 8, 3, 9);
+  ctx.fillStyle = '#222'; ctx.fillRect(1, 8, 2, 9);
+  ctx.restore();
+  ctx.save(); ctx.translate(x + 8, by + 4); ctx.rotate(-as * 0.06);
+  ctx.fillStyle = '#c4892a'; ctx.fillRect(-2, 0, 5, 8);
+  ctx.restore();
+
+  // Head
+  ctx.fillStyle = '#c4892a';
+  ctx.beginPath(); ctx.ellipse(x, by, 6, 7, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#15803d';
+  ctx.beginPath(); ctx.ellipse(x + 2, by - 9, 2, 6, 0.3, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#2d1506';
+  ctx.beginPath();
+  ctx.arc(x - 2, by - 1, 1, 0, Math.PI * 2);
+  ctx.arc(x + 2, by - 1, 1, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawPorter(x, y, t, idx) {
+  const by = y + bob(t, 6, 2, idx * 0.9 + 0.3);
+  shadow(x, y);
+
+  const ls = Math.sin(t * 6 + idx * 1.1) * 4;
+  ctx.fillStyle = '#8b6914';
+  ctx.save(); ctx.translate(x - 2, by + 14); ctx.rotate(ls * 0.1);
+  ctx.fillRect(-2, 0, 4, 10); ctx.restore();
+  ctx.save(); ctx.translate(x + 2, by + 14); ctx.rotate(-ls * 0.1);
+  ctx.fillRect(-2, 0, 4, 10); ctx.restore();
+
+  // Body (bent forward)
+  ctx.save();
+  ctx.translate(x, by + 8); ctx.rotate(0.38);
+  ctx.fillStyle = '#c4892a';
+  ctx.beginPath(); ctx.roundRect(-4, -2, 10, 14, 2); ctx.fill();
+
+  // Tumpline
+  ctx.strokeStyle = '#6b4e18'; ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(-4, 0);
+  ctx.bezierCurveTo(-10, -7, 5, -14, 8, -17);
+  ctx.stroke();
+
+  // Bundle
+  ctx.fillStyle = '#6b4818';
+  ctx.beginPath(); ctx.roundRect(6, -17, 14, 12, 2); ctx.fill();
+  ctx.strokeStyle = '#4a3010'; ctx.lineWidth = 1;
+  [-14, -11, -8].forEach(dy => {
+    ctx.beginPath(); ctx.moveTo(8, dy + 17); ctx.lineTo(18, dy + 17); ctx.stroke();
+  });
+  ctx.restore();
+
+  // Head
+  ctx.fillStyle = '#c4892a';
+  ctx.beginPath(); ctx.ellipse(x - 2, by - 1, 5, 6, -0.18, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#2d1506';
+  ctx.beginPath(); ctx.arc(x - 4, by, 1, 0, Math.PI * 2); ctx.fill();
+}
+
+function drawParty(t) {
+  const s = Math.max(0, G.soldiers);
+  const p = Math.max(0, G.porters);
+
+  // Player leads
+  drawPlayer(PARTY_X, t);
+
+  // Soldiers cluster behind
+  for (let i = 0; i < s; i++) {
+    const col  = i % 3;
+    const row  = Math.floor(i / 3);
+    const sx   = PARTY_X - 42 - col * 22 - row * 10;
+    const sy   = WALK_Y  + (col === 1 ? -4 : col === 2 ? 4 : 0);
+    drawSoldier(sx, sy, t, i);
+  }
+
+  // Porters trail
+  for (let i = 0; i < p; i++) {
+    const px = PARTY_X - 120 - i * 26;
+    const py = WALK_Y  + (i % 2 === 0 ? 0 : 3);
+    drawPorter(px, py, t, i);
+  }
+}
+
+// ─────────────────────────────────────────────
+//  MAIN RENDER LOOP
+// ─────────────────────────────────────────────
+let last = null;
+
+function loop(ts) {
+  if (!last) last = ts;
+  const dt = Math.min((ts - last) / 1000, 0.12);
+  last = ts;
+  const t = ts / 1000;
+  G.campAnim = t;
+
+  const isCamping = document.getElementById('camp-overlay').style.display !== 'none';
+
+  // Scroll
+  if (!G.paused && !G.gameOver && !G.arrived) {
+    let spd = 60;
+    if (G.raining) spd *= 0.6;
+    if (G.wounded) spd *= 0.75;
+
+    farX  += spd * FAR_SPD  * dt;
+    midX  += spd * MID_SPD  * dt;
+    nearX += spd * NEAR_SPD * dt;
+
+    // Day progression
+    G.dayFrac += dt / secPerDay();
+    if (G.dayFrac >= 1) {
+      G.dayFrac -= 1;
+      advanceDay();
+    }
+  }
+
+  // ── DRAW ──
+  ctx.clearRect(0, 0, W, H);
+
+  if (isCamping) {
+    // Night sky
+    const skyGrd = ctx.createLinearGradient(0, 0, 0, ROAD_Y);
+    skyGrd.addColorStop(0, '#04060e');
+    skyGrd.addColorStop(1, '#0b120b');
+    ctx.fillStyle = skyGrd;
+    ctx.fillRect(0, 0, W, ROAD_Y);
+    drawStars(t);
+    drawLayer(FAR,  farX,  FAR.width,  ROAD_Y, 65, COLORS.far,  false);
+    drawLayer(MID,  midX,  MID.width,  ROAD_Y, 52, COLORS.mid,  true);
+    drawRoad();
+    drawNearFoliage();
+    // Night overlay
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(0, 0, W, H);
+    // Campfire glow on main canvas
+    const grd = ctx.createRadialGradient(PARTY_X, WALK_Y - 8, 5, PARTY_X, WALK_Y - 8, 65);
+    grd.addColorStop(0, 'rgba(255,140,30,0.4)');
+    grd.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = grd;
+    ctx.beginPath();
+    ctx.ellipse(PARTY_X, WALK_Y, 70, 40, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    animateCampCard(t);
+  } else {
+    // Daytime
+    drawSky(false);
+    drawLayer(FAR,  farX,  FAR.width,  ROAD_Y, 65, COLORS.far,  false);
+    drawLayer(MID,  midX,  MID.width,  ROAD_Y, 52, COLORS.mid,  true);
+    drawRoad();
+    drawNearFoliage();
+    drawRain();
+
+    if (G.raining) {
+      ctx.fillStyle = 'rgba(0,20,40,0.18)';
+      ctx.fillRect(0, 0, W, H);
+    }
+  }
+
+  drawParty(t);
+
+  requestAnimationFrame(loop);
+}
+
+// ─────────────────────────────────────────────
+//  START
+// ─────────────────────────────────────────────
+G.nextCamp    = 3 + Math.floor(Math.random() * 2);
+G.nextEventIn = 2 + Math.floor(Math.random() * 3);
+updateHUD();
+requestAnimationFrame(loop);
 </script>
 </body>
 </html>
