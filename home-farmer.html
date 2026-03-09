@@ -19,7 +19,6 @@
     
     * { box-sizing: border-box; }
     
-    /* 1. FLEXBOX SANDWICH LAYOUT */
     body {
       margin: 0;
       padding: 0;
@@ -35,7 +34,6 @@
       -webkit-user-select: none;
     }
 
-    /* TOP BAR - Fixed Height */
     #top-bar {
       background: linear-gradient(180deg, #111413 0%, #0b0b0c 100%);
       padding: 10px 15px;
@@ -62,28 +60,23 @@
       text-shadow: 1px 1px 2px #000;
     }
 
-    /* GAME CONTAINER - Expands to fill space */
     #game-container {
       flex-grow: 1;
       position: relative;
       display: flex;
       justify-content: center;
       align-items: center;
-      background: #8fd2ff; /* Fallback sky color */
+      background: #8fd2ff;
       overflow: hidden;
     }
     
-    canvas {
-      width: 100%;
-      height: 100%;
-      display: block;
-    }
+    canvas { width: 100%; height: 100%; display: block; }
 
     .log {
       position: absolute;
       left: 10px;
       right: 10px;
-      bottom: 15px; /* Sits nicely above the bottom bar */
+      bottom: 15px;
       background: rgba(11, 11, 12, 0.75);
       border: 1px solid rgba(213, 200, 170, 0.3);
       border-radius: 8px;
@@ -95,75 +88,53 @@
       text-shadow: 1px 1px 0 #000;
     }
 
-    /* CONTROLS BAR - Fixed Height */
     #controls-bar {
       background: linear-gradient(180deg, #18201e 0%, #0b0b0c 100%);
-      padding: 15px;
       border-top: 3px solid #384240;
       flex-shrink: 0;
       z-index: 20;
     }
 
-    #controls-bar h3 { margin: 0 0 10px; font-size: 14px; color: #a7f3d0; text-transform: uppercase; }
-    
-    .grid { 
-      display: grid; 
-      grid-template-columns: 1fr 1fr; 
-      gap: 12px 20px; 
-      align-items: center; 
-      font-size: 13px; 
+    /* Collapsible Menu Styles */
+    #controls-header {
+      padding: 15px 15px 5px 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
     }
     
+    #controls-header h3 { margin: 0; font-size: 14px; color: #a7f3d0; text-transform: uppercase; }
+    #toggleIcon { color: #a7f3d0; font-size: 14px; transition: transform 0.2s; }
+    
+    #controls-content {
+      padding: 5px 15px 15px 15px;
+      display: block; /* Toggled via JS */
+    }
+
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 20px; align-items: center; font-size: 13px; }
     .slider-group { display: flex; flex-direction: column; gap: 6px; }
     .slider-group label { display: flex; justify-content: space-between; color: #d5c8aa; }
     .slider-group span { font-weight: bold; color: #fff; }
     
-    input[type="range"] { 
-      width: 100%; 
-      accent-color: var(--jade);
-    }
+    input[type="range"] { width: 100%; accent-color: var(--jade); }
     
     .stats-group { 
-      display: flex; 
-      flex-direction: column; 
-      gap: 6px; 
-      border-left: 1px solid #384240;
-      padding-left: 20px;
-      color: #b7a98e;
+      display: flex; flex-direction: column; gap: 6px; 
+      border-left: 1px solid #384240; padding-left: 20px; color: #b7a98e;
     }
 
-    /* POPUPS */
     .popup {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.7);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 100;
-      padding: 18px;
+      position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none;
+      align-items: center; justify-content: center; z-index: 100; padding: 18px;
     }
     .popup-card {
-      width: min(560px, 95vw);
-      background: rgba(17,20,20,0.96);
-      border: 2px solid #5eead4;
-      border-radius: 12px;
-      padding: 20px;
-      font-size: 15px;
-      line-height: 1.4;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.8);
+      width: min(560px, 95vw); background: rgba(17,20,20,0.96);
+      border: 2px solid #5eead4; border-radius: 12px; padding: 20px;
+      font-size: 15px; line-height: 1.4; box-shadow: 0 10px 25px rgba(0,0,0,0.8);
     }
     .popup-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px; }
-    button {
-      background: var(--jade);
-      color: #eafff8;
-      border: 0;
-      border-radius: 7px;
-      padding: 10px 16px;
-      font-family: inherit;
-      font-weight: bold;
-      cursor: pointer;
-    }
+    button { background: var(--jade); color: #eafff8; border: 0; border-radius: 7px; padding: 10px 16px; font-weight: bold; cursor: pointer; }
     button.alt { background: #384240; }
 
     @media (max-width: 640px) {
@@ -191,22 +162,27 @@
   </div>
 
   <div id="controls-bar">
-    <h3>Army Drafting</h3>
-    <div class="grid">
-      <div class="slider-group-container">
-        <div class="slider-group">
-          <label>Soldiers: <span id="soldierVal">0</span></label>
-          <input id="soldierSlider" type="range" min="0" max="0" value="0" />
+    <div id="controls-header">
+      <h3>Army Drafting</h3>
+      <span id="toggleIcon">▼</span>
+    </div>
+    <div id="controls-content">
+      <div class="grid">
+        <div class="slider-group-container">
+          <div class="slider-group">
+            <label>Soldiers: <span id="soldierVal">0</span></label>
+            <input id="soldierSlider" type="range" min="0" max="0" value="0" />
+          </div>
+          <div class="slider-group" style="margin-top: 10px;">
+            <label>Porters: <span id="porterVal">0</span></label>
+            <input id="porterSlider" type="range" min="0" max="0" value="0" />
+          </div>
         </div>
-        <div class="slider-group" style="margin-top: 10px;">
-          <label>Porters: <span id="porterVal">0</span></label>
-          <input id="porterSlider" type="range" min="0" max="0" value="0" />
+        <div class="stats-group">
+          <div id="farmersText">Farmers: 0</div>
+          <div id="harvestText">Estimated harvest: 0</div>
+          <div id="foodText">Food stores: 0</div>
         </div>
-      </div>
-      <div class="stats-group">
-        <div id="farmersText">Farmers: 0</div>
-        <div id="harvestText">Estimated harvest: 0</div>
-        <div id="foodText">Food stores: 0</div>
       </div>
     </div>
   </div>
@@ -225,7 +201,7 @@
 (() => {
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d');
-  const container = document.getElementById('game-container'); // Used for dynamic resizing
+  const container = document.getElementById('game-container');
 
   const state = {
     worldWidth: 3600,
@@ -286,7 +262,7 @@
 
   function terrainY(x) {
     const h = canvas.height;
-    const base = h * 0.92; // The top of our stone pavement
+    const base = h * 0.92;
     const leftHill = hillProfile(x, 1160, 620, h * 0.42);
     const rightHill = hillProfile(x, 2440, 620, h * 0.42);
     const templeDip = hillProfile(x, city.pyramidX, 420, h * 0.08);
@@ -294,35 +270,25 @@
   }
 
   function setupWorld() {
-    state.fields = [
-      buildField(720, 1420, 6),
-      buildField(2150, 2860, 6)
-    ];
-    state.stelae = exits.map(e => ({ ...e, y: terrainY(e.x) - 74 }));
+    state.fields = [ buildField(720, 1420, 6), buildField(2150, 2860, 6) ];
+    state.stelae = exits.map(e => ({ ...e, y: 0 })); // y set in resize()
     state.houses = [0, 1, 2, 3, 4, 5].map(i => {
       const left = i < 3;
       const local = left ? i : i - 3;
       const x = left ? 980 + local * 70 : 2380 + local * 72;
-      return {
-        x,
-        y: terrainY(x) - 30 - (local % 2) * 5
-      };
+      return { x, y: 0 }; // y set in resize()
     });
+    
     state.people = [];
     for (let i = 0; i < state.pop; i++) {
       state.people.push({
         id: i,
         x: city.pyramidX + (Math.random() * 120 - 60),
-        y: terrainY(city.pyramidX),
-        role: 'farmer',
-        targetRole: 'farmer',
-        mode: 'idle',
-        taskNode: null,
+        y: 0,
+        role: 'farmer', targetRole: 'farmer', mode: 'idle', taskNode: null,
         speed: 26 + Math.random() * 14,
-        dir: 1,
-        bob: Math.random() * Math.PI,
-        carryingWater: false,
-        homeX: city.pyramidX + (Math.random() * 80 - 40)
+        dir: 1, bob: Math.random() * Math.PI,
+        carryingWater: false, homeX: city.pyramidX + (Math.random() * 80 - 40)
       });
     }
     log('A farmer has planted the eastern field.');
@@ -336,8 +302,7 @@
       for (let n = 0; n < nodeCount; n++) {
         const t = n / (nodeCount - 1);
         const x = start + (end - start) * t;
-        const y = terrainY(x) - 18 - r * 11 + Math.sin((x + r * 25) * 0.008) * 2;
-        points.push({ x, y, planted: false, reservedBy: null, rotten: false });
+        points.push({ x, y: 0, planted: false, reservedBy: null, rotten: false }); // y set in resize()
       }
       f.rows.push(points);
     }
@@ -355,15 +320,12 @@
     return 'harvestable';
   }
 
-  function maxDraft() {
-    return Math.max(0, state.people.length - 2);
-  }
+  function maxDraft() { return Math.max(0, state.people.length - 2); }
 
   function applyDraftTargets() {
     const s = +document.getElementById('soldierSlider').value;
     const p = +document.getElementById('porterSlider').value;
-    let needSoldier = s;
-    let needPorter = p;
+    let needSoldier = s; let needPorter = p;
     state.people.forEach(person => {
       if (needSoldier > 0) { person.targetRole = 'soldier'; needSoldier--; }
       else if (needPorter > 0) { person.targetRole = 'porter'; needPorter--; }
@@ -408,11 +370,9 @@
 
       if (desired !== person.role && desired !== 'farmer') {
         person.mode = 'toPyramid';
-        moveToward(person, city.pyramidX + (desired === 'soldier' ? -70 : 70), dt);
-        if (Math.abs(person.x - (city.pyramidX + (desired === 'soldier' ? -70 : 70))) < 6) {
-          person.role = desired;
-          person.mode = 'formation';
-          person.taskNode = null;
+        moveToward(person, city.pyramidX + (desired === 'soldier' ? -100 : 100), dt);
+        if (Math.abs(person.x - (city.pyramidX + (desired === 'soldier' ? -100 : 100))) < 6) {
+          person.role = desired; person.mode = 'formation'; person.taskNode = null;
         }
         continue;
       }
@@ -421,16 +381,15 @@
         person.mode = 'toField';
         moveToward(person, city.pyramidX + (Math.random() * 160 - 80), dt);
         if (Math.abs(person.x - city.pyramidX) < 60) {
-          person.role = 'farmer';
-          person.mode = 'idle';
+          person.role = 'farmer'; person.mode = 'idle';
         }
         continue;
       }
 
       if (person.role === 'soldier' || person.role === 'porter') {
-        const offset = person.role === 'soldier' ? -140 : 100;
+        const offset = person.role === 'soldier' ? -180 : 130;
         const idx = person.id % 8;
-        const targetX = city.pyramidX + offset + (idx % 4) * 16;
+        const targetX = city.pyramidX + offset + (idx % 4) * 22;
         moveToward(person, targetX, dt, 12);
         continue;
       }
@@ -441,12 +400,10 @@
       }
 
       if (waterCarriersAssigned < waterNeeded && person.targetRole === 'farmer') {
-        person.role = 'water';
-        person.mode = person.mode === 'watering' ? 'watering' : 'toCistern';
+        person.role = 'water'; person.mode = person.mode === 'watering' ? 'watering' : 'toCistern';
         waterCarriersAssigned++;
       } else if (person.role === 'water') {
-        person.role = 'farmer';
-        person.carryingWater = false;
+        person.role = 'farmer'; person.carryingWater = false;
       }
 
       if (person.role === 'water') {
@@ -461,10 +418,7 @@
           const target = state.fields[Math.floor(person.id % state.fields.length)];
           const wx = (target.start + target.end) * 0.5;
           moveToward(person, wx, dt);
-          if (Math.abs(person.x - wx) < 10) {
-            person.mode = 'toCistern';
-            person.carryingWater = false;
-          }
+          if (Math.abs(person.x - wx) < 10) { person.mode = 'toCistern'; person.carryingWater = false; }
         }
         continue;
       }
@@ -478,10 +432,8 @@
         if (person.taskNode) {
           moveToward(person, person.taskNode.x, dt);
           if (Math.abs(person.x - person.taskNode.x) < 5) {
-            person.taskNode.planted = false;
-            person.taskNode.rotten = false;
-            person.taskNode.reservedBy = null;
-            person.taskNode = null;
+            person.taskNode.planted = false; person.taskNode.rotten = false;
+            person.taskNode.reservedBy = null; person.taskNode = null;
             const gain = 1 + (Math.random() < 0.15 ? 1 : 0);
             state.food += gain;
             if (Math.random() < 0.1) addFloat(person.x, terrainY(person.x) - 36, `+${gain} food`, '#facc15');
@@ -496,16 +448,13 @@
         if (person.taskNode) {
           moveToward(person, person.taskNode.x, dt);
           if (Math.abs(person.x - person.taskNode.x) < 5) {
-            person.taskNode.planted = true;
-            person.taskNode.reservedBy = null;
-            person.taskNode = null;
+            person.taskNode.planted = true; person.taskNode.reservedBy = null; person.taskNode = null;
           }
         } else {
           moveToward(person, person.homeX, dt, 12);
         }
       }
     }
-
     state.people = state.people.filter(p => p.mode !== 'gone');
   }
 
@@ -515,18 +464,14 @@
     person.dir = Math.sign(dx);
     const step = Math.sign(dx) * (speedOverride || person.speed) * dt;
     person.x += Math.abs(step) > Math.abs(dx) ? dx : step;
-    person.y = terrainY(person.x);
+    person.y = terrainY(person.x); // Glues people dynamically to the terrain!
   }
 
   function seasonUpdate(dt) {
     state.seasonTimer += dt;
-
     if (!state.isRainy) {
       state.cistern = Math.max(0, state.cistern - dt * 0.45);
-      if (state.cistern < 18 && !state.lowWaterFlag) {
-        log('The cistern is running low.');
-        state.lowWaterFlag = true;
-      }
+      if (state.cistern < 18 && !state.lowWaterFlag) { log('The cistern is running low.'); state.lowWaterFlag = true; }
       if (state.cistern > 20) state.lowWaterFlag = false;
 
       if (state.cistern < 4 && Math.random() < 0.03) {
@@ -539,23 +484,14 @@
       }
 
       if (state.seasonTimer > state.dryDuration * 0.84 && !state.warnedRot) {
-        state.warnedRot = true;
-        log('Late dry season: harvest before the rains.');
+        state.warnedRot = true; log('Late dry season: harvest before the rains.');
       }
 
       if (state.seasonTimer >= state.dryDuration) {
-        state.isRainy = true;
-        state.seasonTimer = 0;
-        state.warnedRot = false;
+        state.isRainy = true; state.seasonTimer = 0; state.warnedRot = false;
         for (const field of state.fields) {
           for (const row of field.rows) {
-            for (const node of row) {
-              if (node.planted) {
-                node.planted = false;
-                node.rotten = true;
-              }
-              node.reservedBy = null;
-            }
+            for (const node of row) { if (node.planted) { node.planted = false; node.rotten = true; } node.reservedBy = null; }
           }
         }
         log('Rainy season begins. Paths are muddy and blocked.');
@@ -565,23 +501,15 @@
       if (Math.random() < 0.25) state.food = Math.max(0, state.food - 1);
       if (state.seasonTimer > state.rainyDuration * 0.55 && Math.random() < 0.015) {
         if (state.food > state.people.length * 5 && state.people.length < 58) {
-          const id = state.people.length;
-          state.people.push({ id, x: city.pyramidX, y: terrainY(city.pyramidX), role: 'farmer', targetRole: 'farmer', mode: 'idle', taskNode: null, speed: 30, dir: 1, bob: 0, homeX: city.pyramidX + (Math.random()*80-40)});
+          state.people.push({ id: state.people.length, x: city.pyramidX, y: terrainY(city.pyramidX), role: 'farmer', targetRole: 'farmer', mode: 'idle', taskNode: null, speed: 30, dir: 1, bob: 0, homeX: city.pyramidX + (Math.random()*80-40)});
           addFloat(city.pyramidX, terrainY(city.pyramidX)-80, '+1 pop', '#a7f3d0');
         } else if (state.food < state.people.length * 2 && state.people.length > 10) {
-          state.people.pop();
-          addFloat(city.pyramidX, terrainY(city.pyramidX)-80, '-1 pop', '#fda4af');
+          state.people.pop(); addFloat(city.pyramidX, terrainY(city.pyramidX)-80, '-1 pop', '#fda4af');
         }
       }
       if (state.seasonTimer >= state.rainyDuration) {
-        state.isRainy = false;
-        state.seasonTimer = 0;
-        state.seasonIndex += 1;
-        for (const field of state.fields) {
-          for (const row of field.rows) {
-            for (const node of row) node.rotten = false;
-          }
-        }
+        state.isRainy = false; state.seasonTimer = 0; state.seasonIndex += 1;
+        for (const field of state.fields) { for (const row of field.rows) { for (const node of row) node.rotten = false; } }
         log(`Dry Season ${state.seasonIndex} begins.`);
       }
     }
@@ -591,48 +519,17 @@
     state.floats.forEach(f => { f.y -= dt * 20; f.life -= dt; });
     state.floats = state.floats.filter(f => f.life > 0);
   }
+  function addFloat(x, y, text, color) { state.floats.push({ x, y, text, color, life: 1.4 }); }
 
-  function addFloat(x, y, text, color) {
-    state.floats.push({ x, y, text, color, life: 1.4 });
-  }
-
-  function triggerTribute(cityName = 'Ox Witz', foodBonus = 55) {
-    if (state.tributeGroup) return;
-    const fromLeft = Math.random() < 0.5;
-    const startX = fromLeft ? 40 : state.worldWidth - 40;
-    state.tributeGroup = { fromLeft, x: startX, target: city.pyramidX - 20, delivered: false, cityName, foodBonus, members: 4 + Math.floor(Math.random() * 2) };
-    log(`Tribute has arrived from ${cityName}!`);
-  }
-
-  function updateTribute(dt) {
-    if (!state.tributeGroup) return;
-    const t = state.tributeGroup;
-    const dir = Math.sign(t.target - t.x);
-    t.x += dir * 28 * dt;
-    if (Math.abs(t.target - t.x) < 8 && !t.delivered) {
-      t.delivered = true;
-      state.food += t.foodBonus;
-      addFloat(city.pyramidX, terrainY(city.pyramidX)-120, `+${t.foodBonus} tribute`, '#fca5a5');
-      setTimeout(() => state.tributeGroup = null, 2600);
-    }
-  }
-
-  /* 4. UPDATED RENDER ORDER */
   function draw() {
-    const w = canvas.width;
-    const h = canvas.height;
-    ctx.clearRect(0, 0, w, h);
-
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     drawSkyBackdrop();
     drawJungleLayer();
     drawMiddleGround();
     drawFields();
     drawCity();
     drawStelae();
-    
-    // Pavement drawn BEFORE people so they stand on it!
     drawForegroundStone(); 
-    
     drawPeople();
     drawTribute();
     drawWeather();
@@ -645,91 +542,51 @@
     const skyTop = state.isRainy ? '#93a0ab' : '#8fd2ff';
     const skyBottom = state.isRainy ? '#c2c8cf' : '#def4ff';
     const grad = ctx.createLinearGradient(0, 0, 0, canvas.height * 0.3);
-    grad.addColorStop(0, skyTop);
-    grad.addColorStop(1, skyBottom);
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, canvas.width, canvas.height * 0.3);
+    grad.addColorStop(0, skyTop); grad.addColorStop(1, skyBottom);
+    ctx.fillStyle = grad; ctx.fillRect(0, 0, canvas.width, canvas.height * 0.3);
 
     for (let i = 0; i < 6; i++) {
       const cx = ((i * 170) + performance.now() * 0.01) % (canvas.width + 160) - 80;
       const cy = 26 + (i % 3) * 22;
       ctx.fillStyle = state.isRainy ? 'rgba(214,220,224,0.75)' : 'rgba(255,255,255,0.9)';
       ctx.beginPath();
-      ctx.arc(cx, cy, 18, 0, Math.PI * 2);
-      ctx.arc(cx + 18, cy + 2, 16, 0, Math.PI * 2);
-      ctx.arc(cx - 18, cy + 3, 14, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.arc(cx, cy, 18, 0, Math.PI * 2); ctx.arc(cx + 18, cy + 2, 16, 0, Math.PI * 2);
+      ctx.arc(cx - 18, cy + 3, 14, 0, Math.PI * 2); ctx.fill();
     }
   }
 
   function drawJungleLayer() {
-    const top = canvas.height * 0.3;
-    const bottom = canvas.height * 0.7;
+    const top = canvas.height * 0.3; const bottom = canvas.height * 0.7;
     const grad = ctx.createLinearGradient(0, top, 0, bottom);
-    grad.addColorStop(0, '#1f6b34');
-    grad.addColorStop(1, '#0f3b1e');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, top, canvas.width, bottom - top);
+    grad.addColorStop(0, '#1f6b34'); grad.addColorStop(1, '#0f3b1e');
+    ctx.fillStyle = grad; ctx.fillRect(0, top, canvas.width, bottom - top);
     for (let x = -20; x < canvas.width + 40; x += 26) {
       const canopy = bottom - 20 - Math.sin((x + state.cameraX) * 0.02) * 10;
-      ctx.fillStyle = '#14532d';
-      ctx.fillRect(x + 6, canopy - 26, 5, 26);
+      ctx.fillStyle = '#14532d'; ctx.fillRect(x + 6, canopy - 26, 5, 26);
       ctx.fillStyle = (x / 26) % 2 ? '#166534' : '#15803d';
-      ctx.beginPath();
-      ctx.arc(x + 8, canopy - 32, 14, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.beginPath(); ctx.arc(x + 8, canopy - 32, 14, 0, Math.PI * 2); ctx.fill();
     }
   }
 
   function drawMiddleGround() {
-    ctx.fillStyle = palette.ground;
-    ctx.beginPath();
-    ctx.moveTo(0, canvas.height);
-    for (let sx = 0; sx <= canvas.width; sx += 8) {
-      const worldX = sx + state.cameraX;
-      ctx.lineTo(sx, terrainY(worldX));
-    }
-    ctx.lineTo(canvas.width, canvas.height);
-    ctx.closePath();
-    ctx.fill();
-    ctx.fillStyle = '#6f4b2b';
-    ctx.beginPath();
-    for (let sx = 0; sx <= canvas.width; sx += 10) {
-      const worldX = sx + state.cameraX;
-      const y = terrainY(worldX);
-      if (sx === 0) ctx.moveTo(sx, y);
-      else ctx.lineTo(sx, y);
-    }
-    ctx.lineTo(canvas.width, canvas.height);
-    ctx.lineTo(0, canvas.height);
-    ctx.closePath();
-    ctx.globalAlpha = 0.3;
-    ctx.fill();
-    ctx.globalAlpha = 1;
+    ctx.fillStyle = palette.ground; ctx.beginPath(); ctx.moveTo(0, canvas.height);
+    for (let sx = 0; sx <= canvas.width; sx += 8) { ctx.lineTo(sx, terrainY(sx + state.cameraX)); }
+    ctx.lineTo(canvas.width, canvas.height); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#6f4b2b'; ctx.beginPath();
+    for (let sx = 0; sx <= canvas.width; sx += 10) { const y = terrainY(sx + state.cameraX); if (sx === 0) ctx.moveTo(sx, y); else ctx.lineTo(sx, y); }
+    ctx.lineTo(canvas.width, canvas.height); ctx.lineTo(0, canvas.height); ctx.closePath();
+    ctx.globalAlpha = 0.3; ctx.fill(); ctx.globalAlpha = 1;
   }
 
-  /* 5. ANCHORED MAYA STONE PAVEMENT */
   function drawForegroundStone() {
-    const top = canvas.height * 0.92;
-    const heightFromTopToBottom = canvas.height - top;
-    
-    // Fill the empty space below to make it look like solid ground
-    ctx.fillStyle = '#7b6850';
-    ctx.fillRect(0, top, canvas.width, heightFromTopToBottom);
-
-    // Calculate which world chunks are visible on screen
+    const top = canvas.height * 0.92; const heightFromTopToBottom = canvas.height - top;
+    ctx.fillStyle = '#7b6850'; ctx.fillRect(0, top, canvas.width, heightFromTopToBottom);
     const startX = Math.floor(state.cameraX / 36) * 36;
     const endX = state.cameraX + canvas.width + 36;
-
     for (let wx = startX; wx < endX; wx += 36) {
-      const wobble = (Math.abs(wx / 36) % 2) * 3;
-      const sx = wx - state.cameraX; // Screen position
-
-      ctx.fillStyle = '#98846a';
-      ctx.fillRect(sx, top + wobble, 34, heightFromTopToBottom);
-      
-      ctx.strokeStyle = '#5c4a3d';
-      ctx.strokeRect(sx, top + wobble, 34, heightFromTopToBottom);
+      const wobble = (Math.abs(wx / 36) % 2) * 3; const sx = wx - state.cameraX;
+      ctx.fillStyle = '#98846a'; ctx.fillRect(sx, top + wobble, 34, heightFromTopToBottom);
+      ctx.strokeStyle = '#5c4a3d'; ctx.strokeRect(sx, top + wobble, 34, heightFromTopToBottom);
     }
   }
 
@@ -737,16 +594,9 @@
     const stage = currentCropStage();
     for (const field of state.fields) {
       for (const row of field.rows) {
-        ctx.strokeStyle = palette.furrow;
-        ctx.lineWidth = 1.3;
-        ctx.beginPath();
-        row.forEach((n, i) => {
-          const sx = wx(n.x);
-          if (i === 0) ctx.moveTo(sx, n.y);
-          else ctx.lineTo(sx, n.y);
-        });
+        ctx.strokeStyle = palette.furrow; ctx.lineWidth = 1.3; ctx.beginPath();
+        row.forEach((n, i) => { const sx = wx(n.x); if (i === 0) ctx.moveTo(sx, n.y); else ctx.lineTo(sx, n.y); });
         ctx.stroke();
-
         for (const node of row) {
           if (node.rotten) drawCropNode(node, 'rotten');
           else if (node.planted) drawCropNode(node, stage === 'bare' ? 'sprout' : stage);
@@ -756,28 +606,20 @@
   }
 
   function drawCropNode(node, stage) {
-    const sx = wx(node.x);
-    const y = node.y;
+    const sx = wx(node.x); const y = node.y;
     if (stage === 'sprout') {
-      ctx.strokeStyle = '#3f9f46';
-      ctx.beginPath(); ctx.moveTo(sx, y); ctx.lineTo(sx, y - 5); ctx.stroke();
+      ctx.strokeStyle = '#3f9f46'; ctx.beginPath(); ctx.moveTo(sx, y); ctx.lineTo(sx, y - 5); ctx.stroke();
       ctx.fillStyle = '#58b95e'; ctx.fillRect(sx + 1, y - 4, 2, 1);
     } else if (stage === 'growing') {
-      ctx.strokeStyle = palette.cornGreen;
-      ctx.beginPath(); ctx.moveTo(sx, y); ctx.lineTo(sx, y - 10); ctx.stroke();
+      ctx.strokeStyle = palette.cornGreen; ctx.beginPath(); ctx.moveTo(sx, y); ctx.lineTo(sx, y - 10); ctx.stroke();
       ctx.fillRect(sx - 3, y - 8, 3, 1); ctx.fillRect(sx + 1, y - 6, 3, 1);
     } else if (stage === 'harvestable') {
-      ctx.strokeStyle = palette.cornGreen;
-      ctx.beginPath(); ctx.moveTo(sx, y); ctx.lineTo(sx, y - 14); ctx.stroke();
-      ctx.fillStyle = palette.cornGreen;
-      ctx.fillRect(sx - 4, y - 12, 4, 2); ctx.fillRect(sx + 1, y - 9, 4, 2);
-      ctx.fillStyle = palette.cornGold;
-      ctx.fillRect(sx + 1, y - 12, 3, 4);
+      ctx.strokeStyle = palette.cornGreen; ctx.beginPath(); ctx.moveTo(sx, y); ctx.lineTo(sx, y - 14); ctx.stroke();
+      ctx.fillStyle = palette.cornGreen; ctx.fillRect(sx - 4, y - 12, 4, 2); ctx.fillRect(sx + 1, y - 9, 4, 2);
+      ctx.fillStyle = palette.cornGold; ctx.fillRect(sx + 1, y - 12, 3, 4);
     } else if (stage === 'rotten') {
-      ctx.strokeStyle = palette.rotten;
-      ctx.beginPath(); ctx.moveTo(sx, y); ctx.lineTo(sx + 4, y - 10); ctx.stroke();
-      ctx.fillStyle = palette.rotten;
-      ctx.fillRect(sx + 2, y - 9, 2, 4);
+      ctx.strokeStyle = palette.rotten; ctx.beginPath(); ctx.moveTo(sx, y); ctx.lineTo(sx + 4, y - 10); ctx.stroke();
+      ctx.fillStyle = palette.rotten; ctx.fillRect(sx + 2, y - 9, 2, 4);
     }
   }
 
@@ -785,63 +627,73 @@
     const py = terrainY(city.pyramidX);
     for (const house of state.houses) {
       const sx = wx(house.x);
-      ctx.fillStyle = '#a38f72';
-      ctx.fillRect(sx - 11, house.y, 22, 12);
-      ctx.fillStyle = '#caa76a';
-      ctx.beginPath(); ctx.moveTo(sx - 13, house.y); ctx.lineTo(sx, house.y - 9); ctx.lineTo(sx + 13, house.y); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#a38f72'; ctx.fillRect(sx - 11, house.y, 22, 12);
+      ctx.fillStyle = '#caa76a'; ctx.beginPath(); ctx.moveTo(sx - 13, house.y); ctx.lineTo(sx, house.y - 9); ctx.lineTo(sx + 13, house.y); ctx.closePath(); ctx.fill();
     }
 
-    const levels = 5;
+    // TIKAL-STYLE PYRAMID (9 Steep Terraces)
+    const levels = 9;
     for (let i = 0; i < levels; i++) {
-      const width = 180 - i * 30;
+      const width = 200 - i * 16;
       const y = py - i * 14;
       ctx.fillStyle = i % 2 ? palette.limestone : '#c7b28e';
       ctx.fillRect(wx(city.pyramidX) - width / 2, y - 14, width, 14);
     }
-    ctx.fillStyle = '#695640';
-    ctx.fillRect(wx(city.pyramidX) - 10, py - 14, 20, 14);
+    
+    // Central Steep Staircase
+    ctx.fillStyle = '#b5a382';
+    ctx.beginPath();
+    ctx.moveTo(wx(city.pyramidX) - 15, py);
+    ctx.lineTo(wx(city.pyramidX) - 8, py - levels * 14);
+    ctx.lineTo(wx(city.pyramidX) + 8, py - levels * 14);
+    ctx.lineTo(wx(city.pyramidX) + 15, py);
+    ctx.fill();
 
-    [city.pyramidX - 110, city.pyramidX + 110].forEach(tx => {
-      const sx = wx(tx);
-      const ty = terrainY(tx) - 42;
-      ctx.fillStyle = '#5b4631';
-      ctx.fillRect(sx - 3, ty, 6, 20);
-      ctx.fillStyle = '#fb923c';
-      ctx.beginPath();
-      ctx.arc(sx, ty - 5, 5, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#fde68a';
-      ctx.beginPath();
-      ctx.arc(sx + 1, ty - 6, 2.5, 0, Math.PI * 2);
-      ctx.fill();
-    });
+    // Top Shrine
+    const topY = py - levels * 14;
+    ctx.fillStyle = '#d9c7a2';
+    ctx.fillRect(wx(city.pyramidX) - 20, topY - 25, 40, 25);
+    ctx.fillStyle = '#0b0b0c'; // Dark Doorway
+    ctx.fillRect(wx(city.pyramidX) - 6, topY - 18, 12, 18);
 
+    // Iconic Maya Roof Comb
+    ctx.fillStyle = '#c7b28e';
+    ctx.beginPath();
+    ctx.moveTo(wx(city.pyramidX) - 18, topY - 25);
+    ctx.lineTo(wx(city.pyramidX) - 10, topY - 60);
+    ctx.lineTo(wx(city.pyramidX) + 10, topY - 60);
+    ctx.lineTo(wx(city.pyramidX) + 18, topY - 25);
+    ctx.fill();
+    
+    // Roof Comb Details/Window slits
+    ctx.fillStyle = '#a79575';
+    ctx.fillRect(wx(city.pyramidX) - 5, topY - 50, 10, 8);
+    ctx.fillRect(wx(city.pyramidX) - 6, topY - 38, 12, 8);
+
+    // Fire Pit (Moved to side)
+    const tx = city.pyramidX - 140;
+    const sx = wx(tx); const ty = terrainY(tx) - 42;
+    ctx.fillStyle = '#5b4631'; ctx.fillRect(sx - 3, ty, 6, 20);
+    ctx.fillStyle = '#fb923c'; ctx.beginPath(); ctx.arc(sx, ty - 5, 5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#fde68a'; ctx.beginPath(); ctx.arc(sx + 1, ty - 6, 2.5, 0, Math.PI * 2); ctx.fill();
+
+    // Cistern
     [city.cisternX - 90, city.cisternX + 90].forEach(cx => {
       const cisY = terrainY(cx) + city.cisternYOff;
-      ctx.fillStyle = palette.stoneDark;
-      ctx.fillRect(wx(cx) - 36, cisY - 20, 72, 38);
-      ctx.fillStyle = '#3a4b57';
-      ctx.fillRect(wx(cx) - 30, cisY - 14, 60, 26);
+      ctx.fillStyle = palette.stoneDark; ctx.fillRect(wx(cx) - 36, cisY - 20, 72, 38);
+      ctx.fillStyle = '#3a4b57'; ctx.fillRect(wx(cx) - 30, cisY - 14, 60, 26);
       const waterH = 24 * (state.cistern / 100);
-      ctx.fillStyle = palette.water;
-      ctx.fillRect(wx(cx) - 30, cisY + 12 - waterH, 60, waterH);
+      ctx.fillStyle = palette.water; ctx.fillRect(wx(cx) - 30, cisY + 12 - waterH, 60, waterH);
     });
   }
 
   function drawStelae() {
     for (const s of state.stelae) {
       const sx = wx(s.x);
-      ctx.fillStyle = '#8c8c8c';
-      ctx.fillRect(sx - 6, s.y, 12, 54);
-      ctx.fillStyle = '#5f5f5f';
-      ctx.beginPath(); ctx.arc(sx, s.y + 12, 3, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#1f2937';
-      ctx.font = '11px Cinzel';
-      ctx.fillText(s.name, sx - 28, s.y - 5);
-      if (state.isRainy) {
-        ctx.fillStyle = 'rgba(6,182,212,0.55)';
-        ctx.fillRect(sx - 26, terrainY(s.x)-10, 52, 9);
-      }
+      ctx.fillStyle = '#8c8c8c'; ctx.fillRect(sx - 6, s.y, 12, 54);
+      ctx.fillStyle = '#5f5f5f'; ctx.beginPath(); ctx.arc(sx, s.y + 12, 3, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#1f2937'; ctx.font = '11px Cinzel'; ctx.fillText(s.name, sx - 28, s.y - 5);
+      if (state.isRainy) { ctx.fillStyle = 'rgba(6,182,212,0.55)'; ctx.fillRect(sx - 26, terrainY(s.x)-10, 52, 9); }
     }
   }
 
@@ -852,65 +704,73 @@
     const isPorter = p.role === 'porter';
     const isWater = p.role === 'water';
 
-    ctx.fillStyle = isSoldier ? '#ded7c3' : '#9c6f45';
-    ctx.fillRect(sx - 3, y - 12, 6, 10);
-    ctx.fillStyle = '#2f2217';
-    ctx.beginPath(); ctx.arc(sx, y - 14, 3, 0, Math.PI * 2); ctx.fill();
+    // Body (Bigger: 10x16)
+    ctx.fillStyle = isSoldier ? '#ded7c3' : '#a36131'; 
+    ctx.fillRect(sx - 5, y - 18, 10, 16);
+    
+    // Clothing/Loincloth
+    ctx.fillStyle = isSoldier ? '#111827' : '#e5e7eb';
+    ctx.fillRect(sx - 5, y - 8, 10, 6);
 
-    if (p.taskNode && (p.role === 'farmer')) {
-      ctx.strokeStyle = '#6b4f2e';
-      ctx.beginPath(); ctx.moveTo(sx, y - 8); ctx.lineTo(sx + p.dir * 3, y - 6); ctx.stroke();
+    // Head
+    ctx.fillStyle = '#2f2217';
+    ctx.beginPath(); ctx.arc(sx, y - 22, 5, 0, Math.PI * 2); ctx.fill();
+    
+    // Headbands & Feathers
+    if (!isSoldier) {
+      ctx.fillStyle = '#ef4444';
+      ctx.fillRect(sx - 5, y - 25, 10, 2);
+    } else {
+      ctx.fillStyle = '#10b981';
+      ctx.beginPath(); ctx.moveTo(sx, y-25); ctx.lineTo(sx-8, y-35); ctx.lineTo(sx+2, y-27); ctx.fill();
+    }
+
+    // Role specific items
+    if (p.taskNode && p.role === 'farmer') {
+      ctx.strokeStyle = '#6b4f2e'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(sx, y - 12); ctx.lineTo(sx + p.dir * 8, y - 4); ctx.stroke();
+      ctx.lineWidth = 1;
     }
     if (isSoldier) {
-      ctx.fillStyle = '#111827';
-      ctx.fillRect(sx + 4, y - 11, 2, 9);
-      ctx.fillStyle = '#10b981';
-      ctx.fillRect(sx + 1, y - 18, 2, 4);
+      ctx.fillStyle = '#b45309';
+      ctx.beginPath(); ctx.arc(sx - p.dir * 4, y - 10, 6, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#4b5563'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(sx + p.dir * 4, y - 4); ctx.lineTo(sx + p.dir * 18, y - 28); ctx.stroke();
+      ctx.fillStyle = '#9ca3af';
+      ctx.beginPath(); ctx.arc(sx + p.dir * 18, y - 28, 2, 0, Math.PI * 2); ctx.fill();
+      ctx.lineWidth = 1;
     }
     if (isPorter) {
       ctx.fillStyle = '#6b4428';
-      ctx.fillRect(sx - 7, y - 12, 5, 6);
+      ctx.fillRect(sx - (p.dir === 1 ? 12 : 2), y - 20, 14, 16);
       ctx.strokeStyle = '#d6c9a9';
-      ctx.beginPath(); ctx.moveTo(sx-1, y-15); ctx.lineTo(sx-6, y-9); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(sx, y-22); ctx.lineTo(sx-(p.dir===1?8:-8), y-10); ctx.stroke();
     }
     if (isWater && p.carryingWater) {
       ctx.fillStyle = '#8da3ad';
-      ctx.beginPath(); ctx.arc(sx, y - 19, 3, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(sx, y - 28, 6, 0, Math.PI * 2); ctx.fill();
+      ctx.fillRect(sx-3, y-32, 6, 4);
     }
   }
 
-  function drawPeople() {
-    for (const p of state.people) {
-      if (p.mode === 'gone') continue;
-      drawPerson(p);
-    }
-  }
+  function drawPeople() { for (const p of state.people) if (p.mode !== 'gone') drawPerson(p); }
 
   function drawTribute() {
-    if (!state.tributeGroup) return;
-    const t = state.tributeGroup;
+    if (!state.tributeGroup) return; const t = state.tributeGroup;
     for (let i = 0; i < t.members; i++) {
-      const x = t.x + (t.fromLeft ? -i * 18 : i * 18);
-      const sx = wx(x);
-      const y = terrainY(x);
+      const x = t.x + (t.fromLeft ? -i * 18 : i * 18); const sx = wx(x); const y = terrainY(x);
       const bob = Math.sin(performance.now() * 0.01 + i) * 2;
-      ctx.fillStyle = '#b45309';
-      ctx.fillRect(sx - 4, y - 14 + bob, 8, 12);
-      ctx.fillStyle = '#2f2217';
-      ctx.beginPath(); ctx.arc(sx, y - 16 + bob, 3, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = i % 2 ? '#16a34a' : '#dc2626';
-      ctx.fillRect(sx - 3, y - 22 + bob, 6, 3);
-      ctx.fillStyle = '#7c3aed';
-      ctx.fillRect(sx + 5, y - 13 + bob, 4, 6);
+      ctx.fillStyle = '#b45309'; ctx.fillRect(sx - 4, y - 14 + bob, 8, 12);
+      ctx.fillStyle = '#2f2217'; ctx.beginPath(); ctx.arc(sx, y - 16 + bob, 3, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = i % 2 ? '#16a34a' : '#dc2626'; ctx.fillRect(sx - 3, y - 22 + bob, 6, 3);
+      ctx.fillStyle = '#7c3aed'; ctx.fillRect(sx + 5, y - 13 + bob, 4, 6);
     }
   }
 
   function drawWeather() {
-    if (!state.isRainy) return;
-    ctx.strokeStyle = 'rgba(6,182,212,0.45)';
+    if (!state.isRainy) return; ctx.strokeStyle = 'rgba(6,182,212,0.45)';
     for (let i = 0; i < 120; i++) {
-      const x = (i * 49 + performance.now() * 0.4) % canvas.width;
-      const y = (i * 29 + performance.now() * 0.6) % canvas.height;
+      const x = (i * 49 + performance.now() * 0.4) % canvas.width; const y = (i * 29 + performance.now() * 0.6) % canvas.height;
       ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - 3, y + 10); ctx.stroke();
     }
   }
@@ -925,9 +785,7 @@
   }
 
   function updateUI() {
-    const seasonText = state.isRainy
-      ? `Rainy Season ${state.seasonIndex}`
-      : `Dry Season ${state.seasonIndex} — Day ${Math.min(90, Math.floor((state.seasonTimer / state.dryDuration) * 90) + 1)}`;
+    const seasonText = state.isRainy ? `Rainy Season ${state.seasonIndex}` : `Dry Season ${state.seasonIndex} — Day ${Math.min(90, Math.floor((state.seasonTimer / state.dryDuration) * 90) + 1)}`;
     document.getElementById('seasonLabel').textContent = seasonText;
     document.getElementById('foodChip').textContent = `🌽 ${Math.floor(state.food)}`;
     document.getElementById('popChip').textContent = `👥 ${state.people.length}`;
@@ -939,14 +797,11 @@
     const est = Math.floor(planted * 0.8 + farmers * 2.5);
 
     const max = maxDraft();
-    const sSlider = document.getElementById('soldierSlider');
-    const pSlider = document.getElementById('porterSlider');
-    sSlider.max = max;
-    pSlider.max = max;
+    const sSlider = document.getElementById('soldierSlider'); const pSlider = document.getElementById('porterSlider');
+    sSlider.max = max; pSlider.max = max;
     if (+sSlider.value + +pSlider.value > max) pSlider.value = Math.max(0, max - +sSlider.value);
 
-    document.getElementById('soldierVal').textContent = soldiers;
-    document.getElementById('porterVal').textContent = porters;
+    document.getElementById('soldierVal').textContent = soldiers; document.getElementById('porterVal').textContent = porters;
     document.getElementById('farmersText').textContent = `Farmers: ${farmers}`;
     document.getElementById('harvestText').textContent = `Estimated harvest: ${est}`;
     document.getElementById('foodText').textContent = `Food stores: ${Math.floor(state.food)}`;
@@ -954,85 +809,65 @@
 
   function showRoutePopup(stela) {
     state.popupRoute = stela;
-    const soldiers = state.people.filter(p => p.role === 'soldier').length;
-    const porters = state.people.filter(p => p.role === 'porter').length;
-    const txt = soldiers <= 0
-      ? `The road to ${stela.name}. ~${stela.dist} days march. You cannot march alone. Draft warriors first.`
-      : `The road to ${stela.name}. ~${stela.dist} days march. Recommended porters: ${stela.porters}. You have ${soldiers} soldiers and ${porters} porters. Proceed?`;
-    document.getElementById('popupText').textContent = txt;
-    document.getElementById('routePopup').style.display = 'flex';
+    const soldiers = state.people.filter(p => p.role === 'soldier').length; const porters = state.people.filter(p => p.role === 'porter').length;
+    const txt = soldiers <= 0 ? `The road to ${stela.name}. ~${stela.dist} days march. You cannot march alone. Draft warriors first.` : `The road to ${stela.name}. ~${stela.dist} days march. Recommended porters: ${stela.porters}. You have ${soldiers} soldiers and ${porters} porters. Proceed?`;
+    document.getElementById('popupText').textContent = txt; document.getElementById('routePopup').style.display = 'flex';
   }
 
-  function closePopup() {
-    document.getElementById('routePopup').style.display = 'none';
-    state.popupRoute = null;
-  }
+  function closePopup() { document.getElementById('routePopup').style.display = 'none'; state.popupRoute = null; }
 
   function confirmMarch() {
     const soldiers = state.people.filter(p => p.role === 'soldier').length;
     if (soldiers <= 0) return closePopup();
-    state.marching = true;
-    log('War band mustered. They march toward the stela.');
-    saveGameState();
-    setTimeout(() => {
-      state.marching = false;
-      log('March complete. Transition to Game 2 can be invoked now.');
-      window.onTransitionToMarch?.(state.savedState);
-    }, 5000);
+    state.marching = true; log('War band mustered. They march toward the stela.'); saveGameState();
+    setTimeout(() => { state.marching = false; log('March complete.'); window.onTransitionToMarch?.(state.savedState); }, 5000);
     closePopup();
   }
 
   function saveGameState() {
-    state.savedState = {
-      seasonIndex: state.seasonIndex,
-      isRainy: state.isRainy,
-      seasonTimer: state.seasonTimer,
-      food: Math.floor(state.food),
-      cistern: state.cistern,
-      population: state.people.length,
-      fields: state.fields.map(f => f.rows.map(r => r.map(n => ({ planted: n.planted, rotten: n.rotten }))))
-    };
+    state.savedState = { seasonIndex: state.seasonIndex, isRainy: state.isRainy, seasonTimer: state.seasonTimer, food: Math.floor(state.food), cistern: state.cistern, population: state.people.length, fields: state.fields.map(f => f.rows.map(r => r.map(n => ({ planted: n.planted, rotten: n.rotten })))) };
     window.__game1SavedState = state.savedState;
   }
 
   function onPointerDown(e) {
-    state.dragging = true;
-    state.lastPointerX = (e.touches ? e.touches[0].clientX : e.clientX);
-    state.pointerDownX = state.lastPointerX;
-    state.pointerMoved = false;
+    state.dragging = true; state.lastPointerX = (e.touches ? e.touches[0].clientX : e.clientX);
+    state.pointerDownX = state.lastPointerX; state.pointerMoved = false;
   }
-
   function onPointerMove(e) {
     if (!state.dragging) return;
-    const x = (e.touches ? e.touches[0].clientX : e.clientX);
-    const dx = x - state.lastPointerX;
-    state.lastPointerX = x;
-    if (Math.abs(x - state.pointerDownX) > 6) state.pointerMoved = true;
-    state.cameraX -= dx;
-    clampCamera();
+    const x = (e.touches ? e.touches[0].clientX : e.clientX); const dx = x - state.lastPointerX;
+    state.lastPointerX = x; if (Math.abs(x - state.pointerDownX) > 6) state.pointerMoved = true;
+    state.cameraX -= dx; clampCamera();
   }
-
   function onPointerUp(e) {
-    const x = (e.changedTouches ? e.changedTouches[0].clientX : e.clientX);
-    const y = (e.changedTouches ? e.changedTouches[0].clientY : e.clientY);
+    const x = (e.changedTouches ? e.changedTouches[0].clientX : e.clientX); const y = (e.changedTouches ? e.changedTouches[0].clientY : e.clientY);
     if (state.dragging && !state.pointerMoved) {
-      const worldX = x + state.cameraX;
-      // Adjusted hit area due to new flexbox layout coordinates
-      const hit = state.stelae.find(s => Math.abs(s.x - worldX) < 30 && Math.abs((s.y + 20) - y) < 70);
+      const worldX = x + state.cameraX; const hit = state.stelae.find(s => Math.abs(s.x - worldX) < 30 && Math.abs((s.y + 20) - y) < 70);
       if (hit) showRoutePopup(hit);
     }
     state.dragging = false;
   }
+  function clampCamera() { const max = Math.max(0, state.worldWidth - canvas.width); state.cameraX = Math.max(0, Math.min(max, state.cameraX)); }
 
-  function clampCamera() {
-    const max = Math.max(0, state.worldWidth - canvas.width);
-    state.cameraX = Math.max(0, Math.min(max, state.cameraX));
-  }
-
-  /* 6. CANVAS NOW RESIZES TO FIT ITS FLEX CONTAINER */
+  // RECALCULATE Y VALUES SO THEY DON'T FLOAT
   function resize() {
     canvas.width = container.clientWidth;
     canvas.height = container.clientHeight;
+    
+    // Update Field Y coordinates to anchor them to the new ground
+    state.fields.forEach(f => {
+      f.rows.forEach((row, r) => {
+        row.forEach(n => { n.y = terrainY(n.x) - 18 - r * 11 + Math.sin((n.x + r * 25) * 0.008) * 2; });
+      });
+    });
+    
+    // Update Stelae and House Y coordinates
+    state.stelae.forEach(s => s.y = terrainY(s.x) - 74);
+    state.houses.forEach((h, i) => {
+      const left = i < 3; const local = left ? i : i - 3;
+      h.y = terrainY(h.x) - 30 - (local % 2) * 5;
+    });
+
     clampCamera();
   }
 
@@ -1040,48 +875,30 @@
     if (!state.lastTs) state.lastTs = ts;
     const dt = Math.min(0.04, (ts - state.lastTs) / 1000);
     state.lastTs = ts;
-
-    seasonUpdate(dt);
-    updatePeople(dt);
-    updateTribute(dt);
-    updateFloats(dt);
-    applyDraftTargets();
-    draw();
-    updateUI();
-
+    seasonUpdate(dt); updatePeople(dt); updateTribute(dt); updateFloats(dt); applyDraftTargets(); draw(); updateUI();
     requestAnimationFrame(tick);
   }
 
+  // COLLAPSIBLE MENU LOGIC
+  let menuOpen = true;
+  document.getElementById('controls-header').addEventListener('click', () => {
+    menuOpen = !menuOpen;
+    document.getElementById('controls-content').style.display = menuOpen ? 'block' : 'none';
+    document.getElementById('toggleIcon').style.transform = menuOpen ? 'rotate(0deg)' : 'rotate(-90deg)';
+    resize(); // Trigger canvas redraw to stretch into the newly freed space
+  });
+
   window.addEventListener('resize', resize);
-  canvas.addEventListener('mousedown', onPointerDown);
-  canvas.addEventListener('mousemove', onPointerMove);
-  window.addEventListener('mouseup', onPointerUp);
-  canvas.addEventListener('touchstart', onPointerDown, { passive: true });
-  canvas.addEventListener('touchmove', onPointerMove, { passive: true });
-  canvas.addEventListener('touchend', onPointerUp, { passive: true });
+  canvas.addEventListener('mousedown', onPointerDown); canvas.addEventListener('mousemove', onPointerMove); window.addEventListener('mouseup', onPointerUp);
+  canvas.addEventListener('touchstart', onPointerDown, { passive: true }); canvas.addEventListener('touchmove', onPointerMove, { passive: true }); canvas.addEventListener('touchend', onPointerUp, { passive: true });
 
-  document.getElementById('soldierSlider').addEventListener('input', () => {
-    const s = +document.getElementById('soldierSlider').value;
-    const p = +document.getElementById('porterSlider').value;
-    const max = maxDraft();
-    if (s + p > max) document.getElementById('porterSlider').value = Math.max(0, max - s);
-    applyDraftTargets();
-  });
-  document.getElementById('porterSlider').addEventListener('input', () => {
-    const s = +document.getElementById('soldierSlider').value;
-    const p = +document.getElementById('porterSlider').value;
-    const max = maxDraft();
-    if (s + p > max) document.getElementById('soldierSlider').value = Math.max(0, max - p);
-    applyDraftTargets();
-  });
-
-  document.getElementById('cancelBtn').onclick = closePopup;
-  document.getElementById('confirmBtn').onclick = confirmMarch;
-
+  document.getElementById('soldierSlider').addEventListener('input', () => { const s = +document.getElementById('soldierSlider').value; const p = +document.getElementById('porterSlider').value; const max = maxDraft(); if (s + p > max) document.getElementById('porterSlider').value = Math.max(0, max - s); applyDraftTargets(); });
+  document.getElementById('porterSlider').addEventListener('input', () => { const s = +document.getElementById('soldierSlider').value; const p = +document.getElementById('porterSlider').value; const max = maxDraft(); if (s + p > max) document.getElementById('soldierSlider').value = Math.max(0, max - p); applyDraftTargets(); });
+  document.getElementById('cancelBtn').onclick = closePopup; document.getElementById('confirmBtn').onclick = confirmMarch;
   window.triggerTributeArrival = triggerTribute;
 
   setupWorld();
-  resize(); // Trigger initial sizing
+  resize();
   requestAnimationFrame(tick);
 })();
 </script>
