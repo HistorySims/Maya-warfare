@@ -25,7 +25,7 @@
       color: #f3ead7;
       touch-action: none;
     }
-    canvas { display: block; width: 100vw; height: 100vh; }
+    canvas { display: block; width: 100vw; height: 50vh; }
     .hud {
       position: fixed;
       top: 0;
@@ -130,7 +130,6 @@
     <div class="chips">
       <div class="chip" id="foodChip">🌽 0</div>
       <div class="chip" id="popChip">👥 0</div>
-      <div class="chip" id="waterChip">💧 0%</div>
     </div>
   </div>
 
@@ -146,7 +145,6 @@
       <div id="farmersText">Farmers: 0</div>
       <div id="harvestText">Estimated harvest: 0</div>
       <div id="foodText">Food stores: 0</div>
-      <div id="waterText">Cistern: 0%</div>
     </div>
   </div>
 
@@ -215,8 +213,20 @@
     document.getElementById('logBox').textContent = state.logs[0] || '';
   }
 
+  function hillProfile(x, center, width, height) {
+    const d = Math.abs(x - center);
+    if (d > width) return 0;
+    const t = 1 - (d / width);
+    return Math.pow(t, 1.8) * height;
+  }
+
   function terrainY(x) {
-    return canvas.height * 0.72 + Math.sin(x * 0.004) * 22 + Math.sin(x * 0.0013) * 30;
+    const h = canvas.height;
+    const base = h * 0.92;
+    const leftHill = hillProfile(x, 1160, 620, h * 0.42);
+    const rightHill = hillProfile(x, 2440, 620, h * 0.42);
+    const templeDip = hillProfile(x, city.pyramidX, 420, h * 0.08);
+    return base - leftHill - rightHill + templeDip + Math.sin(x * 0.005) * 5;
   }
 
   function setupWorld() {
@@ -225,10 +235,15 @@
       buildField(2150, 2860, 6)
     ];
     state.stelae = exits.map(e => ({ ...e, y: terrainY(e.x) - 74 }));
-    state.houses = [0, 1, 2, 3, 4].map(i => ({
-      x: 1630 + i * 62 + (i % 2) * 15,
-      y: terrainY(1640 + i * 62) - 38 - (i % 2) * 5
-    }));
+    state.houses = [0, 1, 2, 3, 4, 5].map(i => {
+      const left = i < 3;
+      const local = left ? i : i - 3;
+      const x = left ? 980 + local * 70 : 2380 + local * 72;
+      return {
+        x,
+        y: terrainY(x) - 30 - (local % 2) * 5
+      };
+    });
     state.people = [];
     for (let i = 0; i < state.pop; i++) {
       state.people.push({
@@ -543,26 +558,62 @@
     const h = canvas.height;
     ctx.clearRect(0, 0, w, h);
 
-    const grad = ctx.createLinearGradient(0, 0, 0, h);
-    grad.addColorStop(0, palette.sky2);
-    grad.addColorStop(1, palette.sky1);
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, w, h);
-
-    drawGround();
-    drawJungleEdges();
+    drawSkyBackdrop();
+    drawJungleLayer();
+    drawMiddleGround();
     drawFields();
     drawCity();
     drawStelae();
     drawPeople();
     drawTribute();
+    drawForegroundStone();
     drawWeather();
     drawFloats();
   }
 
   function wx(x) { return x - state.cameraX; }
 
-  function drawGround() {
+  function drawSkyBackdrop() {
+    const skyTop = state.isRainy ? '#93a0ab' : '#8fd2ff';
+    const skyBottom = state.isRainy ? '#c2c8cf' : '#def4ff';
+    const grad = ctx.createLinearGradient(0, 0, 0, canvas.height * 0.3);
+    grad.addColorStop(0, skyTop);
+    grad.addColorStop(1, skyBottom);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, canvas.width, canvas.height * 0.3);
+
+    for (let i = 0; i < 6; i++) {
+      const cx = ((i * 170) + performance.now() * 0.01) % (canvas.width + 160) - 80;
+      const cy = 26 + (i % 3) * 22;
+      ctx.fillStyle = state.isRainy ? 'rgba(214,220,224,0.75)' : 'rgba(255,255,255,0.9)';
+      ctx.beginPath();
+      ctx.arc(cx, cy, 18, 0, Math.PI * 2);
+      ctx.arc(cx + 18, cy + 2, 16, 0, Math.PI * 2);
+      ctx.arc(cx - 18, cy + 3, 14, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  function drawJungleLayer() {
+    const top = canvas.height * 0.3;
+    const bottom = canvas.height * 0.7;
+    const grad = ctx.createLinearGradient(0, top, 0, bottom);
+    grad.addColorStop(0, '#1f6b34');
+    grad.addColorStop(1, '#0f3b1e');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, top, canvas.width, bottom - top);
+    for (let x = -20; x < canvas.width + 40; x += 26) {
+      const canopy = bottom - 20 - Math.sin((x + state.cameraX) * 0.02) * 10;
+      ctx.fillStyle = '#14532d';
+      ctx.fillRect(x + 6, canopy - 26, 5, 26);
+      ctx.fillStyle = (x / 26) % 2 ? '#166534' : '#15803d';
+      ctx.beginPath();
+      ctx.arc(x + 8, canopy - 32, 14, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  function drawMiddleGround() {
     ctx.fillStyle = palette.ground;
     ctx.beginPath();
     ctx.moveTo(0, canvas.height);
@@ -573,22 +624,32 @@
     ctx.lineTo(canvas.width, canvas.height);
     ctx.closePath();
     ctx.fill();
+    ctx.fillStyle = '#6f4b2b';
+    ctx.beginPath();
+    for (let sx = 0; sx <= canvas.width; sx += 10) {
+      const worldX = sx + state.cameraX;
+      const y = terrainY(worldX);
+      if (sx === 0) ctx.moveTo(sx, y);
+      else ctx.lineTo(sx, y);
+    }
+    ctx.lineTo(canvas.width, canvas.height);
+    ctx.lineTo(0, canvas.height);
+    ctx.closePath();
+    ctx.globalAlpha = 0.3;
+    ctx.fill();
+    ctx.globalAlpha = 1;
   }
 
-  function drawJungleEdges() {
-    [120, state.worldWidth - 120].forEach(edge => {
-      for (let i = 0; i < 16; i++) {
-        const x = edge + (edge < state.worldWidth / 2 ? i * 16 : -i * 16);
-        const sx = wx(x);
-        const y = terrainY(x) - 56 - (i % 3) * 7;
-        ctx.fillStyle = palette.jungleDark;
-        ctx.fillRect(sx - 2, y + 20, 5, 24);
-        ctx.fillStyle = i % 2 ? palette.jungleDark : palette.jungleMid;
-        ctx.beginPath();
-        ctx.arc(sx, y, 16, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    });
+  function drawForegroundStone() {
+    const top = canvas.height * 0.92;
+    const blockH = canvas.height * 0.08;
+    for (let x = 0; x < canvas.width + 40; x += 36) {
+      const wobble = ((x / 36) % 2) * 3;
+      ctx.fillStyle = '#98846a';
+      ctx.fillRect(x, top + wobble, 34, blockH - wobble);
+      ctx.strokeStyle = '#7b6850';
+      ctx.strokeRect(x, top + wobble, 34, blockH - wobble);
+    }
   }
 
   function drawFields() {
@@ -643,30 +704,47 @@
     const py = terrainY(city.pyramidX);
     for (const house of state.houses) {
       const sx = wx(house.x);
-      ctx.fillStyle = '#8a623b';
-      ctx.fillRect(sx - 10, house.y, 20, 12);
-      ctx.fillStyle = '#6b4628';
-      ctx.beginPath(); ctx.moveTo(sx - 12, house.y); ctx.lineTo(sx, house.y - 9); ctx.lineTo(sx + 12, house.y); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#a38f72';
+      ctx.fillRect(sx - 11, house.y, 22, 12);
+      ctx.fillStyle = '#caa76a';
+      ctx.beginPath(); ctx.moveTo(sx - 13, house.y); ctx.lineTo(sx, house.y - 9); ctx.lineTo(sx + 13, house.y); ctx.closePath(); ctx.fill();
     }
 
     const levels = 5;
     for (let i = 0; i < levels; i++) {
-      const width = 170 - i * 28;
-      const y = py - i * 15;
+      const width = 180 - i * 30;
+      const y = py - i * 14;
       ctx.fillStyle = i % 2 ? palette.limestone : '#c7b28e';
       ctx.fillRect(wx(city.pyramidX) - width / 2, y - 14, width, 14);
     }
     ctx.fillStyle = '#695640';
     ctx.fillRect(wx(city.pyramidX) - 10, py - 14, 20, 14);
 
-    const cisY = terrainY(city.cisternX) + city.cisternYOff;
-    ctx.fillStyle = palette.stoneDark;
-    ctx.fillRect(wx(city.cisternX) - 36, cisY - 20, 72, 38);
-    ctx.fillStyle = '#3a4b57';
-    ctx.fillRect(wx(city.cisternX) - 30, cisY - 14, 60, 26);
-    const waterH = 24 * (state.cistern / 100);
-    ctx.fillStyle = palette.water;
-    ctx.fillRect(wx(city.cisternX) - 30, cisY + 12 - waterH, 60, waterH);
+    [city.pyramidX - 110, city.pyramidX + 110].forEach(tx => {
+      const sx = wx(tx);
+      const ty = terrainY(tx) - 42;
+      ctx.fillStyle = '#5b4631';
+      ctx.fillRect(sx - 3, ty, 6, 20);
+      ctx.fillStyle = '#fb923c';
+      ctx.beginPath();
+      ctx.arc(sx, ty - 5, 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#fde68a';
+      ctx.beginPath();
+      ctx.arc(sx + 1, ty - 6, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    [city.cisternX - 90, city.cisternX + 90].forEach(cx => {
+      const cisY = terrainY(cx) + city.cisternYOff;
+      ctx.fillStyle = palette.stoneDark;
+      ctx.fillRect(wx(cx) - 36, cisY - 20, 72, 38);
+      ctx.fillStyle = '#3a4b57';
+      ctx.fillRect(wx(cx) - 30, cisY - 14, 60, 26);
+      const waterH = 24 * (state.cistern / 100);
+      ctx.fillStyle = palette.water;
+      ctx.fillRect(wx(cx) - 30, cisY + 12 - waterH, 60, waterH);
+    });
   }
 
   function drawStelae() {
@@ -772,7 +850,6 @@
     document.getElementById('seasonLabel').textContent = seasonText;
     document.getElementById('foodChip').textContent = `🌽 ${Math.floor(state.food)}`;
     document.getElementById('popChip').textContent = `👥 ${state.people.length}`;
-    document.getElementById('waterChip').textContent = `💧 ${Math.floor(state.cistern)}%`;
 
     const soldiers = state.people.filter(p => p.targetRole === 'soldier').length;
     const porters = state.people.filter(p => p.targetRole === 'porter').length;
@@ -792,7 +869,6 @@
     document.getElementById('farmersText').textContent = `Farmers: ${farmers}`;
     document.getElementById('harvestText').textContent = `Estimated harvest: ${est}`;
     document.getElementById('foodText').textContent = `Food stores: ${Math.floor(state.food)}`;
-    document.getElementById('waterText').textContent = `Cistern: ${Math.floor(state.cistern)}%`;
   }
 
   function showRoutePopup(stela) {
@@ -873,7 +949,7 @@
 
   function resize() {
     canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    canvas.height = Math.max(280, Math.floor(window.innerHeight * 0.5));
     clampCamera();
   }
 
