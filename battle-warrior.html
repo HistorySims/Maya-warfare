@@ -1,119 +1,1136 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Maya Battle Warrior</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>K'uhul Ajaw — The Battle</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&display=swap" rel="stylesheet">
 <style>
-  body{margin:0;background:#0d0d12;color:#eee8da;font-family:Georgia,serif}
-  .wrap{max-width:980px;margin:0 auto;padding:16px}
-  .hud{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;background:#171722;border:1px solid #2d2d45;border-radius:8px;padding:10px}
-  #arena{margin-top:12px;background:#12121a;border:1px solid #2d2d45;border-radius:8px;height:420px;position:relative;overflow:hidden}
-  .enemy{position:absolute;width:24px;height:24px;border-radius:50%;background:#d04c4c;cursor:pointer}
-  .hero{position:absolute;left:48%;bottom:16px;width:34px;height:34px;border-radius:50%;background:#5ed4b1}
-  .btn{background:#5b67ff;color:white;border:none;border-radius:6px;padding:8px 12px;cursor:pointer;font-weight:700}
-  .log{font-family:monospace;height:140px;overflow:auto;background:#13131d;border:1px solid #2d2d45;border-radius:6px;padding:8px;margin-top:10px}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0b0b0c;
+  display: flex; align-items: center; justify-content: center;
+  min-height: 100vh; overflow: hidden;
+  font-family: 'Cinzel', serif;
+}
+#wrap {
+  position: relative;
+  width: 800px; max-width: 100vw;
+  aspect-ratio: 800 / 480;
+}
+canvas {
+  display: block; width: 100%; height: 100%;
+  image-rendering: pixelated; image-rendering: crisp-edges;
+}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <h1>MAYA BATTLE WARRIOR</h1>
-  <p>Dynasty-style battle burst. Win, then survive the return trail.</p>
-  <div class="hud" id="hud"></div>
-  <button class="btn" onclick="playerStrike()">STRIKE NEAREST</button>
-  <div id="arena"><div class="hero"></div></div>
-  <div id="log" class="log"></div>
-</div>
-
+<div id="wrap"><canvas id="c"></canvas></div>
 <script>
-const KEY='mayaThreeGameState';
-function load(){try{return JSON.parse(localStorage.getItem(KEY));}catch{return null}}
-function save(s){localStorage.setItem(KEY,JSON.stringify(s))}
-function log(msg){const el=document.getElementById('log');const d=document.createElement('div');d.textContent='> '+msg;el.prepend(d)}
-let S=load();
-if(!S||!S.expedition){location.href='home-farmer.html'}
-S.game='battle';
+'use strict';
 
-let playerHp=30;
-let enemies=[];
-const arena=document.getElementById('arena');
+// ── CONSTANTS ─────────────────────────────────────────────────────────────────
+const W = 800, H = 480;
+const LANE_TOP = 255, LANE_BOT = 415;
+const LANE_H = LANE_BOT - LANE_TOP;
 
-function spawn(){
-  const base=5 + (S.expedition.target==="Ik' Naah"?3:S.expedition.target==="Sak Nikte'"?2:0);
-  for(let i=0;i<base;i++){
-    const e={hp:8+Math.floor(Math.random()*6),x:30+Math.random()*900,y:25+Math.random()*300,id:Math.random().toString(36).slice(2)};
-    enemies.push(e);
+const COL = {
+  skyTop: '#0a0a18', skyBot: '#1e1430',
+  jungleDark: '#0a2818', jungleMid: '#0d3320',
+  plaza: '#c4b48a', plazaLine: '#a89a72',
+  killFloor: '#6b5a45', killLine: '#5a4a38',
+  wall: '#7a6a52', wallDark: '#5a4a3a', wallLight: '#a09070',
+  jade: '#0f766e', gold: '#c4a020',
+  blood: '#b91c1c', red: '#dc2626',
+  tan: '#c8a87a', dark: '#2a1a0a',
+  sky2: '#1a1535',
+};
+
+// ── BATTLE STATE ──────────────────────────────────────────────────────────────
+const LS_KEY = 'mayaThreeGameState';
+let savedState = null;
+try { savedState = JSON.parse(localStorage.getItem(LS_KEY)); } catch(e) {}
+
+const battleState = {
+  soldiers:      savedState?.expedition?.soldiers    ?? 5,
+  playerHp:      100,
+  destination:   savedState?.expedition?.target      ?? 'Ox Witz',
+  isReconquest:  savedState?.expedition?.isReconquest ?? false,
+  wallLevel:     savedState?.expedition?.wallLevel    ?? 1,
+};
+
+// ── CANVAS ────────────────────────────────────────────────────────────────────
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
+canvas.width = W; canvas.height = H;
+
+// ── INPUT ─────────────────────────────────────────────────────────────────────
+const keys = {};
+window.addEventListener('keydown', e => { keys[e.code] = true;  e.preventDefault(); });
+window.addEventListener('keyup',   e => { keys[e.code] = false; });
+
+const touch = { jx: 0, jy: 0, attack: false, jActive: false, jSX: 0, jSY: 0 };
+const JR = 48, JCX = 75, JCY = H - 75, ACX = W - 75, ACY = H - 75, AR = 46;
+
+function toCanvas(clientX, clientY) {
+  const r = canvas.getBoundingClientRect();
+  return [(clientX - r.left) * (W / r.width), (clientY - r.top) * (H / r.height)];
+}
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  for (const t of e.changedTouches) {
+    const [tx, ty] = toCanvas(t.clientX, t.clientY);
+    if (tx < W / 2) { touch.jActive = true; touch.jSX = tx; touch.jSY = ty; touch.jx = 0; touch.jy = 0; }
+    else { touch.attack = true; }
   }
-  drawEnemies();
+}, { passive: false });
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  for (const t of e.changedTouches) {
+    const [tx, ty] = toCanvas(t.clientX, t.clientY);
+    if (touch.jActive && tx < W / 2) {
+      let dx = tx - touch.jSX, dy = ty - touch.jSY;
+      const len = Math.sqrt(dx * dx + dy * dy);
+      if (len > JR) { dx *= JR / len; dy *= JR / len; }
+      touch.jx = dx / JR; touch.jy = dy / JR;
+    }
+  }
+}, { passive: false });
+canvas.addEventListener('touchend', e => {
+  e.preventDefault();
+  for (const t of e.changedTouches) {
+    const [tx] = toCanvas(t.clientX, t.clientY);
+    if (tx < W / 2) { touch.jActive = false; touch.jx = 0; touch.jy = 0; }
+    else { touch.attack = false; }
+  }
+}, { passive: false });
+
+// ── GAME STATE ────────────────────────────────────────────────────────────────
+let gamePhase = 'playing'; // 'playing' | 'victory' | 'defeat'
+let camera = { x: 0 };
+let player, soldiers, enemies, projectiles, effects;
+let currentZone, zones, killZone;
+let shakeX = 0, shakeY = 0, shakeMs = 0;
+let hitStopMs = 0;
+let advanceAlpha = 0;
+let startingSoldiers, killZoneLosses;
+let totalMs = 0;
+let victoryFlag = false;
+
+// ── ENTITY FACTORY ────────────────────────────────────────────────────────────
+function makeEnt(type, wx, y) {
+  return {
+    type, wx, y,
+    hp: 0, maxHp: 0,
+    speed: 0,
+    facing: 1,
+    atkCd: 0, atkCdMax: 600,
+    atkTimer: 0,
+    atkRange: 40, atkArc: 45,
+    atkDmg: () => 8,
+    walkTimer: 0,
+    hitFlash: 0,
+    dead: false, dying: false,
+    dyingMs: 0, dyingAngle: 0,
+    throwTimer: 0,
+    id: Math.random(),
+  };
 }
 
-function drawEnemies(){
-  [...arena.querySelectorAll('.enemy')].forEach(n=>n.remove());
-  enemies.forEach(e=>{
-    const n=document.createElement('div');
-    n.className='enemy';
-    n.style.left=e.x+'px'; n.style.top=e.y+'px';
-    n.title='HP '+e.hp;
-    n.onclick=()=>{e.hp-=6; log('You cleave an enemy.'); tick();};
-    arena.appendChild(n);
+function createPlayer(wx, y) {
+  const e = makeEnt('player', wx, y);
+  e.hp = battleState.playerHp; e.maxHp = 100;
+  e.speed = 145; e.atkCdMax = 400;
+  e.atkRange = 58; e.atkArc = 72;
+  e.atkDmg = () => 15 + Math.floor(Math.random() * 6);
+  return e;
+}
+
+function createSoldier(wx, y) {
+  const e = makeEnt('soldier', wx, y);
+  e.hp = 30; e.maxHp = 30;
+  e.speed = 92; e.atkCdMax = 650;
+  e.atkRange = 40; e.atkArc = 46;
+  e.atkDmg = () => 6 + Math.floor(Math.random() * 4);
+  return e;
+}
+
+function createEnemy(wx, y, type) {
+  const e = makeEnt(type || 'enemy', wx, y);
+  e.facing = -1;
+  if (type === 'captain') {
+    e.hp = 80; e.maxHp = 80;
+    e.speed = 72; e.atkCdMax = 520;
+    e.atkRange = 48; e.atkArc = 58;
+    e.atkDmg = () => 12 + Math.floor(Math.random() * 5);
+  } else {
+    e.hp = 25; e.maxHp = 25;
+    e.speed = 62; e.atkCdMax = 720;
+    e.atkRange = 38; e.atkArc = 44;
+    e.atkDmg = () => 6 + Math.floor(Math.random() * 4);
+  }
+  return e;
+}
+
+function createWallDef(wx, y) {
+  const e = makeEnt('wallDef', wx, y);
+  e.hp = 9999; e.maxHp = 9999;
+  e.facing = -1;
+  e.throwTimer = 1500 + Math.random() * 2000;
+  return e;
+}
+
+// ── ZONE BUILDER ──────────────────────────────────────────────────────────────
+function buildZones() {
+  const wl = battleState.wallLevel;
+
+  if (!battleState.isReconquest) {
+    killZone = null;
+    zones = [
+      { name: 'Jungle Edge',     x1: 0,    x2: 1100,
+        types: arr('enemy', 3 + rnd(2)),
+        xs: scatter(500, 1050, 4 + rnd(2)), spawned: false, cleared: false },
+      { name: 'The Plaza',       x1: 1100, x2: 2400,
+        types: arr('enemy', 6 + rnd(3)),
+        xs: scatter(1300, 2300, 10),        spawned: false, cleared: false },
+      { name: 'The Pyramid Steps', x1: 2400, x2: 3300, isFinal: true,
+        types: [...arr('enemy', 2), 'captain'],
+        xs: scatter(2600, 3100, 5),         spawned: false, cleared: false },
+    ];
+  } else {
+    const OW = 950, IW = 1720;
+    const KZ1 = OW + 110, KZ2 = IW - 10;
+    killZone = { x1: KZ1, x2: KZ2 };
+    zones = [
+      { name: 'The Approach',    x1: 0,       x2: OW - 50,
+        types: arr('enemy', 3),
+        xs: scatter(350, OW - 80, 5),          spawned: false, cleared: false },
+      { name: 'The Outer Gate',  x1: OW - 50, x2: KZ1,
+        types: arr('enemy', 3 + wl),
+        xs: scatter(OW - 20, KZ1 - 20, 6),    spawned: false, cleared: false,
+        wallX: OW, gateW: 110 },
+      { name: 'The Kill Zone',   x1: KZ1, x2: KZ2,
+        types: arr('enemy', 2 + wl),
+        xs: scatter(KZ1 + 60, KZ2 - 60, 4),   spawned: false, cleared: false,
+        defWX: [IW - 5, IW + 55, IW + 115].slice(0, 2 + wl),
+        defY:  [LANE_TOP - 18, LANE_TOP - 10, LANE_TOP - 14].slice(0, 2 + wl) },
+      { name: 'The Inner Gate',  x1: KZ2, x2: IW + 200,
+        types: arr('enemy', 3 + wl),
+        xs: scatter(IW + 20, IW + 180, 6),    spawned: false, cleared: false,
+        wallX: IW, gateW: 90 },
+      { name: 'The Palace Plaza', x1: IW + 200, x2: IW + 1500, isFinal: true,
+        types: [...arr('enemy', 4 + wl), 'captain'],
+        xs: scatter(IW + 300, IW + 1300, 10), spawned: false, cleared: false },
+    ];
+  }
+}
+
+function arr(v, n)        { return Array.from({ length: n }, () => v); }
+function rnd(n)            { return Math.floor(Math.random() * n); }
+function scatter(a, b, n) {
+  const out = [];
+  for (let i = 0; i < n; i++) out.push(a + Math.random() * (b - a));
+  return out;
+}
+
+function spawnZone(zone) {
+  if (zone.spawned) return;
+  zone.spawned = true;
+  const types = zone.types, xs = zone.xs;
+  for (let i = 0; i < types.length; i++) {
+    const wx = xs[i % xs.length] + (Math.random() - 0.5) * 40;
+    const y  = LANE_TOP + 20 + Math.random() * (LANE_H - 50);
+    enemies.push(createEnemy(wx, y, types[i]));
+  }
+  // Wall defenders in kill zone
+  if (zone.defWX) {
+    for (let i = 0; i < zone.defWX.length; i++)
+      enemies.push(createWallDef(zone.defWX[i], zone.defY[i]));
+  }
+}
+
+// ── SPRITE: PLAYER ────────────────────────────────────────────────────────────
+function drawPlayer(ctx, e) {
+  const f = e.facing, atk = e.atkTimer > 0;
+  const wk = Math.floor(e.walkTimer / 160) % 2;
+  if (e.hitFlash > 0) ctx.filter = 'brightness(8)';
+
+  // shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.28)';
+  ctx.beginPath(); ctx.ellipse(0, 2, 14, 5, 0, 0, Math.PI * 2); ctx.fill();
+
+  // back feathers (green)
+  const greens = ['#15803d','#16a34a','#166534','#22c55e'];
+  for (let i = 0; i < 5; i++) {
+    ctx.fillStyle = greens[i % greens.length];
+    ctx.save(); ctx.translate(f * (-7 + i * 3.5), -38);
+    ctx.rotate(f * (-0.65 + i * 0.28));
+    ctx.fillRect(-2, -15, 5, 17); ctx.restore();
+  }
+  // red accent feathers
+  ctx.fillStyle = '#dc2626';
+  ctx.save(); ctx.translate(f * 3, -36); ctx.rotate(f * 0.12);
+  ctx.fillRect(-2, -12, 4, 14); ctx.restore();
+  ctx.save(); ctx.translate(f * (-1), -37); ctx.rotate(f * (-0.18));
+  ctx.fillRect(-2, -10, 4, 12); ctx.restore();
+
+  // headdress band
+  ctx.fillStyle = '#7c3aed'; ctx.fillRect(-9, -28, 18, 7);
+  ctx.fillStyle = COL.jade;  ctx.fillRect(-3, -31, 7, 9);
+
+  // head
+  ctx.fillStyle = COL.tan; ctx.fillRect(-7, -26, 14, 13);
+  ctx.fillStyle = '#1a0a00'; ctx.fillRect(f * 2, -23, 3, 3);
+  // ear spools
+  ctx.fillStyle = COL.jade;
+  ctx.beginPath(); ctx.arc(-9, -21, 3.5, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc( 9, -21, 3.5, 0, Math.PI * 2); ctx.fill();
+
+  // body (jaguar pelt)
+  ctx.fillStyle = '#b8926a'; ctx.fillRect(-9, -13, 18, 18);
+  ctx.fillStyle = '#6a3a18';
+  ctx.fillRect(-6, -11, 4, 3); ctx.fillRect(3, -8, 3, 3);
+  ctx.fillRect(-4, -4,  3, 3); ctx.fillRect(4, -3, 4, 3);
+
+  // belt + loincloth
+  ctx.fillStyle = COL.gold;    ctx.fillRect(-9, 5, 18, 4);
+  ctx.fillStyle = '#7c3aed';   ctx.fillRect(-5, 9, 10, 11);
+
+  // legs
+  const lL = wk ? 4 : -2, lR = wk ? -2 : 4;
+  ctx.fillStyle = COL.tan;
+  ctx.fillRect(-8, 20, 6, 10 + lL); ctx.fillRect(2, 20, 6, 10 + lR);
+  ctx.fillStyle = '#8a6a3a';
+  ctx.fillRect(-9, 28 + lL, 7, 4); ctx.fillRect(1, 28 + lR, 7, 4);
+
+  // club (macuahuitl)
+  const cSwing = atk ? f * 22 : 0, cRot = f * (atk ? 0.65 : 0.2);
+  ctx.save(); ctx.translate(f * 13 + cSwing, atk ? -12 : -6); ctx.rotate(cRot);
+  ctx.fillStyle = '#5a3010'; ctx.fillRect(-2, -16, 6, 22);
+  ctx.fillStyle = '#1a1a2e'; ctx.fillRect(-4, -16, 2, 20); ctx.fillRect(6, -16, 2, 20);
+  ctx.restore();
+
+  ctx.filter = 'none';
+}
+
+// ── SPRITE: SOLDIER ───────────────────────────────────────────────────────────
+function drawSoldier(ctx, e) {
+  const f = e.facing, atk = e.atkTimer > 0;
+  const wk = Math.floor(e.walkTimer / 160) % 2;
+  if (e.hitFlash > 0) ctx.filter = 'brightness(8)';
+
+  ctx.fillStyle = 'rgba(0,0,0,0.22)';
+  ctx.beginPath(); ctx.ellipse(0, 2, 10, 4, 0, 0, Math.PI * 2); ctx.fill();
+
+  // green feather
+  ctx.fillStyle = '#16a34a';
+  ctx.save(); ctx.translate(f * (-1), -23); ctx.rotate(f * (-0.3));
+  ctx.fillRect(-1, -9, 3, 11); ctx.restore();
+
+  ctx.fillStyle = COL.tan; ctx.fillRect(-5, -21, 10, 10);
+  ctx.fillStyle = '#1a0a00'; ctx.fillRect(f * 1, -19, 2, 3);
+
+  ctx.fillStyle = '#e8dfc8'; ctx.fillRect(-6, -11, 12, 14);
+  ctx.fillStyle = '#c8bfa8'; ctx.fillRect(-6, -4, 12, 2);
+
+  const lL = wk ? 2 : -2, lR = wk ? -2 : 2;
+  ctx.fillStyle = COL.tan;
+  ctx.fillRect(-5, 3, 4, 9 + lL); ctx.fillRect(1, 3, 4, 9 + lR);
+  ctx.fillStyle = '#8a6a3a';
+  ctx.fillRect(-6, 10 + lL, 5, 3); ctx.fillRect(0, 10 + lR, 5, 3);
+
+  const cs = atk ? f * 13 : 0;
+  ctx.save(); ctx.translate(f * 9 + cs, -7); ctx.rotate(f * (atk ? 0.55 : 0.15));
+  ctx.fillStyle = '#5a3010'; ctx.fillRect(-2, -11, 4, 15);
+  ctx.fillStyle = '#1a1a2e'; ctx.fillRect(-3, -11, 2, 13); ctx.fillRect(4, -11, 2, 13);
+  ctx.restore();
+
+  ctx.filter = 'none';
+}
+
+// ── SPRITE: ENEMY ─────────────────────────────────────────────────────────────
+function drawEnemy(ctx, e) {
+  const f = e.facing, atk = e.atkTimer > 0;
+  const wk = Math.floor(e.walkTimer / 160) % 2;
+  const capt = e.type === 'captain';
+  if (e.hitFlash > 0) ctx.filter = 'brightness(8)';
+
+  const sc = capt ? 1.28 : 1;
+  ctx.save(); ctx.scale(sc, sc);
+
+  ctx.fillStyle = 'rgba(0,0,0,0.22)';
+  ctx.beginPath(); ctx.ellipse(0, 2, capt ? 13 : 10, capt ? 5 : 4, 0, 0, Math.PI * 2); ctx.fill();
+
+  if (capt) {
+    // Elaborate orange/gold headdress
+    ctx.fillStyle = '#f97316';
+    for (let i = 0; i < 4; i++) {
+      ctx.save(); ctx.translate(f * (-4.5 + i * 3), -27);
+      ctx.rotate(f * (-0.55 + i * 0.35));
+      ctx.fillRect(-2, -13, 5, 15); ctx.restore();
+    }
+    ctx.fillStyle = COL.gold; ctx.fillRect(-8, -24, 16, 6);
+    ctx.fillStyle = '#f97316';  ctx.fillRect(-3, -27, 7, 7);
+  } else {
+    ctx.fillStyle = COL.blood;
+    ctx.save(); ctx.translate(f * 2, -22); ctx.rotate(f * 0.3);
+    ctx.fillRect(-1, -9, 3, 11); ctx.restore();
+  }
+
+  ctx.fillStyle = '#c4a07a'; ctx.fillRect(-5, capt ? -21 : -19, 10, 10);
+  ctx.fillStyle = '#1a0a00'; ctx.fillRect(f * 1, capt ? -19 : -17, 2, 3);
+
+  ctx.fillStyle = capt ? '#7f1d1d' : '#cc4040'; ctx.fillRect(-6, capt ? -11 : -9, 12, 13);
+  ctx.fillStyle = capt ? '#991b1b' : '#b91c1c'; ctx.fillRect(-6, capt ? -4 : -2, 12, 2);
+
+  const lL = wk ? 2 : -2, lR = wk ? -2 : 2;
+  ctx.fillStyle = '#c4a07a';
+  ctx.fillRect(-5, 4, 4, 9 + lL); ctx.fillRect(1, 4, 4, 9 + lR);
+  ctx.fillStyle = '#8a6a3a';
+  ctx.fillRect(-6, 11 + lL, 5, 3); ctx.fillRect(0, 11 + lR, 5, 3);
+
+  const cs = atk ? f * 13 : 0;
+  ctx.save(); ctx.translate(f * 9 + cs, -5); ctx.rotate(f * (atk ? 0.55 : 0.18));
+  ctx.fillStyle = '#5a3010'; ctx.fillRect(-2, -11, 4, 15);
+  ctx.fillStyle = '#2a0808'; ctx.fillRect(-3, -11, 2, 13); ctx.fillRect(4, -11, 2, 13);
+  ctx.restore();
+
+  ctx.restore();
+  ctx.filter = 'none';
+}
+
+// ── SPRITE: WALL DEFENDER ─────────────────────────────────────────────────────
+function drawWallDef(ctx, e) {
+  const f = e.facing;
+  if (e.hitFlash > 0) ctx.filter = 'brightness(8)';
+
+  ctx.fillStyle = '#cc3030'; ctx.fillRect(-5, -16, 10, 14);
+  ctx.fillStyle = '#c4a07a'; ctx.fillRect(-4, -26, 9, 11);
+  ctx.fillStyle = COL.blood;
+  ctx.save(); ctx.translate(f * 1, -27); ctx.rotate(f * 0.2);
+  ctx.fillRect(-1, -7, 3, 9); ctx.restore();
+
+  // throwing arm
+  ctx.fillStyle = '#c4a07a';
+  ctx.save(); ctx.translate(f * 9, -18); ctx.rotate(f * -0.75);
+  ctx.fillRect(-2, -9, 4, 11); ctx.restore();
+
+  ctx.filter = 'none';
+}
+
+// ── DRAW ENTITY ───────────────────────────────────────────────────────────────
+function drawEntity(ctx, e) {
+  if (e.dead) return;
+  const sx = Math.round(e.wx - camera.x), sy = Math.round(e.y);
+
+  ctx.save();
+  ctx.translate(sx, sy);
+
+  if (e.dying) {
+    ctx.rotate(e.dyingAngle * e.facing);
+    ctx.globalAlpha = Math.max(0, e.dyingMs / 700);
+    if (e.type === 'player')  drawPlayer(ctx, e);
+    else if (e.type === 'soldier') drawSoldier(ctx, e);
+    else if (e.type === 'wallDef') drawWallDef(ctx, e);
+    else drawEnemy(ctx, e);
+    ctx.restore();
+    return;
+  }
+
+  if (e.type === 'player')  drawPlayer(ctx, e);
+  else if (e.type === 'soldier') drawSoldier(ctx, e);
+  else if (e.type === 'wallDef') drawWallDef(ctx, e);
+  else drawEnemy(ctx, e);
+
+  // HP bar (skip wall defenders)
+  if (e.type !== 'wallDef') {
+    const bw = e.type === 'player' ? 42 : e.type === 'captain' ? 48 : 28;
+    const by = e.type === 'player' ? -60 : e.type === 'captain' ? -48 : -38;
+    const pct = Math.max(0, e.hp / e.maxHp);
+    ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(-bw / 2 - 1, by - 1, bw + 2, 7);
+    ctx.fillStyle = pct > 0.6 ? '#22c55e' : pct > 0.3 ? '#eab308' : '#ef4444';
+    ctx.fillRect(-bw / 2, by, bw * pct, 5);
+    ctx.strokeStyle = '#555'; ctx.lineWidth = 0.5;
+    ctx.strokeRect(-bw / 2, by, bw, 5);
+  }
+  ctx.restore();
+}
+
+// ── BACKGROUND ────────────────────────────────────────────────────────────────
+function drawBackground() {
+  const cx = camera.x;
+
+  // Sky
+  const sg = ctx.createLinearGradient(0, 0, 0, LANE_TOP);
+  sg.addColorStop(0, '#07071a'); sg.addColorStop(0.6, '#12122a'); sg.addColorStop(1, '#1e1228');
+  ctx.fillStyle = sg; ctx.fillRect(0, 0, W, LANE_TOP);
+
+  // Stars
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  const starSeed = 31337;
+  for (let i = 0; i < 60; i++) {
+    const sx = ((i * 173 + starSeed) % W);
+    const sy = ((i * 97 + 13) % (LANE_TOP - 20));
+    const sz = (i % 3 === 0) ? 1.5 : 1;
+    ctx.fillRect(sx - cx * 0.02 % W, sy, sz, sz);
+  }
+
+  // Pyramid (parallax 0.12)
+  drawPyramid(cx * 0.12);
+
+  // Jungle canopy (parallax 0.22)
+  drawJungle(cx * 0.22);
+
+  // Ground
+  drawGround(cx);
+
+  // Walls (reconquest)
+  if (battleState.isReconquest) drawWalls(cx);
+}
+
+function drawPyramid(px) {
+  const prog = Math.min(1, camera.x / 2400);
+  const sc   = 0.25 + prog * 0.75;
+  const baseX = 550 - px % W;
+  const baseY = LANE_TOP;
+
+  ctx.save(); ctx.translate(baseX, baseY); ctx.scale(sc, sc);
+
+  const steps = 5, bW = 220, bH = 130;
+  for (let i = 0; i < steps; i++) {
+    const t  = i / steps;
+    const sw = bW * (1 - t * 0.62), sh = bH / steps;
+    ctx.fillStyle = (i % 2 === 0) ? '#5c4c32' : '#4a3c22';
+    ctx.fillRect(-sw / 2, -sh * (i + 1), sw, sh);
+  }
+  // temple on top
+  ctx.fillStyle = '#6a5a3a';
+  ctx.fillRect(-22, -bH - 32, 44, 32);
+  ctx.fillStyle = '#5a4a2a';
+  ctx.fillRect(-10, -bH - 52, 20, 22);
+
+  // victory flag
+  if (victoryFlag) {
+    ctx.fillStyle = '#1a8a4a';
+    ctx.fillRect(-2, -bH - 80, 4, 30);
+    ctx.fillStyle = '#22c55e';
+    ctx.fillRect(2, -bH - 80, 20, 14);
+  }
+
+  ctx.restore();
+}
+
+function drawJungle(px) {
+  const cols = ['#082010', '#0a2818', '#0c3020', '#0d3820'];
+  for (let layer = 0; layer < 2; layer++) {
+    for (let i = 0; i < 18; i++) {
+      const tx = ((i * 130 + layer * 65 - px) % (W + 200)) - 100;
+      const ty = LANE_TOP - 55 - (i * 37 + layer * 19) % 45;
+      const r  = 28 + (i * 13 + layer * 7) % 30;
+      ctx.fillStyle = cols[(i + layer) % cols.length];
+      ctx.beginPath(); ctx.arc(tx, ty, r, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+}
+
+function drawGround(cx) {
+  // Main plaza floor
+  ctx.fillStyle = COL.plaza;
+  ctx.fillRect(0, LANE_TOP, W, H - LANE_TOP);
+
+  // Stone grid
+  ctx.strokeStyle = COL.plazaLine; ctx.lineWidth = 0.8;
+  const tW = 62, tH = 42;
+  const offX = cx % tW;
+  for (let c = -1; c < W / tW + 2; c++) {
+    const x = c * tW - offX;
+    ctx.beginPath(); ctx.moveTo(x, LANE_TOP); ctx.lineTo(x, H); ctx.stroke();
+  }
+  for (let r = 0; r < (H - LANE_TOP) / tH + 2; r++) {
+    const y = LANE_TOP + r * tH;
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  }
+
+  // Kill zone overlay (darker stone)
+  if (killZone) {
+    const ksx1 = killZone.x1 - cx, ksx2 = killZone.x2 - cx;
+    if (ksx2 > 0 && ksx1 < W) {
+      const kl = Math.max(0, ksx1), kr = Math.min(W, ksx2);
+      ctx.fillStyle = COL.killFloor;
+      ctx.fillRect(kl, LANE_TOP, kr - kl, H - LANE_TOP);
+      ctx.strokeStyle = COL.killLine; ctx.lineWidth = 0.8;
+      const offKX = cx % tW;
+      for (let c = -1; c < (kr - kl) / tW + 2; c++) {
+        const x = kl + c * tW - offKX % tW;
+        if (x >= kl && x <= kr) {
+          ctx.beginPath(); ctx.moveTo(x, LANE_TOP); ctx.lineTo(x, H); ctx.stroke();
+        }
+      }
+    }
+  }
+}
+
+function drawWalls(cx) {
+  for (const zone of zones) {
+    if (!zone.wallX) continue;
+    const sx = zone.wallX - cx;
+    if (sx < -250 || sx > W + 250) continue;
+    drawWallAt(sx, zone.gateW, zone.wallX === (zones.find(z => z.wallX && z !== zone)?.wallX ?? -1));
+  }
+}
+
+function drawWallAt(sx, gateW, isInner) {
+  const wC  = isInner ? COL.wallLight : COL.wall;
+  const wC2 = isInner ? '#8a7a60'     : '#5a4a3a';
+  const gL  = sx - gateW / 2, gR = sx + gateW / 2;
+  const wallTop = 0, wallH = LANE_BOT + 30;
+
+  // Battlements
+  for (let bx = 0; bx < W; bx += 28) {
+    const inGate = bx + 20 > gL && bx < gR;
+    if (!inGate) {
+      ctx.fillStyle = wC;
+      ctx.fillRect(bx, wallTop - 14, 20, 14);
+    }
+  }
+
+  // Left wall section
+  if (gL > 0) {
+    ctx.fillStyle = wC; ctx.fillRect(0, wallTop, gL, wallH);
+    ctx.fillStyle = wC2;
+    for (let r = wallTop; r < wallH; r += 20) ctx.fillRect(0, r, gL, 2);
+    for (let c = 0; c < gL; c += 32) ctx.fillRect(c, wallTop, 2, wallH);
+  }
+  // Right wall section
+  if (gR < W) {
+    ctx.fillStyle = wC; ctx.fillRect(gR, wallTop, W - gR, wallH);
+    ctx.fillStyle = wC2;
+    for (let r = wallTop; r < wallH; r += 20) ctx.fillRect(gR, r, W - gR, 2);
+    for (let c = gR; c < W; c += 32) ctx.fillRect(c, wallTop, 2, wallH);
+  }
+
+  // Gate arch (dark opening)
+  ctx.fillStyle = '#150a00';
+  const archH = 80;
+  ctx.fillRect(gL, wallH - archH, gateW, archH);
+  ctx.beginPath();
+  ctx.arc(sx, wallH - archH, gateW / 2, Math.PI, 0);
+  ctx.fill();
+
+  // Gate frame
+  ctx.strokeStyle = '#3a2a18'; ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(sx, wallH - archH, gateW / 2, Math.PI, 0);
+  ctx.moveTo(gL, wallH - archH); ctx.lineTo(gL, wallH);
+  ctx.moveTo(gR, wallH - archH); ctx.lineTo(gR, wallH);
+  ctx.stroke();
+}
+
+// ── EFFECTS ───────────────────────────────────────────────────────────────────
+function drawEffects() {
+  for (const ef of effects) {
+    const sx = ef.wx - camera.x;
+    ctx.save(); ctx.globalAlpha = ef.alpha;
+    if (ef.type === 'spark') {
+      ctx.fillStyle = '#fbbf24';
+      ctx.beginPath(); ctx.arc(sx, ef.y, ef.r, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(sx, ef.y, ef.r * 0.45, 0, Math.PI * 2); ctx.fill();
+    } else if (ef.type === 'dust') {
+      ctx.fillStyle = '#c4b48a';
+      ctx.beginPath(); ctx.arc(sx + ef.dx, ef.y + ef.dy, ef.r, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  // Projectiles
+  for (const p of projectiles) {
+    const sx = p.wx - camera.x;
+    ctx.fillStyle = '#5a3a18';
+    ctx.beginPath();
+    ctx.ellipse(sx, p.y, 5, 3, Math.atan2(p.vy || 0, 1), 0, Math.PI * 2);
+    ctx.fill();
+    // small shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.beginPath(); ctx.ellipse(sx, LANE_BOT - 5, 4, 1.5, 0, 0, Math.PI * 2); ctx.fill();
+  }
+}
+
+// ── HUD ───────────────────────────────────────────────────────────────────────
+function drawHUD() {
+  // Player HP bar
+  const hpPct = Math.max(0, player.hp / player.maxHp);
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.beginPath(); ctx.roundRect(6, 6, 178, 44, 6); ctx.fill();
+  ctx.fillStyle = '#444'; ctx.fillRect(10, 10, 170, 16);
+  ctx.fillStyle = hpPct > 0.6 ? '#22c55e' : hpPct > 0.3 ? '#eab308' : '#ef4444';
+  ctx.fillRect(10, 10, 170 * hpPct, 16);
+  ctx.strokeStyle = '#555'; ctx.lineWidth = 1; ctx.strokeRect(10, 10, 170, 16);
+  ctx.fillStyle = '#eee8da'; ctx.font = '11px Cinzel, serif'; ctx.textAlign = 'left';
+  ctx.fillText(`HP  ${Math.max(0, Math.ceil(player.hp))} / ${player.maxHp}`, 12, 42);
+
+  // Soldiers
+  const alive = soldiers.filter(s => !s.dead && !s.dying).length;
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.beginPath(); ctx.roundRect(6, 54, 148, 22, 5); ctx.fill();
+  ctx.fillStyle = '#eee8da'; ctx.font = '11px Cinzel, serif';
+  ctx.fillText(`\u2694 Warriors: ${alive} / ${startingSoldiers}`, 12, 69);
+
+  // Zone name (top right)
+  const zone = zones[currentZone];
+  if (zone) {
+    ctx.font = 'bold 13px Cinzel, serif';
+    const tw = ctx.measureText(zone.name).width;
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.beginPath(); ctx.roundRect(W - tw - 20, 6, tw + 16, 24, 5); ctx.fill();
+    ctx.fillStyle = '#eee8da'; ctx.textAlign = 'right';
+    ctx.fillText(zone.name, W - 10, 23);
+  }
+
+  // Kill zone warning
+  if (killZone && player.wx > killZone.x1 && player.wx < killZone.x2) {
+    const pulse = 0.55 + 0.45 * Math.sin(totalMs / 190);
+    ctx.fillStyle = `rgba(185,28,28,${0.13 * pulse})`;
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = `rgba(239,68,68,${pulse})`;
+    ctx.font = 'bold 15px Cinzel, serif'; ctx.textAlign = 'center';
+    ctx.fillText('\u26a0 KILL ZONE \u2014 PUSH THROUGH FAST!', W / 2, 32);
+  }
+
+  // Advance prompt
+  if (advanceAlpha > 0) {
+    ctx.save(); ctx.globalAlpha = advanceAlpha;
+    ctx.fillStyle = 'rgba(0,0,0,0.65)';
+    ctx.beginPath(); ctx.roundRect(W / 2 - 90, H / 2 - 24, 180, 38, 8); ctx.fill();
+    ctx.fillStyle = '#fbbf24'; ctx.font = 'bold 19px Cinzel, serif'; ctx.textAlign = 'center';
+    ctx.fillText('ADVANCE \u2192', W / 2, H / 2 + 2);
+    ctx.restore();
+  }
+
+  // Mobile controls
+  if ('ontouchstart' in window) drawMobile();
+}
+
+function drawMobile() {
+  ctx.save(); ctx.globalAlpha = 0.48;
+  // Joystick
+  ctx.fillStyle = '#222'; ctx.beginPath(); ctx.arc(JCX, JCY, JR, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#444'; ctx.lineWidth = 2; ctx.stroke();
+  const kx = JCX + touch.jx * (JR - 16), ky = JCY + touch.jy * (JR - 16);
+  ctx.fillStyle = '#666'; ctx.beginPath(); ctx.arc(kx, ky, 18, 0, Math.PI * 2); ctx.fill();
+  // Attack button
+  ctx.fillStyle = '#6d28d9'; ctx.beginPath(); ctx.arc(ACX, ACY, AR, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 24px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('\u2694', ACX, ACY);
+  ctx.textBaseline = 'alphabetic';
+  ctx.restore();
+}
+
+// ── VICTORY / DEFEAT ──────────────────────────────────────────────────────────
+function drawVictory() {
+  ctx.fillStyle = 'rgba(0,0,0,0.72)'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#0e1a10';
+  ctx.beginPath(); ctx.roundRect(W / 2 - 230, H / 2 - 165, 460, 330, 14); ctx.fill();
+  ctx.strokeStyle = COL.jade; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.roundRect(W / 2 - 230, H / 2 - 165, 460, 330, 14); ctx.stroke();
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = COL.gold; ctx.font = 'bold 27px Cinzel, serif';
+  ctx.fillText(`${battleState.destination} Has Fallen!`, W / 2, H / 2 - 118);
+
+  const alive = soldiers.filter(s => !s.dead && !s.dying).length;
+  ctx.fillStyle = '#eee8da'; ctx.font = '15px Cinzel, serif';
+  ctx.fillText(`Warriors lost: ${startingSoldiers - alive}`, W / 2, H / 2 - 70);
+  ctx.fillText(`HP remaining: ${Math.max(0, Math.ceil(player.hp))} / ${player.maxHp}`, W / 2, H / 2 - 42);
+
+  if (battleState.isReconquest && killZoneLosses > 0) {
+    ctx.fillStyle = '#ef4444';
+    ctx.fillText(`Kill zone cost: ${killZoneLosses} warriors`, W / 2, H / 2 - 14);
+  }
+
+  // Your kinsman installed (first conquest)
+  if (!battleState.isReconquest) {
+    ctx.fillStyle = '#a8d8b0'; ctx.font = '13px Cinzel, serif';
+    ctx.fillText('Your kinsman is installed as Ajaw.', W / 2, H / 2 + 14);
+  }
+
+  // Button
+  ctx.fillStyle = COL.jade;
+  ctx.beginPath(); ctx.roundRect(W / 2 - 130, H / 2 + 42, 260, 46, 9); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 15px Cinzel, serif';
+  ctx.fillText('Begin the March Home', W / 2, H / 2 + 71);
+
+  ctx.fillStyle = '#666'; ctx.font = '12px Cinzel, serif';
+  ctx.fillText('Click / tap to continue', W / 2, H / 2 + 130);
+}
+
+function drawDefeat() {
+  ctx.fillStyle = 'rgba(0,0,0,0.82)'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#180808';
+  ctx.beginPath(); ctx.roundRect(W / 2 - 210, H / 2 - 130, 420, 250, 12); ctx.fill();
+  ctx.strokeStyle = COL.blood; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.roundRect(W / 2 - 210, H / 2 - 130, 420, 250, 12); ctx.stroke();
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = COL.blood; ctx.font = 'bold 26px Cinzel, serif';
+  ctx.fillText('Your Dynasty Has Ended', W / 2, H / 2 - 80);
+  ctx.fillStyle = '#c4b48a'; ctx.font = '14px Cinzel, serif';
+  ctx.fillText('The jungle reclaims your name.', W / 2, H / 2 - 46);
+
+  ctx.fillStyle = '#7c2020';
+  ctx.beginPath(); ctx.roundRect(W / 2 - 110, H / 2 + 14, 220, 46, 8); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 15px Cinzel, serif';
+  ctx.fillText('Try Again', W / 2, H / 2 + 43);
+
+  ctx.fillStyle = '#555'; ctx.font = '12px Cinzel, serif';
+  ctx.fillText('Click / tap to restart', W / 2, H / 2 + 90);
+}
+
+// ── COMBAT ────────────────────────────────────────────────────────────────────
+function doAttack(attacker, targets) {
+  for (const t of targets) {
+    if (t.dead || t.dying || t.type === 'wallDef') continue;
+    const dx = (t.wx - attacker.wx) * attacker.facing;
+    const dy = Math.abs(t.y - attacker.y);
+    if (dx > -8 && dx < attacker.atkRange && dy < attacker.atkArc / 2) {
+      const dmg = attacker.atkDmg();
+      t.hp -= dmg;
+      t.hitFlash = 160;
+      effects.push({ type: 'spark', wx: t.wx, y: t.y - 12, r: 8, alpha: 1, life: 300, maxLife: 300 });
+
+      if (attacker.type === 'player') {
+        shakeMs = 110; shakeX = (Math.random() - 0.5) * 5; shakeY = (Math.random() - 0.5) * 4;
+        hitStopMs = 35;
+      }
+      if (t.hp <= 0 && !t.dying) die(t);
+    }
+  }
+}
+
+function die(e) {
+  e.dying = true; e.dyingMs = 700; e.hp = 0;
+  if (e.type === 'soldier' && killZone && e.wx > killZone.x1 && e.wx < killZone.x2)
+    killZoneLosses++;
+}
+
+// ── AI ────────────────────────────────────────────────────────────────────────
+function liveEnemies()  { return enemies.filter(e => !e.dead && !e.dying && e.type !== 'wallDef'); }
+function liveFriendlies() { return [player, ...soldiers].filter(e => !e.dead && !e.dying); }
+
+function nearest(me, list) {
+  let best = null, bestD = Infinity;
+  for (const t of list) {
+    const d = Math.hypot(t.wx - me.wx, t.y - me.y);
+    if (d < bestD) { best = t; bestD = d; }
+  }
+  return { target: best, dist: bestD };
+}
+
+function soldierAI(s, dt) {
+  if (s.dead || s.dying) return;
+  s.walkTimer += dt;
+  s.atkCd = Math.max(0, s.atkCd - dt);
+  if (s.atkTimer > 0) s.atkTimer = Math.max(0, s.atkTimer - dt);
+
+  const zone = zones[currentZone];
+  const minX = (zone?.x1 ?? 0) + 5;
+
+  const { target, dist } = nearest(s, liveEnemies());
+  if (target && dist < 280) {
+    const dx = target.wx - s.wx, dy = target.y - s.y;
+    const len = Math.hypot(dx, dy) || 1;
+    s.facing = dx > 0 ? 1 : -1;
+    if (dist > s.atkRange - 4) {
+      s.wx += (dx / len) * s.speed * (dt / 1000);
+      s.y  += (dy / len) * s.speed * 0.5 * (dt / 1000);
+    } else if (s.atkCd <= 0) {
+      s.atkCd = s.atkCdMax; s.atkTimer = 280;
+      doAttack(s, [target]);
+    }
+  } else {
+    const dx = player.wx - s.wx, dy = player.y - s.y;
+    const d = Math.hypot(dx, dy) || 1;
+    if (d > 55) {
+      s.wx += (dx / d) * s.speed * 0.6 * (dt / 1000);
+      s.y  += (dy / d) * s.speed * 0.4 * (dt / 1000);
+      s.facing = dx > 0 ? 1 : -1;
+    }
+  }
+  s.wx = Math.max(minX, s.wx);
+  s.y  = Math.max(LANE_TOP + 8, Math.min(LANE_BOT - 4, s.y));
+}
+
+function enemyAI(e, dt) {
+  if (e.dead || e.dying) return;
+  if (e.type === 'wallDef') { wallDefAI(e, dt); return; }
+  e.walkTimer += dt;
+  e.atkCd = Math.max(0, e.atkCd - dt);
+  if (e.atkTimer > 0) e.atkTimer = Math.max(0, e.atkTimer - dt);
+
+  const { target, dist } = nearest(e, liveFriendlies());
+  if (!target) return;
+  const dx = target.wx - e.wx, dy = target.y - e.y;
+  const len = Math.hypot(dx, dy) || 1;
+  e.facing = dx > 0 ? 1 : -1;
+  if (dist > e.atkRange - 4) {
+    e.wx += (dx / len) * e.speed * (dt / 1000);
+    e.y  += (dy / len) * e.speed * 0.5 * (dt / 1000);
+  } else if (e.atkCd <= 0) {
+    e.atkCd = e.atkCdMax; e.atkTimer = 280;
+    doAttack(e, liveFriendlies());
+  }
+  e.y = Math.max(LANE_TOP + 8, Math.min(LANE_BOT - 4, e.y));
+}
+
+function wallDefAI(e, dt) {
+  if (!killZone) return;
+  e.throwTimer -= dt;
+  if (e.throwTimer > 0) return;
+  e.throwTimer = 1800 + Math.random() * 1400;
+
+  const inKZ = [...soldiers.filter(s => !s.dead && !s.dying && s.wx > killZone.x1 && s.wx < killZone.x2)];
+  if (!player.dead && !player.dying && player.wx > killZone.x1 && player.wx < killZone.x2) inKZ.push(player);
+  if (!inKZ.length) return;
+
+  const t = inKZ[Math.floor(Math.random() * inKZ.length)];
+  const endWX = t.wx + (Math.random() - 0.5) * 35;
+  const endY  = t.y;
+  projectiles.push({
+    wx: e.wx, y: e.y,
+    startWX: e.wx, startY: e.y,
+    endWX, endY,
+    elapsed: 0, travelMs: 900,
+    damage: 5,
   });
 }
 
-function playerStrike(){
-  if(!enemies.length) return;
-  enemies[0].hp -= 7;
-  log('Strike landed.');
-  tick();
-}
+// ── UPDATE ────────────────────────────────────────────────────────────────────
+function update(dt) {
+  if (hitStopMs > 0) { hitStopMs = Math.max(0, hitStopMs - dt); return; }
+  totalMs += dt;
+  shakeMs = Math.max(0, shakeMs - dt);
+  if (shakeMs <= 0) { shakeX = 0; shakeY = 0; }
 
-function enemyTurn(){
-  const pressure=Math.max(1,Math.floor(enemies.length/2));
-  playerHp-=pressure;
-  if(Math.random()<0.35 && S.expedition.soldiers>0){S.expedition.soldiers--; log('A warrior fell in the melee.');}
-}
+  updatePlayer(dt);
+  for (const s of soldiers) soldierAI(s, dt);
+  for (const e of enemies)  enemyAI(e, dt);
+  updateProjectiles(dt);
+  updateEffects(dt);
+  updateDying(dt);
+  cleanDead();
+  updateZones(dt);
+  updateCamera(dt);
 
-function tick(){
-  enemies=enemies.filter(e=>e.hp>0);
-  if(enemies.length===0){
-    log('City taken. But now comes the hard part: keeping it.');
-    S.vassals[S.expedition.target]=true;
-    S.unrest[S.expedition.target]=Math.max(0,S.unrest[S.expedition.target]-2);
-    S.expedition.leg='homebound';
-    S.expedition.distance=S.expedition.distanceTotal;
-    S.expedition.food += 25;
-    S.game='trail';
-    save(S);
-    setTimeout(()=>location.href='trail-warrior.html',700);
-    return;
+  // Flash timers
+  for (const e of [player, ...soldiers, ...enemies])
+    if (e.hitFlash > 0) e.hitFlash = Math.max(0, e.hitFlash - dt);
+
+  // Defeat check
+  if (!player.dead && !player.dying && player.hp <= 0) {
+    die(player);
+    setTimeout(() => { gamePhase = 'defeat'; }, 900);
   }
-  enemyTurn();
-  if(playerHp<=0 || S.expedition.soldiers<=0){
-    log('Defeat. The campaign collapses.');
-    S.expedition=null;
-    S.game='home';
-    S.food=Math.max(0,S.food-35);
-    save(S);
-    setTimeout(()=>location.href='home-farmer.html',900);
-    return;
+}
+
+function updatePlayer(dt) {
+  if (player.dead || player.dying) return;
+  player.walkTimer += dt;
+  player.atkCd = Math.max(0, player.atkCd - dt);
+  if (player.atkTimer > 0) player.atkTimer = Math.max(0, player.atkTimer - dt);
+
+  let dx = 0, dy = 0;
+  if (keys['ArrowLeft']  || keys['KeyA']) dx -= 1;
+  if (keys['ArrowRight'] || keys['KeyD']) dx += 1;
+  if (keys['ArrowUp']    || keys['KeyW']) dy -= 1;
+  if (keys['ArrowDown']  || keys['KeyS']) dy += 1;
+  if (Math.abs(touch.jx) > 0.1) dx = touch.jx;
+  if (Math.abs(touch.jy) > 0.1) dy = touch.jy;
+
+  const len = Math.hypot(dx, dy);
+  if (len > 0) {
+    dx /= len; dy /= len;
+    if (dx !== 0) player.facing = dx > 0 ? 1 : -1;
   }
-  drawEnemies();
-  render();
+
+  const zone  = zones[currentZone];
+  const minWX = camera.x + 30;
+  const maxWX = zone ? (zone.cleared ? (zones[currentZone + 1]?.x2 ?? 9999) : zone.x2 - 10) : 9999;
+
+  player.wx += dx * player.speed * (dt / 1000);
+  player.y  += dy * player.speed * 0.55 * (dt / 1000);
+  player.wx  = Math.max(minWX, Math.min(maxWX, player.wx));
+  player.y   = Math.max(LANE_TOP + 8, Math.min(LANE_BOT - 4, player.y));
+
+  const atkPressed = keys['Space'] || keys['KeyZ'] || touch.attack;
+  if (atkPressed && player.atkCd <= 0) {
+    player.atkCd = player.atkCdMax; player.atkTimer = 340;
+    doAttack(player, liveEnemies());
+  }
 }
 
-function render(){
-  document.getElementById('hud').innerHTML=`
-    <div>Target: <b>${S.expedition.target}</b></div>
-    <div>Player HP: <b>${playerHp}</b></div>
-    <div>Your soldiers: <b>${S.expedition.soldiers}</b></div>
-    <div>Enemy count: <b>${enemies.length}</b></div>
-    <div>Phase: <b>Battle Warrior</b></div>
-  `;
-  save(S);
+function updateProjectiles(dt) {
+  for (let i = projectiles.length - 1; i >= 0; i--) {
+    const p = projectiles[i];
+    p.elapsed += dt;
+    const t = Math.min(1, p.elapsed / p.travelMs);
+    p.wx = p.startWX + (p.endWX - p.startWX) * t;
+    p.y  = p.startY + (p.endY - p.startY) * t - 55 * Math.sin(t * Math.PI);
+
+    if (t >= 1) {
+      effects.push({ type: 'dust', wx: p.endWX, y: p.endY, dx: 0, dy: 0, r: 6, alpha: 1, life: 400, maxLife: 400 });
+      for (const tgt of liveFriendlies()) {
+        if (Math.abs(tgt.wx - p.endWX) < 26 && Math.abs(tgt.y - p.endY) < 32) {
+          tgt.hp -= p.damage; tgt.hitFlash = 150;
+          if (tgt.hp <= 0 && !tgt.dying) die(tgt);
+        }
+      }
+      projectiles.splice(i, 1);
+    }
+  }
 }
 
-spawn();
-render();
-log('Click enemies or use STRIKE NEAREST. Victory sends you to the return trail.');
+function updateEffects(dt) {
+  for (let i = effects.length - 1; i >= 0; i--) {
+    const ef = effects[i];
+    ef.life -= dt; ef.alpha = ef.life / ef.maxLife;
+    if (ef.type === 'spark') ef.r *= 0.93;
+    if (ef.life <= 0) effects.splice(i, 1);
+  }
+}
+
+function updateDying(dt) {
+  for (const e of [player, ...soldiers, ...enemies]) {
+    if (!e.dying) continue;
+    e.dyingMs -= dt;
+    e.dyingAngle = Math.min(Math.PI / 2, e.dyingAngle + dt * 0.003);
+    if (e.dyingMs <= 0) { e.dead = true; e.dying = false; }
+  }
+}
+
+function cleanDead() {
+  soldiers = soldiers.filter(s => !s.dead);
+  enemies  = enemies.filter(e => !e.dead);
+}
+
+function updateZones(dt) {
+  if (gamePhase !== 'playing') return;
+  const zone = zones[currentZone];
+  if (!zone) return;
+
+  // Spawn on entry
+  if (!zone.spawned && player.wx >= zone.x1) spawnZone(zone);
+
+  if (!zone.spawned) return;
+
+  // Check cleared
+  const living = liveEnemies();
+  if (living.length === 0 && !zone.cleared) {
+    zone.cleared = true;
+    if (zone.isFinal) { gamePhase = 'victory'; victoryFlag = true; return; }
+  }
+
+  // Advance prompt
+  if (zone.cleared) {
+    advanceAlpha = 0.5 + 0.5 * Math.sin(totalMs / 320);
+    if (player.wx >= zone.x2 - 60) advanceZone();
+  } else {
+    advanceAlpha = 0;
+  }
+}
+
+function advanceZone() {
+  advanceAlpha = 0;
+  currentZone++;
+  if (currentZone >= zones.length) { gamePhase = 'victory'; victoryFlag = true; }
+}
+
+function updateCamera(dt) {
+  if (player.dead) return;
+  const zone   = zones[currentZone];
+  const target = player.wx - 200;
+  const minCam = zone ? zone.x1 : 0;
+  const maxCam = zone ? (zone.cleared ? (zones[currentZone + 1]?.x1 ?? 9999) : zone.x2 - W + 80) : 9999;
+  const clamped = Math.max(minCam, Math.min(maxCam, target));
+  camera.x += (clamped - camera.x) * Math.min(1, dt / 180);
+}
+
+// ── MAIN DRAW ─────────────────────────────────────────────────────────────────
+function draw() {
+  ctx.save();
+  if (shakeMs > 0) ctx.translate(shakeX, shakeY);
+
+  drawBackground();
+
+  // Z-sort by y (higher y = more foreground)
+  const all = [player, ...soldiers, ...enemies].filter(e => e && !e.dead);
+  all.sort((a, b) => a.y - b.y);
+  for (const e of all) drawEntity(ctx, e);
+
+  drawEffects();
+  ctx.restore();
+
+  if (gamePhase === 'playing' || player.dying || player.dead)  drawHUD();
+  if (gamePhase === 'victory') drawVictory();
+  if (gamePhase === 'defeat')  drawDefeat();
+}
+
+// ── CLICK / TAP ───────────────────────────────────────────────────────────────
+canvas.addEventListener('click', ev => {
+  const [cx2, cy2] = toCanvas(ev.clientX, ev.clientY);
+  if (gamePhase === 'victory' && cy2 > H / 2 + 38 && cy2 < H / 2 + 96) returnToTrail();
+  if (gamePhase === 'defeat'  && cy2 > H / 2 + 10 && cy2 < H / 2 + 68) location.reload();
+});
+
+function returnToTrail() {
+  try {
+    const s = JSON.parse(localStorage.getItem(LS_KEY)) || {};
+    const alive = soldiers.filter(x => !x.dead && !x.dying).length;
+    if (s.expedition) {
+      s.expedition.soldiers  = alive;
+      s.expedition.leg       = 'homebound';
+      s.expedition.distance  = s.expedition.distanceTotal || 10;
+      s.expedition.playerHp  = Math.max(0, Math.ceil(player.hp));
+      s.game = 'trail';
+    }
+    localStorage.setItem(LS_KEY, JSON.stringify(s));
+  } catch (e) { /* ignore */ }
+  location.href = 'trail-warrior.html';
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+function init() {
+  buildZones();
+
+  player    = createPlayer(130, LANE_TOP + LANE_H * 0.6);
+  soldiers  = [];
+  enemies   = [];
+  projectiles = [];
+  effects   = [];
+  currentZone = 0;
+  killZoneLosses = 0;
+  startingSoldiers = battleState.soldiers;
+
+  for (let i = 0; i < battleState.soldiers; i++) {
+    const sx = 70 + Math.random() * 50;
+    const sy = LANE_TOP + 15 + Math.random() * (LANE_H - 35);
+    soldiers.push(createSoldier(sx, sy));
+  }
+
+  spawnZone(zones[0]);
+}
+
+// ── LOOP ──────────────────────────────────────────────────────────────────────
+let lastTs = 0;
+function loop(ts) {
+  const dt = Math.min(48, ts - lastTs);
+  lastTs = ts;
+  if (gamePhase === 'playing') update(dt);
+  draw();
+  requestAnimationFrame(loop);
+}
+
+init();
+requestAnimationFrame(ts => { lastTs = ts; requestAnimationFrame(loop); });
 </script>
 </body>
 </html>
