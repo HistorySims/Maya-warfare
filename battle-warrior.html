@@ -116,6 +116,7 @@ let advanceAlpha = 0;
 let startingSoldiers, killZoneLosses;
 let totalMs = 0;
 let victoryFlag = false;
+let victoryTerms = null;  // computed once when victory triggers
 
 // ── ENTITY FACTORY ────────────────────────────────────────────────────────────
 function makeEnt(type, wx, y) {
@@ -728,40 +729,119 @@ function drawMobile() {
 
 // ── VICTORY / DEFEAT ──────────────────────────────────────────────────────────
 function drawVictory() {
-  ctx.fillStyle = 'rgba(0,0,0,0.72)'; ctx.fillRect(0, 0, W, H);
-  ctx.fillStyle = '#0e1a10';
-  ctx.beginPath(); ctx.roundRect(W / 2 - 230, H / 2 - 165, 460, 330, 14); ctx.fill();
+  if (!victoryTerms) return;
+  const { marchFood, tributeFood, jade, pelts } = victoryTerms;
+  const alive = soldiers.filter(s => !s.dead && !s.dying).length;
+
+  // Full-screen dim
+  ctx.fillStyle = 'rgba(0,0,0,0.78)'; ctx.fillRect(0, 0, W, H);
+
+  // Main panel — taller to fit tribute tablet
+  const PX = W / 2 - 232, PY = 14, PW = 464, PH = 452;
+  ctx.fillStyle = '#0b1810';
+  ctx.beginPath(); ctx.roundRect(PX, PY, PW, PH, 14); ctx.fill();
   ctx.strokeStyle = COL.jade; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.roundRect(W / 2 - 230, H / 2 - 165, 460, 330, 14); ctx.stroke();
+  ctx.beginPath(); ctx.roundRect(PX, PY, PW, PH, 14); ctx.stroke();
 
   ctx.textAlign = 'center';
-  ctx.fillStyle = COL.gold; ctx.font = 'bold 27px Cinzel, serif';
-  ctx.fillText(`${battleState.destination} Has Fallen!`, W / 2, H / 2 - 118);
 
-  const alive = soldiers.filter(s => !s.dead && !s.dying).length;
-  ctx.fillStyle = '#eee8da'; ctx.font = '15px Cinzel, serif';
-  ctx.fillText(`Warriors lost: ${startingSoldiers - alive}`, W / 2, H / 2 - 70);
-  ctx.fillText(`HP remaining: ${Math.max(0, Math.ceil(player.hp))} / ${player.maxHp}`, W / 2, H / 2 - 42);
+  // ── Title ──
+  ctx.fillStyle = COL.gold; ctx.font = 'bold 26px Cinzel, serif';
+  ctx.fillText(`${battleState.destination} Has Fallen!`, W / 2, PY + 42);
+  if (battleState.isReconquest) {
+    ctx.fillStyle = '#f97316'; ctx.font = '12px Cinzel, serif';
+    ctx.fillText('Reconquered', W / 2, PY + 60);
+  } else {
+    ctx.fillStyle = '#a8d8b0'; ctx.font = '12px Cinzel, serif';
+    ctx.fillText('Your kinsman is installed as Ajaw', W / 2, PY + 60);
+  }
 
+  // ── Battle stats ──
+  let sy = PY + 88;
+  ctx.fillStyle = '#eee8da'; ctx.font = '14px Cinzel, serif';
+  ctx.fillText(`Warriors lost: ${startingSoldiers - alive}   \u2022   HP: ${Math.max(0, Math.ceil(player.hp))} / ${player.maxHp}`, W / 2, sy);
   if (battleState.isReconquest && killZoneLosses > 0) {
-    ctx.fillStyle = '#ef4444';
-    ctx.fillText(`Kill zone cost: ${killZoneLosses} warriors`, W / 2, H / 2 - 14);
+    sy += 20; ctx.fillStyle = '#ef4444'; ctx.font = '13px Cinzel, serif';
+    ctx.fillText(`Kill zone claimed ${killZoneLosses} warrior${killZoneLosses > 1 ? 's' : ''} in the corridor`, W / 2, sy);
   }
 
-  // Your kinsman installed (first conquest)
-  if (!battleState.isReconquest) {
-    ctx.fillStyle = '#a8d8b0'; ctx.font = '13px Cinzel, serif';
-    ctx.fillText('Your kinsman is installed as Ajaw.', W / 2, H / 2 + 14);
-  }
+  // ── Divider ──
+  sy += 18;
+  ctx.strokeStyle = '#2a3a2a'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(PX + 24, sy); ctx.lineTo(PX + PW - 24, sy); ctx.stroke();
 
-  // Button
+  // ── Tribute tablet ──
+  const TX = PX + 22, TY = sy + 10, TW = PW - 44, TH = 208;
+  // Stone tablet background
+  ctx.fillStyle = '#c8b888';
+  ctx.beginPath(); ctx.roundRect(TX, TY, TW, TH, 6); ctx.fill();
+  // Inner relief (slightly lighter)
+  ctx.fillStyle = '#d4c498';
+  ctx.beginPath(); ctx.roundRect(TX + 6, TY + 6, TW - 12, TH - 12, 4); ctx.fill();
+  // Carved edge
+  ctx.strokeStyle = '#9a8858'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.roundRect(TX + 6, TY + 6, TW - 12, TH - 12, 4); ctx.stroke();
+
+  // Tablet heading
+  ctx.fillStyle = '#2a1a00'; ctx.font = 'bold 13px Cinzel, serif'; ctx.textAlign = 'center';
+  ctx.fillText('TRIBUTE AGREEMENT', W / 2, TY + 28);
+  // Small glyphs decoration
+  ctx.fillStyle = '#5a3a10'; ctx.font = '9px Cinzel, serif';
+  ctx.fillText('\u25c6 \u25c6 \u25c6', W / 2, TY + 42);
+
+  // Tablet body text (left-aligned inside tablet)
+  const TXT_X = TX + 28;
+  ctx.textAlign = 'left'; ctx.fillStyle = '#2a1a00'; ctx.font = '12px Cinzel, serif';
+  const lineH = 26;
+  let ly = TY + 62;
+
+  // The city name and agreement preamble
+  ctx.font = 'italic 11px Cinzel, serif'; ctx.fillStyle = '#4a2a08';
+  ctx.fillText(`Let it be known that ${battleState.destination}, having submitted to`, TXT_X, ly); ly += 16;
+  ctx.fillText(`the K'uhul Ajaw, shall render tribute every 5 days:`, TXT_X, ly); ly += 22;
+
+  // Tribute line items
+  ctx.font = 'bold 12px Cinzel, serif'; ctx.fillStyle = '#1a0a00';
+
+  // Jade
   ctx.fillStyle = COL.jade;
-  ctx.beginPath(); ctx.roundRect(W / 2 - 130, H / 2 + 42, 260, 46, 9); ctx.fill();
-  ctx.fillStyle = '#fff'; ctx.font = 'bold 15px Cinzel, serif';
-  ctx.fillText('Begin the March Home', W / 2, H / 2 + 71);
+  ctx.beginPath(); ctx.arc(TXT_X + 6, ly - 4, 6, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#1a0a00'; ctx.font = '12px Cinzel, serif';
+  ctx.fillText(`${jade} jade celts`, TXT_X + 18, ly); ly += lineH;
 
-  ctx.fillStyle = '#666'; ctx.font = '12px Cinzel, serif';
-  ctx.fillText('Click / tap to continue', W / 2, H / 2 + 130);
+  // Pelts
+  ctx.fillStyle = '#8a5c30';
+  ctx.fillRect(TXT_X, ly - 10, 12, 10);
+  ctx.fillStyle = '#5a3010'; ctx.fillRect(TXT_X + 2, ly - 10, 2, 10);
+  ctx.fillStyle = '#1a0a00'; ctx.font = '12px Cinzel, serif';
+  ctx.fillText(`${pelts} jaguar pelts`, TXT_X + 18, ly); ly += lineH;
+
+  // FOOD — highlighted as the key number
+  ctx.fillStyle = '#7c3a00';
+  ctx.beginPath(); ctx.roundRect(TXT_X - 4, ly - 16, TW - 40, 22, 3); ctx.fill();
+  ctx.fillStyle = '#fbbf24'; ctx.font = 'bold 13px Cinzel, serif';
+  ctx.fillText(`\uD83C\uDF3D  ${tributeFood} days of food  \u2190 every 5 days`, TXT_X + 4, ly);
+
+  // Seal mark
+  ctx.textAlign = 'right'; ctx.fillStyle = '#5a3a10'; ctx.font = '9px Cinzel, serif';
+  ctx.fillText('Sealed in jade blood \u25c6 Year 8 Ajaw', TX + TW - 14, TY + TH - 10);
+
+  // ── March provisions ──
+  const MY = TY + TH + 14;
+  ctx.textAlign = 'center'; ctx.fillStyle = '#c4b48a'; ctx.font = '13px Cinzel, serif';
+  ctx.fillText('The city provides for your return:', W / 2, MY);
+  ctx.fillStyle = '#eee8da'; ctx.font = 'bold 15px Cinzel, serif';
+  ctx.fillText(`\uD83C\uDF3D ${marchFood} days of food for the march home`, W / 2, MY + 22);
+
+  // ── Button ──
+  const BY = MY + 44;
+  ctx.fillStyle = COL.jade;
+  ctx.beginPath(); ctx.roundRect(W / 2 - 135, BY, 270, 44, 9); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 15px Cinzel, serif';
+  ctx.fillText('Begin the March Home', W / 2, BY + 28);
+
+  ctx.fillStyle = '#666'; ctx.font = '11px Cinzel, serif';
+  ctx.fillText('Click / tap to continue', W / 2, BY + 60);
 }
 
 function drawDefeat() {
@@ -966,6 +1046,10 @@ function updatePlayer(dt) {
     player.atkCd = player.atkCdMax; player.atkTimer = 340;
     doAttack(player, liveEnemies());
   }
+
+  // Passive HP regen: 2.5 HP/sec (battle stimulants, jade bloodletting rites)
+  if (player.hp < player.maxHp)
+    player.hp = Math.min(player.maxHp, player.hp + 2.5 * dt / 1000);
 }
 
 function updateProjectiles(dt) {
@@ -1026,7 +1110,7 @@ function updateZones(dt) {
   const living = liveEnemies();
   if (living.length === 0 && !zone.cleared) {
     zone.cleared = true;
-    if (zone.isFinal) { gamePhase = 'victory'; victoryFlag = true; return; }
+    if (zone.isFinal) { gamePhase = 'victory'; victoryFlag = true; computeVictoryTerms(); return; }
   }
 
   // Advance prompt
@@ -1041,7 +1125,7 @@ function updateZones(dt) {
 function advanceZone() {
   advanceAlpha = 0;
   currentZone++;
-  if (currentZone >= zones.length) { gamePhase = 'victory'; victoryFlag = true; }
+  if (currentZone >= zones.length) { gamePhase = 'victory'; victoryFlag = true; computeVictoryTerms(); }
 }
 
 function updateCamera(dt) {
@@ -1077,21 +1161,55 @@ function draw() {
 // ── CLICK / TAP ───────────────────────────────────────────────────────────────
 canvas.addEventListener('click', ev => {
   const [cx2, cy2] = toCanvas(ev.clientX, ev.clientY);
-  if (gamePhase === 'victory' && cy2 > H / 2 + 38 && cy2 < H / 2 + 96) returnToTrail();
+  if (gamePhase === 'victory' && cy2 > 385 && cy2 < 465) returnToTrail();
   if (gamePhase === 'defeat'  && cy2 > H / 2 + 10 && cy2 < H / 2 + 68) location.reload();
 });
 
+// Compute tribute and march-food figures once when victory fires.
+// Random values (jade, pelts) are fixed here so the tablet doesn't flicker.
+function computeVictoryTerms() {
+  if (victoryTerms) return;
+  const alive      = soldiers.filter(s => !s.dead && !s.dying).length;
+  // Trail-warrior march home is 15 days (hardcoded in trail-warrior.html).
+  // foodPerDay there = (soldiers + porters + 1) * 0.5 ; no porters on return.
+  const marchDays  = 15;
+  const marchFood  = Math.ceil(marchDays * (alive + 1) * 0.5 * 1.3);
+
+  // Tribute food per 5-day cycle — the critical number for home-farmer.
+  // triggerTribute(city, foodBonus) adds foodBonus to state.food on arrival.
+  const tributeFood = battleState.isReconquest
+    ? 22 + battleState.wallLevel * 3   // reconquest extracts more
+    : 18;                               // first conquest base rate
+
+  const jade  = 3 + Math.floor(Math.random() * 3);  // 3-5
+  const pelts = 5 + Math.floor(Math.random() * 4);  // 5-8
+  victoryTerms = { marchFood, tributeFood, jade, pelts, alive };
+}
+
 function returnToTrail() {
+  computeVictoryTerms();  // ensure computed even if somehow missed
   try {
     const s = JSON.parse(localStorage.getItem(LS_KEY)) || {};
+    const { marchFood, tributeFood, jade, pelts } = victoryTerms;
     const alive = soldiers.filter(x => !x.dead && !x.dying).length;
     if (s.expedition) {
       s.expedition.soldiers  = alive;
       s.expedition.leg       = 'homebound';
       s.expedition.distance  = s.expedition.distanceTotal || 10;
       s.expedition.playerHp  = Math.max(0, Math.ceil(player.hp));
+      s.expedition.food      = marchFood;   // food for the march home
       s.game = 'trail';
     }
+    // Tribute agreement — home-farmer reads tribute.food every tribute.cycleDays
+    // and calls triggerTribute(city, tribute.food) to deliver it.
+    s.tribute = {
+      city:      battleState.destination,
+      food:      tributeFood,   // food delivered per cycle (key number)
+      cycleDays: 5,             // delivery interval in in-game days
+      jade,
+      pelts,
+      isReconquest: battleState.isReconquest,
+    };
     localStorage.setItem(LS_KEY, JSON.stringify(s));
   } catch (e) { /* ignore */ }
   location.href = 'trail-warrior.html';
