@@ -21,76 +21,40 @@
     background:#f5f0e1;border:3px solid #ca8a04;border-radius:6px;
     padding:28px 32px 22px;max-width:420px;width:90%;
     box-shadow:0 0 0 6px rgba(0,0,0,.5),0 8px 40px rgba(0,0,0,.8);
-    position:relative;color:#1c1208;
+    color:#1c1208;
   }
-  #card h2{
-    font-size:1.25rem;color:#0f766e;text-align:center;
-    letter-spacing:.08em;margin-bottom:6px;text-transform:uppercase;
-  }
-  #card .flavor{
-    font-size:.78rem;color:#5a4a2a;text-align:center;
-    font-style:italic;margin-bottom:14px;line-height:1.5;
-  }
+  #card h2{font-size:1.25rem;color:#0f766e;text-align:center;letter-spacing:.08em;margin-bottom:6px;text-transform:uppercase}
+  #card .flavor{font-size:.78rem;color:#5a4a2a;text-align:center;font-style:italic;margin-bottom:14px;line-height:1.5}
   #card .stat-row{display:flex;gap:12px;margin-bottom:10px;align-items:center}
   #card .stat-label{font-size:.72rem;color:#5a4a2a;width:76px;flex-shrink:0;letter-spacing:.05em}
   #card .bar-bg{flex:1;height:10px;background:#d6cbb0;border-radius:4px;overflow:hidden}
-  #card .bar-fill{height:100%;border-radius:4px;transition:width .3s}
+  #card .bar-fill{height:100%;border-radius:4px}
   #card .bar-val{font-size:.72rem;color:#1c1208;width:20px;text-align:right;flex-shrink:0}
-  #card .corn-row{
-    display:flex;justify-content:space-between;align-items:center;
-    font-size:.75rem;color:#5a4a2a;margin-bottom:16px;padding:6px 0;
-    border-top:1px solid #d6cbb0;border-bottom:1px solid #d6cbb0;
-  }
+  #card .corn-row{display:flex;justify-content:space-between;align-items:center;font-size:.75rem;color:#5a4a2a;margin-bottom:16px;padding:6px 0;border-top:1px solid #d6cbb0;border-bottom:1px solid #d6cbb0}
   #card .corn-row span{color:#ca8a04;font-weight:600;font-size:.85rem}
-  #card .role-badge{
-    text-align:center;margin-bottom:14px;font-size:.72rem;letter-spacing:.1em;
-    text-transform:uppercase;
-  }
+  #card .role-badge{text-align:center;margin-bottom:14px;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase}
   #card .btn-row{display:flex;flex-direction:column;gap:8px}
-  #card .btn{
-    width:100%;padding:10px;border:2px solid;border-radius:4px;
-    font-family:'Cinzel',serif;font-size:.78rem;letter-spacing:.06em;
-    cursor:pointer;text-transform:uppercase;transition:background .15s,color .15s;
-  }
-  .btn-warrior{background:#b91c1c;border-color:#991b1b;color:#fff}
-  .btn-warrior:hover{background:#991b1b}
-  .btn-porter{background:#0f766e;border-color:#0d6b63;color:#fff}
-  .btn-porter:hover{background:#0d6b63}
-  .btn-back{background:transparent;border-color:#a89060;color:#5a4a2a}
-  .btn-back:hover{background:#ede5d0}
-  .btn-send-back{background:transparent;border-color:#b91c1c;color:#b91c1c;font-size:.72rem;padding:7px}
-  .btn-send-back:hover{background:#fde8e8}
-  .btn-march{background:#ca8a04;border-color:#a16207;color:#1c1208;font-size:.88rem;font-weight:600;padding:13px}
-  .btn-march:hover{background:#b07a03}
+  #card .btn{width:100%;padding:10px;border:2px solid;border-radius:4px;font-family:'Cinzel',serif;font-size:.78rem;letter-spacing:.06em;cursor:pointer;text-transform:uppercase;transition:background .15s,color .15s}
+  .btn-warrior{background:#b91c1c;border-color:#991b1b;color:#fff}.btn-warrior:hover{background:#991b1b}
+  .btn-porter{background:#0f766e;border-color:#0d6b63;color:#fff}.btn-porter:hover{background:#0d6b63}
+  .btn-back{background:transparent;border-color:#a89060;color:#5a4a2a}.btn-back:hover{background:#ede5d0}
+  .btn-send-back{background:transparent;border-color:#b91c1c;color:#b91c1c;font-size:.72rem;padding:7px}.btn-send-back:hover{background:#fde8e8}
+  .btn-march{background:#ca8a04;border-color:#a16207;color:#1c1208;font-size:.88rem;font-weight:600;padding:13px}.btn-march:hover{background:#b07a03}
   #card .roster-list{max-height:240px;overflow-y:auto;margin-bottom:14px}
-  #card .roster-item{
-    display:flex;justify-content:space-between;align-items:center;
-    padding:7px 0;border-bottom:1px solid #d6cbb0;gap:8px;
-  }
+  #card .roster-item{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #d6cbb0;gap:8px}
   #card .roster-item:last-child{border-bottom:none}
   #card .roster-name{font-size:.78rem;color:#1c1208;flex:1}
-  #card .roster-role{
-    font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;
-    padding:2px 8px;border-radius:10px;
-  }
-  .role-warrior-tag{background:#b91c1c;color:#fff}
-  .role-porter-tag{background:#0f766e;color:#fff}
-  #card .summary-row{
-    display:flex;justify-content:space-around;margin-bottom:14px;
-    padding:8px 0;border-top:1px solid #d6cbb0;border-bottom:1px solid #d6cbb0;
-    font-size:.78rem;color:#5a4a2a;
-  }
+  #card .roster-role{font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;padding:2px 8px;border-radius:10px}
+  .role-warrior-tag{background:#b91c1c;color:#fff}.role-porter-tag{background:#0f766e;color:#fff}
+  #card .summary-row{display:flex;justify-content:space-around;margin-bottom:14px;padding:8px 0;border-top:1px solid #d6cbb0;border-bottom:1px solid #d6cbb0;font-size:.78rem;color:#5a4a2a}
   #card .summary-row strong{color:#1c1208;font-size:.88rem;display:block;text-align:center}
   #mobile-left,#mobile-right{
-    position:fixed;bottom:28px;z-index:5;
-    width:64px;height:64px;border-radius:50%;
-    background:rgba(15,118,110,.55);border:2px solid #0f766e;
-    color:#fff;font-size:1.5rem;display:none;
-    align-items:center;justify-content:center;cursor:pointer;
+    position:fixed;bottom:28px;z-index:5;width:64px;height:64px;border-radius:50%;
+    background:rgba(15,118,110,.55);border:2px solid #0f766e;color:#fff;font-size:1.5rem;
+    display:none;align-items:center;justify-content:center;cursor:pointer;
     -webkit-tap-highlight-color:transparent;user-select:none;
   }
-  #mobile-left{left:18px}
-  #mobile-right{right:18px}
+  #mobile-left{left:18px}#mobile-right{right:18px}
   @media(max-width:640px){#mobile-left,#mobile-right{display:flex}}
 </style>
 </head>
@@ -103,19 +67,34 @@
 'use strict';
 
 // ── CONSTANTS ──────────────────────────────────────────────────────────────────
-const WORLD_W         = 3400;
-const WORLD_H         = 480;
-const TEMPLE_X        = 1700;
-const GROUND_Y        = 340;
-const P_SPEED         = 160;
-const P_ACCEL         = 900;
-const P_DECEL         = 700;
-const INTERACT_R      = 80;
-const TEMPLE_R        = 140;
-const GATHER_W_X      = TEMPLE_X - 190;
-const GATHER_P_X      = TEMPLE_X + 190;
+const WORLD_W    = 3400;
+const WORLD_H    = 480;
+const TEMPLE_X   = 1700;
+const GROUND_Y   = 340;
+const P_SPEED    = 160;
+const P_ACCEL    = 900;
+const P_DECEL    = 700;
+const INTERACT_R = 80;
+const TEMPLE_R   = 140;
+const GATHER_W_X = TEMPLE_X - 190;
+const GATHER_P_X = TEMPLE_X + 190;
+const DRY_DUR    = 80;
+const RAINY_DUR  = 35;
 
 function sr(n){ return Math.abs(Math.sin(n*9301+49297)*23423.4)%1; }
+
+// ── SEASON STATE ───────────────────────────────────────────────────────────────
+let season      = 'dry';
+let seasonTimer = 0;
+let cropGrowth  = 0;   // 0=seedling, 1=mature/golden
+
+// ── CISTERNS ──────────────────────────────────────────────────────────────────
+const CISTERNS = [
+  { x: 500,              side: 'left'  },
+  { x: 920,              side: 'left'  },
+  { x: TEMPLE_X + 530,   side: 'right' },
+  { x: TEMPLE_X + 940,   side: 'right' },
+];
 
 // ── FARMER DATA ────────────────────────────────────────────────────────────────
 const FARMER_DATA = [
@@ -134,26 +113,49 @@ const FARMER_DATA = [
 function homeX(i) {
   const d = FARMER_DATA[i];
   if (d.zone === 'left')   return 300  + Math.floor(sr(i*3)   * 550);
-  if (d.zone === 'right')  return TEMPLE_X + 480 + Math.floor(sr(i*3)   * 560);
+  if (d.zone === 'right')  return TEMPLE_X + 480 + Math.floor(sr(i*3) * 560);
   return TEMPLE_X - 340 + Math.floor(sr(i*3+1) * 680);
 }
 
-// ── GAME STATE ─────────────────────────────────────────────────────────────────
-const P = { x: TEMPLE_X, y: GROUND_Y, vx: 0, facing: 1, walkPhase: 0 };
-
-const farmers = FARMER_DATA.map((d, i) => ({
-  ...d,
-  x: homeX(i),
-  y: GROUND_Y,
-  homeX: homeX(i),
-  role: 'farmer',
-  walkPhase: sr(i*7) * Math.PI * 2,
-  wanderDir: sr(i*11) > 0.5 ? 1 : -1,
-  wanderTimer: sr(i*13) * 3 + 1,
+// ── RAIN DROPS (screen-space) ─────────────────────────────────────────────────
+const rainDrops = Array.from({length:130}, (_,i) => ({
+  x: sr(i*7)  * 1400,
+  y: sr(i*11) * 800,
+  spd: 280 + sr(i*13) * 130,
+  len: 9 + sr(i*17) * 13,
 }));
 
-let camX = P.x - window.innerWidth / 2;
-let keys = {};
+// ── PLAYER ─────────────────────────────────────────────────────────────────────
+const P = { x: TEMPLE_X, y: GROUND_Y, vx: 0, facing: 1, walkPhase: 0 };
+
+// ── FARMERS ───────────────────────────────────────────────────────────────────
+const farmers = FARMER_DATA.map((d, i) => {
+  const side  = d.zone === 'right' ? 'right' : d.zone === 'left' ? 'left' : null;
+  const cists = side ? CISTERNS.filter(c => c.side === side) : [];
+  const cX    = cists.length ? cists[Math.floor(sr(i*7) * cists.length)].x : homeX(i);
+  return {
+    ...d,
+    x: homeX(i), y: GROUND_Y, homeX: homeX(i),
+    role: 'farmer', facing: 1, walkPhase: sr(i*7)*Math.PI*2,
+    task: 'tend', taskTimer: 4 + sr(i*31)*7, targetX: null, cisternX: cX,
+    waterLoaded: false, pose: 'none', poseTimer: 0,
+    actCD: sr(i*23)*3 + 1,
+    wanderDir: sr(i*11)>.5?1:-1, wanderTimer: sr(i*13)*3+1,
+  };
+});
+
+// ── MAIZE ─────────────────────────────────────────────────────────────────────
+const maize = [];
+for (let i=0; i<80; i++) {
+  maize.push({ x:140+sr(i*17)*1100, y:GROUND_Y-sr(i*23)*55-5, phase:sr(i*7)*Math.PI*2, sc:0.7+sr(i*13)*0.5, go:sr(i*41)*0.12-0.06 });
+}
+for (let i=0; i<80; i++) {
+  maize.push({ x:TEMPLE_X+420+sr(i*17+500)*1100, y:GROUND_Y-sr(i*23+500)*55-5, phase:sr(i*7+500)*Math.PI*2, sc:0.7+sr(i*13+500)*0.5, go:sr(i*41+500)*0.12-0.06 });
+}
+
+// ── CAMERA / GLOBALS ──────────────────────────────────────────────────────────
+let camX      = P.x - window.innerWidth / 2;
+let keys      = {};
 let dialogOpen = false;
 let nearFarmer = -1;
 let nearTemple = false;
@@ -161,63 +163,61 @@ let totalTime  = 0;
 
 // ── CANVAS ─────────────────────────────────────────────────────────────────────
 const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
-function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+const ctx    = canvas.getContext('2d');
+function resize(){ canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
 resize();
 window.addEventListener('resize', resize);
 
 // ── PARALLAX LAYERS ────────────────────────────────────────────────────────────
 function buildLayer(seed, count, minG, maxG) {
   const items = []; let x = 0;
-  for (let i = 0; i < count; i++) {
-    x += minG + sr(seed + i*2) * (maxG - minG);
-    items.push({ x, variant: Math.floor(sr(seed + i*2+1) * 4) });
+  for (let i=0; i<count; i++) {
+    x += minG + sr(seed+i*2)*(maxG-minG);
+    items.push({ x, variant: Math.floor(sr(seed+i*2+1)*4) });
   }
   return items;
 }
-const FAR  = buildLayer(1, 80, 40, 90);
-const MID  = buildLayer(2, 60, 50,110);
-const NEAR = buildLayer(3, 50, 60,130);
-
-// ── MAIZE PLANTS ───────────────────────────────────────────────────────────────
-const maize = [];
-for (let i = 0; i < 80; i++) {
-  maize.push({ x: 140  + sr(i*17)*1100,     y: GROUND_Y - sr(i*23)*55 - 5, phase: sr(i*7)*Math.PI*2, sc: 0.7+sr(i*13)*0.5 });
-}
-for (let i = 0; i < 80; i++) {
-  maize.push({ x: TEMPLE_X+420+sr(i*17+500)*1100, y: GROUND_Y - sr(i*23+500)*55 - 5, phase: sr(i*7+500)*Math.PI*2, sc: 0.7+sr(i*13+500)*0.5 });
-}
+const FAR  = buildLayer(1, 80,  40,  90);
+const MID  = buildLayer(2, 60,  50, 110);
+const NEAR = buildLayer(3, 50,  60, 130);
 
 // ── INPUT ──────────────────────────────────────────────────────────────────────
 window.addEventListener('keydown', e => {
   keys[e.key] = true;
-  if ((e.key === 'e' || e.key === 'E') && !dialogOpen) tryInteract();
-  if (e.key === 'Escape' && dialogOpen) closeDialog();
+  if ((e.key==='e'||e.key==='E') && !dialogOpen) tryInteract();
+  if (e.key==='Escape' && dialogOpen) closeDialog();
 });
 window.addEventListener('keyup', e => { keys[e.key] = false; });
 
+// Canvas tap → speak
+canvas.addEventListener('click', () => {
+  if (!dialogOpen && (nearFarmer>=0 || nearTemple)) tryInteract();
+});
+canvas.addEventListener('touchend', e => {
+  e.preventDefault();
+  if (!dialogOpen && (nearFarmer>=0 || nearTemple)) tryInteract();
+}, { passive: false });
+
 const mbL = document.getElementById('mobile-left');
 const mbR = document.getElementById('mobile-right');
-mbL.addEventListener('touchstart', e => { e.preventDefault(); keys['ArrowLeft']  = true;  }, {passive:false});
-mbL.addEventListener('touchend',   e => { e.preventDefault(); keys['ArrowLeft']  = false; }, {passive:false});
-mbR.addEventListener('touchstart', e => { e.preventDefault(); keys['ArrowRight'] = true;  }, {passive:false});
-mbR.addEventListener('touchend',   e => { e.preventDefault(); keys['ArrowRight'] = false; }, {passive:false});
-mbL.addEventListener('mousedown', () => keys['ArrowLeft']  = true);
-mbL.addEventListener('mouseup',   () => keys['ArrowLeft']  = false);
-mbR.addEventListener('mousedown', () => keys['ArrowRight'] = true);
-mbR.addEventListener('mouseup',   () => keys['ArrowRight'] = false);
+mbL.addEventListener('touchstart', e=>{e.preventDefault();keys['ArrowLeft']=true;},{passive:false});
+mbL.addEventListener('touchend',   e=>{e.preventDefault();keys['ArrowLeft']=false;},{passive:false});
+mbR.addEventListener('touchstart', e=>{e.preventDefault();keys['ArrowRight']=true;},{passive:false});
+mbR.addEventListener('touchend',   e=>{e.preventDefault();keys['ArrowRight']=false;},{passive:false});
+mbL.addEventListener('mousedown', ()=>keys['ArrowLeft']=true);
+mbL.addEventListener('mouseup',   ()=>keys['ArrowLeft']=false);
+mbR.addEventListener('mousedown', ()=>keys['ArrowRight']=true);
+mbR.addEventListener('mouseup',   ()=>keys['ArrowRight']=false);
 
 // ── DIALOG ─────────────────────────────────────────────────────────────────────
 function tryInteract() {
   if (nearTemple) { openTempleDialog(); return; }
   if (nearFarmer >= 0) openFarmerDialog(nearFarmer);
 }
-
 function closeDialog() {
   document.getElementById('overlay').classList.remove('visible');
   dialogOpen = false;
 }
-
 function showCard(html) {
   document.getElementById('card').innerHTML = html;
   document.getElementById('overlay').classList.add('visible');
@@ -226,513 +226,621 @@ function showCard(html) {
 
 function openFarmerDialog(idx) {
   const f = farmers[idx];
-  const roleLabel = f.role === 'farmer' ? 'Tending the Fields' : f.role === 'warrior' ? 'Selected as Warrior' : 'Selected as Porter';
-  const roleColor = f.role === 'warrior' ? '#b91c1c' : f.role === 'porter' ? '#0f766e' : '#5a4a2a';
-
-  const makeWarriorBtn = f.role !== 'warrior'
-    ? `<button class="btn btn-warrior" onclick="assignRole(${idx},'warrior')">Make Warrior</button>` : '';
-  const makePorterBtn  = f.role !== 'porter'
-    ? `<button class="btn btn-porter"  onclick="assignRole(${idx},'porter')">Make Porter</button>`   : '';
-  const returnBtn = f.role !== 'farmer'
-    ? `<button class="btn btn-send-back" onclick="assignRole(${idx},'farmer')">Return to Fields</button>` : '';
-
+  const roleLabel = f.role==='farmer'?'Tending the Fields': f.role==='warrior'?'Selected as Warrior':'Selected as Porter';
+  const roleColor = f.role==='warrior'?'#b91c1c': f.role==='porter'?'#0f766e':'#5a4a2a';
+  const mkW = f.role!=='warrior' ? `<button class="btn btn-warrior" onclick="assignRole(${idx},'warrior')">Make Warrior</button>` : '';
+  const mkP = f.role!=='porter'  ? `<button class="btn btn-porter"  onclick="assignRole(${idx},'porter')">Make Porter</button>`   : '';
+  const ret = f.role!=='farmer'  ? `<button class="btn btn-send-back" onclick="assignRole(${idx},'farmer')">Return to Fields</button>` : '';
   showCard(`
     <h2>${f.name}</h2>
     <div class="flavor">"${f.flavor}"</div>
-    <div class="stat-row">
-      <span class="stat-label">Strength</span>
-      <div class="bar-bg"><div class="bar-fill" style="width:${f.str*10}%;background:#b91c1c"></div></div>
-      <span class="bar-val">${f.str}</span>
-    </div>
-    <div class="stat-row">
-      <span class="stat-label">Endurance</span>
-      <div class="bar-bg"><div class="bar-fill" style="width:${f.end*10}%;background:#0f766e"></div></div>
-      <span class="bar-val">${f.end}</span>
-    </div>
-    <div class="corn-row">
-      <span>Corn harvested this season</span>
-      <span>${f.cornH} loads</span>
-    </div>
+    <div class="stat-row"><span class="stat-label">Strength</span><div class="bar-bg"><div class="bar-fill" style="width:${f.str*10}%;background:#b91c1c"></div></div><span class="bar-val">${f.str}</span></div>
+    <div class="stat-row"><span class="stat-label">Endurance</span><div class="bar-bg"><div class="bar-fill" style="width:${f.end*10}%;background:#0f766e"></div></div><span class="bar-val">${f.end}</span></div>
+    <div class="corn-row"><span>Corn harvested this season</span><span>${f.cornH} loads</span></div>
     <div class="role-badge" style="color:${roleColor}">${roleLabel}</div>
-    <div class="btn-row">
-      ${makeWarriorBtn}
-      ${makePorterBtn}
-      ${returnBtn}
-      <button class="btn btn-back" onclick="closeDialog()">Leave</button>
-    </div>
+    <div class="btn-row">${mkW}${mkP}${ret}<button class="btn btn-back" onclick="closeDialog()">Leave</button></div>
   `);
 }
 
 function openTempleDialog() {
-  const warriors = farmers.filter(f => f.role === 'warrior');
-  const porters  = farmers.filter(f => f.role === 'porter');
-
-  if (warriors.length === 0 && porters.length === 0) {
-    showCard(`
-      <h2>The Temple Steps</h2>
-      <div class="flavor">The plaza is empty. No warriors have been called. No porters wait with their bundles.<br>Speak to your farmers in the fields first.</div>
-      <div class="btn-row"><button class="btn btn-back" onclick="closeDialog()">Return to the Fields</button></div>
-    `);
+  const warriors = farmers.filter(f=>f.role==='warrior');
+  const porters  = farmers.filter(f=>f.role==='porter');
+  if (!warriors.length && !porters.length) {
+    showCard(`<h2>The Temple Steps</h2><div class="flavor">The plaza is empty. Speak to your farmers in the fields first.</div><div class="btn-row"><button class="btn btn-back" onclick="closeDialog()">Return to the Fields</button></div>`);
     return;
   }
-
-  const food = porters.length * 14 + 20;
-  const rosterRows = [...warriors, ...porters].map(f => {
-    const fi = farmers.indexOf(f);
-    const tagClass = f.role === 'warrior' ? 'role-warrior-tag' : 'role-porter-tag';
-    return `<div class="roster-item">
-      <span class="roster-name">${f.name}</span>
-      <span class="roster-role ${tagClass}">${f.role}</span>
-      <button class="btn btn-send-back" onclick="sendBack(${fi})">Send Back</button>
-    </div>`;
+  const food = porters.length*14+20;
+  const rows = [...warriors,...porters].map(f=>{
+    const fi=farmers.indexOf(f);
+    const tc=f.role==='warrior'?'role-warrior-tag':'role-porter-tag';
+    return `<div class="roster-item"><span class="roster-name">${f.name}</span><span class="roster-role ${tc}">${f.role}</span><button class="btn btn-send-back" onclick="sendBack(${fi})">Send Back</button></div>`;
   }).join('');
-
-  const marchBtn = warriors.length > 0
-    ? `<button class="btn btn-march" onclick="beginMarch()">Begin the March</button>`
-    : `<div style="text-align:center;color:#b91c1c;font-size:.75rem;margin-bottom:8px">At least one warrior is required.</div>`;
-
+  let marchSection;
+  if (season === 'rainy') {
+    marchSection = `<div style="text-align:center;color:#1d4ed8;font-size:.8rem;padding:10px;background:rgba(29,78,216,.1);border-radius:4px;margin-bottom:8px">The rains have come. No column marches through mud season.<br><em style="font-size:.7rem;opacity:.8">Wait for the dry season to return.</em></div>`;
+  } else if (!warriors.length) {
+    marchSection = `<div style="text-align:center;color:#b91c1c;font-size:.75rem;margin-bottom:8px">At least one warrior is required.</div>`;
+  } else {
+    marchSection = `<button class="btn btn-march" onclick="beginMarch()">Begin the March</button>`;
+  }
   showCard(`
     <h2>The Great Temple</h2>
     <div class="flavor">Review your column before the march begins.</div>
-    <div class="summary-row">
-      <div><strong>${warriors.length}</strong>Warriors</div>
-      <div><strong>${porters.length}</strong>Porters</div>
-      <div><strong>${food}</strong>Food</div>
-    </div>
-    <div class="roster-list">${rosterRows}</div>
-    <div class="btn-row">
-      ${marchBtn}
-      <button class="btn btn-back" onclick="closeDialog()">Back to the Fields</button>
-    </div>
+    <div class="summary-row"><div><strong>${warriors.length}</strong>Warriors</div><div><strong>${porters.length}</strong>Porters</div><div><strong>${food}</strong>Food</div></div>
+    <div class="roster-list">${rows}</div>
+    <div class="btn-row">${marchSection}<button class="btn btn-back" onclick="closeDialog()">Back to the Fields</button></div>
   `);
 }
 
 function assignRole(idx, role) {
-  const f = farmers[idx];
-  f.role = role;
-  if (role === 'farmer') {
-    f.x = f.homeX;
-    f.y = GROUND_Y;
-  } else {
-    const gx = role === 'warrior' ? GATHER_W_X : GATHER_P_X;
-    const slot = farmers.filter(ff => ff.role === role).length - 1;
-    f.x = gx + (slot % 5) * 22 - 44;
-    f.y = GROUND_Y;
-  }
+  const f = farmers[idx]; f.role = role;
+  if (role === 'farmer') { f.x=f.homeX; f.y=GROUND_Y; f.task='tend'; f.taskTimer=3; }
+  else { const gx=role==='warrior'?GATHER_W_X:GATHER_P_X; const slot=farmers.filter(ff=>ff.role===role).length-1; f.x=gx+(slot%5)*22-44; f.y=GROUND_Y; }
   openFarmerDialog(idx);
 }
-
 function sendBack(fi) {
-  farmers[fi].role   = 'farmer';
-  farmers[fi].x      = farmers[fi].homeX;
-  farmers[fi].y      = GROUND_Y;
+  farmers[fi].role='farmer'; farmers[fi].x=farmers[fi].homeX; farmers[fi].y=GROUND_Y; farmers[fi].task='tend'; farmers[fi].taskTimer=3;
   openTempleDialog();
 }
-
 function beginMarch() {
-  const warriors = farmers.filter(f => f.role === 'warrior');
-  const porters  = farmers.filter(f => f.role === 'porter');
-  const state = {
-    soldiers: warriors.length,
-    porters:  porters.length,
-    food:     porters.length * 14 + 20,
-    destination:    'Ox Witz',
-    distanceDays:   15,
-    isReturnTrip:   false,
-    seasonDaysLeft: 60,
-  };
+  const w=farmers.filter(f=>f.role==='warrior'), p=farmers.filter(f=>f.role==='porter');
+  const state={soldiers:w.length,porters:p.length,food:p.length*14+20,destination:'Ox Witz',distanceDays:15,isReturnTrip:false,seasonDaysLeft:60};
   closeDialog();
-  if (typeof window.onMarchBegin === 'function') {
-    window.onMarchBegin(state);
-  } else {
-    showCard(`
-      <h2>The March Begins</h2>
-      <div class="flavor">${warriors.length} warrior${warriors.length!==1?'s':''} and ${porters.length} porter${porters.length!==1?'s':''} depart at dawn, bearing ${state.food} loads of food. May the sacbe road be clear.</div>
-      <div class="btn-row"><button class="btn btn-back" onclick="closeDialog()">Continue</button></div>
-    `);
-  }
+  if (typeof window.onMarchBegin==='function') window.onMarchBegin(state);
+  else showCard(`<h2>The March Begins</h2><div class="flavor">${w.length} warrior${w.length!==1?'s':''} and ${p.length} porter${p.length!==1?'s':''} depart at dawn, bearing ${state.food} loads of food.</div><div class="btn-row"><button class="btn btn-back" onclick="closeDialog()">Continue</button></div>`);
 }
 
 // ── DRAW HELPERS ───────────────────────────────────────────────────────────────
 function drawTree(x, y, v, sc, alpha) {
-  ctx.save();
-  ctx.globalAlpha = alpha;
-  ctx.translate(x, y);
-  ctx.scale(sc, sc);
-  const th = 26 + v * 6;
-  ctx.fillStyle = '#4a3220';
-  ctx.fillRect(-5, -th, 10, th);
-  const gs = ['#166534','#15803d','#16a34a','#14532d'];
-  ctx.fillStyle = gs[v%4];
-  ctx.beginPath(); ctx.ellipse(0, -th-10, 28, 17, 0, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = gs[(v+1)%4];
-  ctx.beginPath(); ctx.ellipse(0, -th-22, 20, 13, 0, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = gs[(v+2)%4];
-  ctx.beginPath(); ctx.ellipse(0, -th-32, 13,  9, 0, 0, Math.PI*2); ctx.fill();
+  ctx.save(); ctx.globalAlpha=alpha; ctx.translate(x,y); ctx.scale(sc,sc);
+  const th=26+v*6;
+  const lush=season==='rainy';
+  const gs=lush?['#15803d','#16a34a','#22c55e','#166534']:['#166534','#15803d','#16a34a','#14532d'];
+  ctx.fillStyle='#4a3220'; ctx.fillRect(-5,-th,10,th);
+  ctx.fillStyle=gs[v%4]; ctx.beginPath(); ctx.ellipse(0,-th-10,28,17,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle=gs[(v+1)%4]; ctx.beginPath(); ctx.ellipse(0,-th-22,20,13,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle=gs[(v+2)%4]; ctx.beginPath(); ctx.ellipse(0,-th-32,13,9,0,0,Math.PI*2); ctx.fill();
   ctx.restore();
 }
 
-function drawMaize(x, y, phase, sc) {
+function drawMaize(x, y, phase, sc, g) {
+  if (g <= 0.01) return;
+  const eff = Math.min(1, g);
   ctx.save();
   ctx.translate(x, y);
-  ctx.scale(sc, sc);
-  const sw = Math.sin(phase) * 2.5;
-  ctx.strokeStyle = '#6b7c2a'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+  ctx.scale(sc * eff, sc * eff);
+  if (eff < 0.12) {
+    // Seedling: tiny sprout
+    ctx.fillStyle = season==='rainy' ? '#4ade80' : '#6b9a2a';
+    ctx.beginPath(); ctx.ellipse(0,-5,3,7,0,0,Math.PI*2); ctx.fill();
+    ctx.restore(); return;
+  }
+  const lush    = season === 'rainy';
+  const ripe    = eff > 0.85;
+  const earVis  = eff > 0.62;
+  const sw = Math.sin(phase) * (lush ? 4.5 : 2.5);
+  ctx.strokeStyle = ripe ? '#8a7a30' : lush ? '#3a9c30' : '#6b7c2a';
+  ctx.lineWidth=3; ctx.lineCap='round';
   ctx.beginPath(); ctx.moveTo(0,0); ctx.quadraticCurveTo(sw,-20,sw*1.5,-40); ctx.stroke();
-  ctx.strokeStyle = '#84a32e'; ctx.lineWidth = 2;
+  ctx.strokeStyle = ripe ? '#9a8a38' : lush ? '#5aac40' : '#84a32e';
+  ctx.lineWidth=2;
   ctx.beginPath(); ctx.moveTo(sw*.5,-16); ctx.quadraticCurveTo(sw*.5+15,-20,sw*.5+20,-12); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(sw*.5,-16); ctx.quadraticCurveTo(sw*.5-15,-20,sw*.5-20,-12); ctx.stroke();
-  ctx.fillStyle = '#ca8a04';
-  ctx.fillRect(sw*1.2-2,-35,5,9);
+  if (earVis) {
+    ctx.fillStyle = ripe ? '#ca8a04' : eff>0.76 ? '#c4a820' : '#a8b840';
+    ctx.fillRect(sw*1.2-2,-35,5,9);
+  }
+  ctx.restore();
+}
+
+function drawCistern(cx, cy) {
+  ctx.save(); ctx.translate(cx, cy);
+  ctx.fillStyle='#9e8e6a'; ctx.beginPath(); ctx.ellipse(0,-5,18,9,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#b8a880'; ctx.beginPath(); ctx.ellipse(0,-7,16,7,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='rgba(29,78,216,.7)'; ctx.beginPath(); ctx.ellipse(0,-7,13,5,0,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='#d4c5a0'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.ellipse(0,-7,16,7,0,Math.PI,true); ctx.stroke();
   ctx.restore();
 }
 
 function drawPyramid(cx, gy) {
-  const steps = [{w:200,h:24},{w:162,h:22},{w:128,h:20},{w:96,h:18},{w:68,h:16},{w:42,h:40}];
-  let y = gy;
-  steps.forEach((s, i) => {
-    const x = cx - s.w/2;
-    y -= s.h;
-    ctx.fillStyle = i<5 ? '#b8a880' : '#9e8e6a';
-    ctx.fillRect(x, y, s.w, s.h);
-    ctx.fillStyle = '#d4c5a0';
-    ctx.fillRect(x, y, s.w, 3);
-    ctx.fillStyle = '#9e8e6a';
-    ctx.fillRect(x, y, 5, s.h);
-    ctx.strokeStyle = '#8a7a56'; ctx.lineWidth = 0.8;
-    for (let row = 8; row < s.h; row += 8) {
-      ctx.beginPath(); ctx.moveTo(x, y+row); ctx.lineTo(x+s.w, y+row); ctx.stroke();
-    }
-    const bw = 18, off = i*5;
-    for (let bx = x+(off%bw); bx < x+s.w; bx += bw) {
-      ctx.beginPath(); ctx.moveTo(bx, y); ctx.lineTo(bx, y+s.h); ctx.stroke();
-    }
+  const steps=[{w:200,h:24},{w:162,h:22},{w:128,h:20},{w:96,h:18},{w:68,h:16},{w:42,h:40}];
+  let y=gy;
+  steps.forEach((s,i)=>{
+    const x=cx-s.w/2; y-=s.h;
+    ctx.fillStyle=i<5?'#b8a880':'#9e8e6a'; ctx.fillRect(x,y,s.w,s.h);
+    ctx.fillStyle='#d4c5a0'; ctx.fillRect(x,y,s.w,3);
+    ctx.fillStyle='#9e8e6a'; ctx.fillRect(x,y,5,s.h);
+    ctx.strokeStyle='#8a7a56'; ctx.lineWidth=0.8;
+    for(let row=8;row<s.h;row+=8){ctx.beginPath();ctx.moveTo(x,y+row);ctx.lineTo(x+s.w,y+row);ctx.stroke();}
+    const bw=18,off=i*5;
+    for(let bx=x+(off%bw);bx<x+s.w;bx+=bw){ctx.beginPath();ctx.moveTo(bx,y);ctx.lineTo(bx,y+s.h);ctx.stroke();}
   });
   // Roof comb
-  const ct = y;
-  ctx.fillStyle = '#9e8e6a';
-  ctx.fillRect(cx-18, ct-28, 36, 28);
-  ctx.fillStyle = '#d4c5a0';
-  ctx.fillRect(cx-18, ct-28, 36, 3);
-  ctx.fillStyle = '#0b0b0c';
-  for (let ni = 0; ni < 3; ni++) ctx.fillRect(cx-14+ni*11, ct-22, 6, 14);
-  // Door
-  ctx.fillStyle = '#0b0b0c';
-  ctx.fillRect(cx-10, y-22, 20, 22);
-  ctx.beginPath(); ctx.arc(cx, y-22, 10, Math.PI, 0); ctx.fill();
+  const ct=y;
+  ctx.fillStyle='#9e8e6a'; ctx.fillRect(cx-18,ct-28,36,28);
+  ctx.fillStyle='#d4c5a0'; ctx.fillRect(cx-18,ct-28,36,3);
+  ctx.fillStyle='#0b0b0c';
+  for(let ni=0;ni<3;ni++) ctx.fillRect(cx-14+ni*11,ct-22,6,14);
+  ctx.fillStyle='#0b0b0c';
+  ctx.fillRect(cx-10,y-22,20,22);
+  ctx.beginPath(); ctx.arc(cx,y-22,10,Math.PI,0); ctx.fill();
 }
 
-function drawSprite(x, y, phase, facing, role, isPlayer) {
+// pose: 'walk'|'plant'|'water'|'fill'|'harvest'|'rest'
+function drawSprite(x, y, phase, facing, role, isPlayer, pose) {
   ctx.save();
   ctx.translate(x, y);
   ctx.scale(facing, 1);
 
-  const bob  = Math.sin(phase) * (isPlayer ? 3 : 2);
-  const legS = Math.sin(phase) * 9;
-  const armS = Math.sin(phase + Math.PI) * 7;
+  const isWalk = !pose || pose==='walk';
+  const bob  = isWalk ? Math.sin(phase)*(isPlayer?3:2) : 0;
+  const legS = isWalk ? Math.sin(phase)*9 : 0;
 
   // Shadow
-  ctx.fillStyle = 'rgba(0,0,0,.18)';
-  ctx.beginPath(); ctx.ellipse(0,2,14,4,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='rgba(0,0,0,.18)'; ctx.beginPath(); ctx.ellipse(0,2,14,4,0,0,Math.PI*2); ctx.fill();
 
-  // Leg color
-  const legC = isPlayer ? '#ca8a04' : role==='warrior' ? '#7f1d1d' : role==='porter' ? '#0c4a6e' : '#5a4a2a';
-  ctx.strokeStyle = legC; ctx.lineWidth = 5; ctx.lineCap = 'round';
-  ctx.beginPath(); ctx.moveTo(-3,-12+bob); ctx.lineTo(-5, legS>0?-legS*.3:0); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo( 3,-12+bob); ctx.lineTo( 5, legS<0? legS*.3:0); ctx.stroke();
+  // Legs
+  const legC = isPlayer?'#ca8a04': role==='warrior'?'#7f1d1d': role==='porter'?'#0c4a6e':'#5a4a2a';
+  ctx.strokeStyle=legC; ctx.lineWidth=5; ctx.lineCap='round';
+  const lLeg = pose==='plant'||pose==='fill'||pose==='harvest' ? [[-3,-14+bob],[-4,2]] : [[-3,-12+bob],[-5,legS>0?-legS*.3:0]];
+  const rLeg = pose==='plant'||pose==='fill'||pose==='harvest' ? [[ 3,-14+bob],[ 4,2]] : [[ 3,-12+bob],[ 5,legS<0? legS*.3:0]];
+  ctx.beginPath(); ctx.moveTo(...lLeg[0]); ctx.lineTo(...lLeg[1]); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(...rLeg[0]); ctx.lineTo(...rLeg[1]); ctx.stroke();
 
   // Body
-  const bodyC = isPlayer ? '#0f766e' : role==='warrior' ? '#991b1b' : role==='porter' ? '#075985' : '#6b7c2a';
-  ctx.fillStyle = bodyC;
-  ctx.beginPath(); ctx.roundRect(-9,-34+bob,18,22,3); ctx.fill();
-  ctx.strokeStyle = isPlayer ? '#ca8a04' : 'rgba(255,255,255,.22)'; ctx.lineWidth=1.5;
+  const bodyC = isPlayer?'#0f766e': role==='warrior'?'#991b1b': role==='porter'?'#075985':'#6b7c2a';
+  ctx.fillStyle=bodyC; ctx.beginPath(); ctx.roundRect(-9,-34+bob,18,22,3); ctx.fill();
+  ctx.strokeStyle=isPlayer?'#ca8a04':'rgba(255,255,255,.22)'; ctx.lineWidth=1.5;
   ctx.beginPath(); ctx.moveTo(0,-34+bob); ctx.lineTo(0,-12+bob); ctx.stroke();
 
-  // Arms
-  ctx.strokeStyle = bodyC; ctx.lineWidth=4;
-  ctx.beginPath(); ctx.moveTo(-9,-28+bob); ctx.lineTo(-14,-20+bob+armS*.4); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo( 9,-28+bob); ctx.lineTo( 14,-20+bob-armS*.4); ctx.stroke();
+  // Arms — endpoint relative to shoulder at (±9, -28+bob)
+  const armWobble = Math.sin(totalTime*2.5)*3;
+  let la, ra;
+  if      (pose==='plant')   { la=[-9,-4];  ra=[9,-4]; }
+  else if (pose==='fill')    { la=[-10,-3]; ra=[10,-3]; }
+  else if (pose==='water')   { la=[-12,-22+bob]; ra=[22,-14+bob+armWobble]; }
+  else if (pose==='harvest') { la=[-15,-52+bob]; ra=[15,-52+bob]; }
+  else if (pose==='rest')    { la=[-12,-16+bob]; ra=[12,-16+bob]; }
+  else {
+    const armS = Math.sin(phase+Math.PI)*7;
+    la=[-14,-20+bob+armS*.4]; ra=[14,-20+bob-armS*.4];
+  }
+  ctx.strokeStyle=bodyC; ctx.lineWidth=4;
+  ctx.beginPath(); ctx.moveTo(-9,-28+bob); ctx.lineTo(...la); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo( 9,-28+bob); ctx.lineTo(...ra); ctx.stroke();
+
+  // Water jar on 'water' pose
+  if (pose==='water' && !isPlayer) {
+    ctx.fillStyle='#075985'; ctx.globalAlpha=.85;
+    ctx.beginPath(); ctx.arc(ra[0],ra[1],5,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#bfdbfe'; ctx.globalAlpha=.5;
+    ctx.beginPath(); ctx.arc(ra[0],ra[1]-2,3,0,Math.PI*2); ctx.fill();
+    ctx.globalAlpha=1;
+    // Water pour line
+    ctx.strokeStyle='rgba(147,197,253,.7)'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(ra[0],ra[1]+5); ctx.lineTo(ra[0]+2,ra[1]+14); ctx.stroke();
+  }
 
   // Porter bundle
-  if (role === 'porter') {
-    ctx.fillStyle = '#92400e'; ctx.fillRect(-7,-46+bob,14,12);
-    ctx.strokeStyle = '#ca8a04'; ctx.lineWidth=1; ctx.strokeRect(-7,-46+bob,14,12);
-    ctx.strokeStyle = '#ca8a04'; ctx.lineWidth=1.5;
+  if (role==='porter') {
+    ctx.fillStyle='#92400e'; ctx.fillRect(-7,-46+bob,14,12);
+    ctx.strokeStyle='#ca8a04'; ctx.lineWidth=1; ctx.strokeRect(-7,-46+bob,14,12);
+    ctx.strokeStyle='#ca8a04'; ctx.lineWidth=1.5;
     ctx.beginPath(); ctx.moveTo(-7,-46+bob); ctx.quadraticCurveTo(-12,-50+bob,-8,-52+bob); ctx.stroke();
   }
   // Warrior weapon
-  if (role === 'warrior' && !isPlayer) {
-    ctx.strokeStyle = '#a16207'; ctx.lineWidth=2.5; ctx.lineCap='round';
+  if (role==='warrior' && !isPlayer) {
+    ctx.strokeStyle='#a16207'; ctx.lineWidth=2.5; ctx.lineCap='round';
     ctx.beginPath(); ctx.moveTo(14,-34+bob); ctx.lineTo(16,-56+bob); ctx.stroke();
-    ctx.fillStyle = '#374151';
+    ctx.fillStyle='#374151';
     ctx.beginPath(); ctx.moveTo(14,-54+bob); ctx.lineTo(17,-62+bob); ctx.lineTo(11,-60+bob); ctx.closePath(); ctx.fill();
   }
 
   // Head
-  ctx.fillStyle = '#c27d4a';
-  ctx.beginPath(); ctx.ellipse(0,-42+bob,9,10,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#c27d4a'; ctx.beginPath(); ctx.ellipse(0,-42+bob,9,10,0,0,Math.PI*2); ctx.fill();
 
-  // Headdress
+  // Headdress/headwear
   if (isPlayer) {
-    const fc = ['#b91c1c','#0f766e','#ca8a04','#7c3aed','#065f46'];
-    [-0.5,-0.25,0,0.25,0.5].forEach((ang,fi) => {
+    const fc=['#b91c1c','#0f766e','#ca8a04','#7c3aed','#065f46'];
+    [-0.5,-0.25,0,0.25,0.5].forEach((ang,fi)=>{
       ctx.save(); ctx.translate(0,-52+bob); ctx.rotate(ang-0.15);
-      ctx.fillStyle = fc[fi]; ctx.beginPath(); ctx.ellipse(0,-10,3,14,0,0,Math.PI*2); ctx.fill();
-      ctx.restore();
+      ctx.fillStyle=fc[fi]; ctx.beginPath(); ctx.ellipse(0,-10,3,14,0,0,Math.PI*2); ctx.fill(); ctx.restore();
     });
-    ctx.fillStyle = '#ca8a04'; ctx.fillRect(-10,-49+bob,20,5);
-    ctx.fillStyle = '#0f766e'; ctx.beginPath(); ctx.arc(0,-47+bob,4,0,Math.PI*2); ctx.fill();
-  } else if (role === 'warrior') {
-    ctx.fillStyle = '#d1d5db';
-    ctx.beginPath(); ctx.ellipse(0,-48+bob,9,7,0,Math.PI,true); ctx.fill();
+    ctx.fillStyle='#ca8a04'; ctx.fillRect(-10,-49+bob,20,5);
+    ctx.fillStyle='#0f766e'; ctx.beginPath(); ctx.arc(0,-47+bob,4,0,Math.PI*2); ctx.fill();
+  } else if (role==='warrior') {
+    ctx.fillStyle='#d1d5db'; ctx.beginPath(); ctx.ellipse(0,-48+bob,9,7,0,Math.PI,true); ctx.fill();
     ctx.strokeStyle='#b91c1c'; ctx.lineWidth=2;
     ctx.beginPath(); ctx.moveTo(0,-52+bob); ctx.quadraticCurveTo(4,-62+bob,0,-66+bob); ctx.stroke();
   } else {
-    ctx.fillStyle = '#78716c'; ctx.fillRect(-9,-50+bob,18,7);
+    ctx.fillStyle='#78716c'; ctx.fillRect(-9,-50+bob,18,7);
   }
   ctx.restore();
+}
+
+// ── FARMER TASK SYSTEM ────────────────────────────────────────────────────────
+function walkTo(f, tx, dist) {
+  if (f.x < tx) { f.x=Math.min(f.x+dist, tx); f.facing=1; }
+  else           { f.x=Math.max(f.x-dist, tx); f.facing=-1; }
+}
+
+function updateFarmer(f, fi, dt) {
+  if (f.role !== 'farmer') { f.walkPhase += dt*.4; return; }
+  const isCenter   = FARMER_DATA[fi].zone === 'center';
+  const harvestNow = season==='dry' && cropGrowth > 0.76;
+
+  // Pose countdown
+  if (f.pose !== 'none') { f.poseTimer -= dt; if (f.poseTimer<=0) f.pose='none'; }
+
+  // Rainy season: rest near edge of field
+  if (season === 'rainy') {
+    if (f.task !== 'rest') {
+      f.task = 'rest'; f.pose = 'none';
+      f.targetX = f.homeX + (f.homeX < TEMPLE_X ? -55 : 55);
+    }
+    walkTo(f, f.targetX, 22*dt);
+    if (Math.abs(f.x - f.targetX) < 6 && f.pose === 'none') {
+      f.pose = 'rest'; f.poseTimer = 99;
+    }
+    return;
+  }
+
+  switch (f.task) {
+    case 'rest':
+      // Resume tending after rain
+      f.task='tend'; f.taskTimer=3+sr(fi*31+totalTime*.1)*5; f.pose='none';
+      break;
+
+    case 'tend':
+      f.taskTimer -= dt;
+      f.actCD     -= dt;
+      // Activity pose (plant or harvest)
+      if (f.actCD <= 0 && f.pose === 'none') {
+        f.pose      = harvestNow ? 'harvest' : 'plant';
+        f.poseTimer = 0.85;
+        f.actCD     = 2.2 + sr(fi*13+totalTime*.05)*3.5;
+      }
+      // Wander in home zone when not posing
+      if (f.pose === 'none') {
+        f.wanderTimer -= dt;
+        if (f.wanderTimer <= 0) {
+          f.wanderDir   = sr(fi*13+totalTime*.12)>.5 ? 1 : -1;
+          f.wanderTimer = 1.5 + sr(fi*17+totalTime*.12)*3;
+        }
+        const nx = f.x + f.wanderDir * 22 * dt;
+        if (nx < f.homeX-72 || nx > f.homeX+72) f.wanderDir *= -1;
+        f.x = Math.max(f.homeX-72, Math.min(f.homeX+72, nx));
+        f.facing = f.wanderDir >= 0 ? 1 : -1;
+        f.walkPhase += dt*2.5;
+      }
+      // Transition to cistern fetch (non-center farmers, not harvest time)
+      if (f.taskTimer <= 0) {
+        if (!isCenter && !harvestNow) {
+          f.task='to_cistern'; f.targetX=f.cisternX;
+        } else {
+          f.taskTimer = 7 + sr(fi*31+totalTime*.1)*7;
+        }
+      }
+      break;
+
+    case 'to_cistern':
+      walkTo(f, f.targetX, P_SPEED*.62*dt);
+      f.walkPhase += dt*6;
+      if (Math.abs(f.x-f.targetX) < 8) {
+        f.task='at_cistern'; f.taskTimer=2.2; f.pose='fill'; f.poseTimer=2.2;
+      }
+      break;
+
+    case 'at_cistern':
+      f.taskTimer -= dt;
+      if (f.taskTimer <= 0) {
+        f.waterLoaded=true; f.task='from_cistern';
+        f.targetX=f.homeX + (sr(fi*19)*40-20); f.pose='none';
+      }
+      break;
+
+    case 'from_cistern':
+      walkTo(f, f.targetX, P_SPEED*.52*dt);
+      f.walkPhase += dt*5;
+      f.pose = 'water'; // show carrying-water pose while walking
+      if (Math.abs(f.x-f.targetX) < 10) {
+        f.task='watering'; f.taskTimer=2.8; f.pose='water'; f.poseTimer=2.8;
+      }
+      break;
+
+    case 'watering':
+      f.taskTimer -= dt;
+      if (f.taskTimer <= 0) {
+        f.waterLoaded=false; f.task='tend';
+        f.taskTimer=7+sr(fi*31+totalTime*.1)*7; f.pose='none';
+      }
+      break;
+  }
+}
+
+// ── SEASON UPDATE ─────────────────────────────────────────────────────────────
+function updateSeason(dt) {
+  seasonTimer += dt;
+  if (season === 'dry') {
+    cropGrowth = Math.min(1, seasonTimer / DRY_DUR);
+    if (seasonTimer >= DRY_DUR) { season='rainy'; seasonTimer=0; cropGrowth=1; }
+  } else {
+    // During rain, stalks slowly die back so new planting cycle is visible
+    cropGrowth = Math.max(0, 1 - seasonTimer / RAINY_DUR);
+    if (seasonTimer >= RAINY_DUR) { season='dry'; seasonTimer=0; cropGrowth=0; }
+  }
 }
 
 // ── UPDATE ─────────────────────────────────────────────────────────────────────
 function update(dt) {
   if (dialogOpen) return;
+  updateSeason(dt);
 
   const goL = keys['ArrowLeft']  || keys['a'] || keys['A'];
   const goR = keys['ArrowRight'] || keys['d'] || keys['D'];
-
-  if (goR)      P.vx = Math.min(P.vx + P_ACCEL*dt, P_SPEED);
+  if (goR)      P.vx = Math.min(P.vx + P_ACCEL*dt,  P_SPEED);
   else if (goL) P.vx = Math.max(P.vx - P_ACCEL*dt, -P_SPEED);
   else {
-    if (P.vx>0) P.vx = Math.max(0,  P.vx - P_DECEL*dt);
-    if (P.vx<0) P.vx = Math.min(0,  P.vx + P_DECEL*dt);
+    if (P.vx>0) P.vx = Math.max(0, P.vx-P_DECEL*dt);
+    if (P.vx<0) P.vx = Math.min(0, P.vx+P_DECEL*dt);
   }
-  if (goR) P.facing = 1;
-  if (goL) P.facing = -1;
-
+  if (goR) P.facing=1; if (goL) P.facing=-1;
   P.x = Math.max(40, Math.min(WORLD_W-40, P.x + P.vx*dt));
-  if (Math.abs(P.vx) > 5) P.walkPhase += dt*8;
+  if (Math.abs(P.vx)>5) P.walkPhase += dt*8;
 
-  // Camera lerp
   camX += (P.x - canvas.width/2 - camX) * Math.min(1, dt*7);
   camX  = Math.max(0, Math.min(WORLD_W - canvas.width, camX));
 
-  // Farmers wander
-  farmers.forEach((f, fi) => {
-    if (f.role !== 'farmer') { f.walkPhase += dt*0.4; return; }
-    f.wanderTimer -= dt;
-    if (f.wanderTimer <= 0) {
-      f.wanderDir   = sr(fi*13 + totalTime*0.1) > 0.5 ? 1 : -1;
-      f.wanderTimer = 2 + sr(fi*17 + totalTime*0.1) * 4;
-    }
-    const nx = f.x + f.wanderDir * 18 * dt;
-    if (nx < f.homeX - 60 || nx > f.homeX + 60) f.wanderDir *= -1;
-    f.x = Math.max(f.homeX-60, Math.min(f.homeX+60, nx));
-    f.walkPhase += dt*2.5;
-  });
+  farmers.forEach((f,fi) => updateFarmer(f,fi,dt));
+  maize.forEach(m => { m.phase += dt*(season==='rainy'?1.1:0.6); });
 
-  maize.forEach(m => { m.phase += dt*0.6; });
+  // Rain particle update (screen-space)
+  if (season === 'rainy') {
+    rainDrops.forEach(r => {
+      r.y += r.spd*dt; r.x += 55*dt;
+      if (r.y > canvas.height) { r.y=-20; r.x=Math.random()*canvas.width; }
+      if (r.x > canvas.width)  { r.x=0; }
+    });
+  }
 
-  // Proximity
+  // Proximity checks
   nearFarmer = -1;
   nearTemple = Math.abs(P.x - TEMPLE_X) < TEMPLE_R;
   if (!nearTemple) {
     for (let i=0; i<farmers.length; i++) {
-      if (Math.abs(P.x - farmers[i].x) < INTERACT_R) { nearFarmer = i; break; }
+      if (Math.abs(P.x-farmers[i].x) < INTERACT_R) { nearFarmer=i; break; }
     }
   }
+}
+
+// ── DRAW RAIN ──────────────────────────────────────────────────────────────────
+function drawRain() {
+  ctx.save();
+  ctx.strokeStyle='rgba(147,197,253,.5)'; ctx.lineWidth=1.5; ctx.lineCap='round';
+  rainDrops.forEach(r => {
+    ctx.beginPath(); ctx.moveTo(r.x,r.y); ctx.lineTo(r.x+r.len*.4,r.y+r.len); ctx.stroke();
+  });
+  ctx.fillStyle='rgba(12,30,50,.18)'; ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.restore();
+}
+
+// ── DRAW SEASON HUD ────────────────────────────────────────────────────────────
+function drawSeasonHUD(W, H) {
+  const bW=184, bH=16, bX=W/2-bW/2, bY=52;
+  const prog = seasonTimer / (season==='dry'?DRY_DUR:RAINY_DUR);
+  const accentC = season==='rainy' ? '#1d4ed8' : '#ca8a04';
+
+  ctx.fillStyle='rgba(0,0,0,.62)';
+  ctx.beginPath(); ctx.roundRect(bX-10,bY-8,bW+20,bH+26,7); ctx.fill();
+  ctx.strokeStyle=accentC; ctx.lineWidth=1.2;
+  ctx.beginPath(); ctx.roundRect(bX-10,bY-8,bW+20,bH+26,7); ctx.stroke();
+
+  // Track
+  ctx.fillStyle='rgba(0,0,0,.35)'; ctx.beginPath(); ctx.roundRect(bX,bY,bW,bH,4); ctx.fill();
+  // Fill
+  const barC = season==='rainy' ? '#1d4ed8' : cropGrowth>0.76 ? '#ca8a04' : cropGrowth>0.3 ? '#16a34a' : '#4ade80';
+  ctx.fillStyle=barC; ctx.beginPath(); ctx.roundRect(bX,bY,bW*prog,bH,4); ctx.fill();
+
+  // Label
+  const phase = season==='dry'
+    ? (cropGrowth<0.12?'Planting': cropGrowth<0.76?'Growing': 'Harvest')
+    : 'Rainy Season';
+  ctx.fillStyle='rgba(245,240,225,.82)'; ctx.font="10px 'Cinzel',serif"; ctx.textAlign='center';
+  ctx.fillText(phase, W/2, bY+bH+14);
+}
+
+// ── DRAW MINIMAP ───────────────────────────────────────────────────────────────
+function drawMinimap(W, H) {
+  const MW=180, MH=22, MX=W/2-MW/2, MY=16;
+  ctx.fillStyle='rgba(0,0,0,.58)'; ctx.beginPath(); ctx.roundRect(MX,MY,MW,MH,5); ctx.fill();
+  ctx.strokeStyle=season==='rainy'?'#1d4ed8':'#ca8a04'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.roundRect(MX,MY,MW,MH,5); ctx.stroke();
+  // Temple marker
+  const tx=MX+(TEMPLE_X/WORLD_W)*MW;
+  ctx.fillStyle='#ca8a04'; ctx.fillRect(tx-2,MY+4,4,MH-8);
+  // Farmer dots
+  farmers.forEach(f=>{
+    const fx=MX+(f.x/WORLD_W)*MW;
+    ctx.fillStyle=f.role==='warrior'?'#b91c1c': f.role==='porter'?'#0f766e':'#6b7c2a';
+    ctx.beginPath(); ctx.arc(fx,MY+MH/2,2.5,0,Math.PI*2); ctx.fill();
+  });
+  // Player
+  const ppx=MX+(P.x/WORLD_W)*MW;
+  ctx.fillStyle='#f5f0e1'; ctx.beginPath(); ctx.arc(ppx,MY+MH/2,3.5,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='#ca8a04'; ctx.lineWidth=1.3;
+  ctx.beginPath(); ctx.arc(ppx,MY+MH/2,3.5,0,Math.PI*2); ctx.stroke();
 }
 
 // ── DRAW ───────────────────────────────────────────────────────────────────────
 function draw() {
-  const W = canvas.width, H = canvas.height;
-  const sc = H / WORLD_H;
-  const gY = GROUND_Y * sc;
+  const W=canvas.width, H=canvas.height;
+  const sc=H/WORLD_H;
+  const gY=GROUND_Y*sc;
 
   ctx.clearRect(0,0,W,H);
 
   // Sky
-  const sky = ctx.createLinearGradient(0,0,0,gY);
-  sky.addColorStop(0,'#0c1a0e'); sky.addColorStop(0.5,'#1a3320'); sky.addColorStop(1,'#2d5a35');
-  ctx.fillStyle = sky; ctx.fillRect(0,0,W,gY);
+  const sky=ctx.createLinearGradient(0,0,0,gY);
+  sky.addColorStop(0, season==='rainy'?'#060c10':'#0c1a0e');
+  sky.addColorStop(.5, season==='rainy'?'#0b1e2e':'#1a3320');
+  sky.addColorStop(1, season==='rainy'?'#173448':'#2d5a35');
+  ctx.fillStyle=sky; ctx.fillRect(0,0,W,gY);
 
-  // Far trees (parallax offset from camera)
-  const farOff = -(camX * 0.18 * sc) + (WORLD_W * sc * 0.5 * (1-0.18)) - (WORLD_W * sc * 0.5 * (1-0.18));
-  FAR.forEach(t => {
-    const sx = t.x * sc + farOff;
-    if (sx > -100 && sx < W+100) drawTree(sx, gY, t.variant, sc*0.55, 0.32);
-  });
+  // Parallax trees (far + mid, screen-offset)
+  const farOff=-(camX*.18*sc);
+  FAR.forEach(t=>{ const sx=t.x*sc+farOff; if(sx>-100&&sx<W+100) drawTree(sx,gY,t.variant,sc*.55,.32); });
+  const midOff=-(camX*.38*sc);
+  MID.forEach(t=>{ const sx=t.x*sc+midOff; if(sx>-100&&sx<W+100) drawTree(sx,gY-2*sc,t.variant,sc*.74,.52); });
 
-  const midOff = -(camX * 0.38 * sc);
-  MID.forEach(t => {
-    const sx = t.x * sc + midOff;
-    if (sx > -100 && sx < W+100) drawTree(sx, gY-2*sc, t.variant, sc*0.74, 0.52);
-  });
-
-  // World-space (camera offset)
+  // ── World-space ──
   ctx.save();
-  ctx.translate(-camX * sc, 0);
+  ctx.translate(-camX*sc, 0);
 
   // Ground
-  ctx.fillStyle = '#3d2b10'; ctx.fillRect(0, gY, WORLD_W*sc, H-gY);
-  ctx.fillStyle = '#4a6741'; ctx.fillRect(0, gY, WORLD_W*sc, 14*sc);
+  ctx.fillStyle=season==='rainy'?'#26190b':'#3d2b10';
+  ctx.fillRect(0,gY,WORLD_W*sc,H-gY);
+  ctx.fillStyle=season==='rainy'?'#253f22':'#4a6741';
+  ctx.fillRect(0,gY,WORLD_W*sc,14*sc);
 
-  // Sacbe road (stone path to temple)
-  const ry = (GROUND_Y+2)*sc;
-  ctx.fillStyle = '#c8bea0'; ctx.fillRect(0, ry, (TEMPLE_X+100)*sc, 11*sc);
-  ctx.strokeStyle = '#a89060'; ctx.lineWidth = 0.8;
-  for (let rx = 0; rx < (TEMPLE_X+100)*sc; rx += 26*sc) {
-    ctx.beginPath(); ctx.moveTo(rx,ry); ctx.lineTo(rx,ry+11*sc); ctx.stroke();
+  // Mud puddles in rainy season
+  if (season==='rainy') {
+    ctx.fillStyle='rgba(38,20,8,.5)';
+    for (let i=0;i<18;i++) {
+      const px=(160+sr(i*7)*3080)*sc, py=gY+9*sc;
+      ctx.beginPath(); ctx.ellipse(px,py,(18+sr(i*11)*22)*sc,(5+sr(i*13)*5)*sc,sr(i*17)*0.6,0,Math.PI*2); ctx.fill();
+    }
   }
 
+  // Sacbe road
+  const ry=(GROUND_Y+2)*sc;
+  ctx.fillStyle='#c8bea0'; ctx.fillRect(0,ry,(TEMPLE_X+100)*sc,11*sc);
+  ctx.strokeStyle='#a89060'; ctx.lineWidth=.8;
+  for(let rx=0;rx<(TEMPLE_X+100)*sc;rx+=26*sc){ctx.beginPath();ctx.moveTo(rx,ry);ctx.lineTo(rx,ry+11*sc);ctx.stroke();}
+
   // Field labels
-  ctx.globalAlpha = 0.22; ctx.fillStyle = '#ca8a04';
-  ctx.fillRect(100*sc,(GROUND_Y-85)*sc, 1050*sc, 72*sc);
-  ctx.fillRect((TEMPLE_X+380)*sc,(GROUND_Y-85)*sc, 1050*sc, 72*sc);
-  ctx.globalAlpha = 0.55; ctx.fillStyle = '#ca8a04';
-  ctx.font = `${13*sc}px 'Cinzel',serif`; ctx.textAlign = 'center';
-  ctx.fillText('MAIZE FIELDS', 625*sc, (GROUND_Y-55)*sc);
-  ctx.fillText('MAIZE FIELDS', (TEMPLE_X+905)*sc, (GROUND_Y-55)*sc);
-  ctx.globalAlpha = 1;
+  ctx.globalAlpha=.2; ctx.fillStyle='#ca8a04';
+  ctx.fillRect(100*sc,(GROUND_Y-88)*sc,1050*sc,72*sc);
+  ctx.fillRect((TEMPLE_X+380)*sc,(GROUND_Y-88)*sc,1050*sc,72*sc);
+  ctx.globalAlpha=.5; ctx.fillStyle='#ca8a04'; ctx.font=`${13*sc}px 'Cinzel',serif`; ctx.textAlign='center';
+  ctx.fillText('MAIZE FIELDS',625*sc,(GROUND_Y-58)*sc);
+  ctx.fillText('MAIZE FIELDS',(TEMPLE_X+905)*sc,(GROUND_Y-58)*sc);
+  ctx.globalAlpha=1;
 
   // Near trees
-  NEAR.forEach(t => {
-    const sx = t.x*sc;
-    if (sx - camX*sc > -120*sc && sx - camX*sc < W+120*sc)
-      drawTree(sx, gY, t.variant, sc*0.92, 0.68);
+  NEAR.forEach(t=>{
+    const sx=t.x*sc;
+    if(sx-camX*sc>-120*sc&&sx-camX*sc<W+120*sc) drawTree(sx,gY,t.variant,sc*.92,.68);
+  });
+
+  // Cisterns
+  CISTERNS.forEach(c=>{
+    const sx=c.x*sc;
+    if(sx-camX*sc>-50*sc&&sx-camX*sc<W+50*sc) drawCistern(sx,GROUND_Y*sc);
   });
 
   // Maize plants
-  maize.forEach(m => {
-    const sx = m.x*sc;
-    if (sx - camX*sc > -60*sc && sx - camX*sc < W+60*sc)
-      drawMaize(sx, (m.y+4)*sc, m.phase, m.sc*sc);
+  maize.forEach(m=>{
+    const sx=m.x*sc;
+    if(sx-camX*sc>-60*sc&&sx-camX*sc<W+60*sc) {
+      const g=Math.max(0,Math.min(1,cropGrowth+m.go));
+      drawMaize(sx,(m.y+4)*sc,m.phase,m.sc*sc,g);
+    }
   });
 
   // Pyramid
-  drawPyramid(TEMPLE_X*sc, GROUND_Y*sc);
+  drawPyramid(TEMPLE_X*sc,GROUND_Y*sc);
 
   // Temple glow when near
   if (nearTemple) {
-    ctx.globalAlpha = 0.16 + Math.sin(totalTime*3)*0.05;
-    const tg = ctx.createRadialGradient(TEMPLE_X*sc,(GROUND_Y-50)*sc,20*sc, TEMPLE_X*sc,(GROUND_Y-50)*sc,130*sc);
+    ctx.globalAlpha=.14+Math.sin(totalTime*3)*.05;
+    const tg=ctx.createRadialGradient(TEMPLE_X*sc,(GROUND_Y-50)*sc,20*sc,TEMPLE_X*sc,(GROUND_Y-50)*sc,130*sc);
     tg.addColorStop(0,'#ca8a04'); tg.addColorStop(1,'transparent');
-    ctx.fillStyle = tg;
-    ctx.beginPath(); ctx.arc(TEMPLE_X*sc,(GROUND_Y-50)*sc,130*sc,0,Math.PI*2); ctx.fill();
-    ctx.globalAlpha = 1;
+    ctx.fillStyle=tg; ctx.beginPath(); ctx.arc(TEMPLE_X*sc,(GROUND_Y-50)*sc,130*sc,0,Math.PI*2); ctx.fill();
+    ctx.globalAlpha=1;
   }
 
   // Gather zone markers
-  const wArr = farmers.filter(f=>f.role==='warrior');
-  const pArr = farmers.filter(f=>f.role==='porter');
-  if (wArr.length) {
-    ctx.globalAlpha=0.45; ctx.fillStyle='#b91c1c';
-    ctx.fillRect((GATHER_W_X-52)*sc, (GROUND_Y-1)*sc, 104*sc, 4*sc);
-    ctx.globalAlpha=0.7; ctx.font=`${9*sc}px 'Cinzel',serif`; ctx.textAlign='center';
-    ctx.fillText('WARRIORS', GATHER_W_X*sc, (GROUND_Y+15)*sc);
-    ctx.globalAlpha=1;
+  const wArr=farmers.filter(f=>f.role==='warrior');
+  const pArr=farmers.filter(f=>f.role==='porter');
+  if(wArr.length){
+    ctx.globalAlpha=.45; ctx.fillStyle='#b91c1c'; ctx.fillRect((GATHER_W_X-52)*sc,(GROUND_Y-1)*sc,104*sc,4*sc);
+    ctx.globalAlpha=.7; ctx.font=`${9*sc}px 'Cinzel',serif`; ctx.textAlign='center'; ctx.fillText('WARRIORS',GATHER_W_X*sc,(GROUND_Y+15)*sc); ctx.globalAlpha=1;
   }
-  if (pArr.length) {
-    ctx.globalAlpha=0.45; ctx.fillStyle='#0f766e';
-    ctx.fillRect((GATHER_P_X-52)*sc, (GROUND_Y-1)*sc, 104*sc, 4*sc);
-    ctx.globalAlpha=0.7; ctx.font=`${9*sc}px 'Cinzel',serif`; ctx.textAlign='center';
-    ctx.fillText('PORTERS', GATHER_P_X*sc, (GROUND_Y+15)*sc);
-    ctx.globalAlpha=1;
+  if(pArr.length){
+    ctx.globalAlpha=.45; ctx.fillStyle='#0f766e'; ctx.fillRect((GATHER_P_X-52)*sc,(GROUND_Y-1)*sc,104*sc,4*sc);
+    ctx.globalAlpha=.7; ctx.font=`${9*sc}px 'Cinzel',serif`; ctx.textAlign='center'; ctx.fillText('PORTERS',GATHER_P_X*sc,(GROUND_Y+15)*sc); ctx.globalAlpha=1;
   }
 
   // Farmers
-  farmers.forEach((f, fi) => {
-    const sx = f.x*sc;
-    if (sx - camX*sc < -80*sc || sx - camX*sc > W+80*sc) return;
-    const isNear = nearFarmer === fi;
-    ctx.save();
-    if (isNear) { ctx.shadowColor='#ca8a04'; ctx.shadowBlur=16; }
-    drawSprite(sx, f.y*sc, f.walkPhase, f.wanderDir>=0 ? 1:-1, f.role, false);
+  farmers.forEach((f,fi)=>{
+    const sx=f.x*sc;
+    if(sx-camX*sc<-80*sc||sx-camX*sc>W+80*sc) return;
+    const isNear=nearFarmer===fi;
+    ctx.save(); if(isNear){ctx.shadowColor='#ca8a04';ctx.shadowBlur=16;}
+    const pose=f.role==='farmer' ? (f.pose==='none'?'walk':f.pose) : 'walk';
+    drawSprite(sx,f.y*sc,f.walkPhase,f.facing,f.role,false,pose);
     ctx.restore();
-    ctx.fillStyle = isNear ? '#ca8a04' : 'rgba(245,240,225,.65)';
-    ctx.font = `${isNear?11:9}px 'Cinzel',serif`; ctx.textAlign='center';
-    ctx.fillText(f.name, sx, (f.y-72)*sc);
+    ctx.fillStyle=isNear?'#ca8a04':'rgba(245,240,225,.62)';
+    ctx.font=`${isNear?11:9}px 'Cinzel',serif`; ctx.textAlign='center';
+    ctx.fillText(f.name,sx,(f.y-74)*sc);
   });
 
   // Player
-  ctx.save();
-  ctx.shadowColor='#0f766e'; ctx.shadowBlur=22;
-  drawSprite(P.x*sc, P.y*sc, P.walkPhase, P.facing, 'player', true);
+  ctx.save(); ctx.shadowColor='#0f766e'; ctx.shadowBlur=22;
+  drawSprite(P.x*sc,P.y*sc,P.walkPhase,P.facing,'player',true,'walk');
   ctx.restore();
-  ctx.fillStyle='#ca8a04';
-  ctx.font=`${11*sc}px 'Cinzel',serif`; ctx.textAlign='center';
-  ctx.fillText("K'uhul Ajaw", P.x*sc, (P.y-76)*sc);
+  ctx.fillStyle='#ca8a04'; ctx.font=`${11*sc}px 'Cinzel',serif`; ctx.textAlign='center';
+  ctx.fillText("K'uhul Ajaw",P.x*sc,(P.y-78)*sc);
 
   ctx.restore(); // end world-space
 
-  // ── HUD ────────────────────────────────────────────────────────────────────
-  let prompt = '';
+  // Rain overlay (screen-space)
+  if (season==='rainy') drawRain();
+
+  // HUD
+  drawMinimap(W, H);
+  drawSeasonHUD(W, H);
+
+  // Interact prompt (tap-friendly label)
+  let prompt='';
   if (!dialogOpen) {
     if (nearTemple) {
-      const n = farmers.filter(f=>f.role!=='farmer').length;
-      prompt = n ? `[E] Speak at the Temple  (${n} assembled)` : '[E] Speak at the Temple';
-    } else if (nearFarmer >= 0) {
-      prompt = `[E] Speak with ${farmers[nearFarmer].name}`;
+      const n=farmers.filter(f=>f.role!=='farmer').length;
+      prompt = n ? `Tap \u2022 Speak at the Temple  (${n} assembled)` : `Tap \u2022 Speak at the Temple`;
+    } else if (nearFarmer>=0) {
+      prompt = `Tap \u2022 Speak with ${farmers[nearFarmer].name}`;
     }
   }
   if (prompt) {
-    ctx.font = "13px 'Cinzel',serif";
-    const pw = ctx.measureText(prompt).width + 28;
-    const px = W/2 - pw/2, py = H - 88;
-    ctx.fillStyle = 'rgba(11,11,12,.75)';
-    ctx.beginPath(); ctx.roundRect(px,py,pw,32,6); ctx.fill();
-    ctx.strokeStyle='#ca8a04'; ctx.lineWidth=1.5;
-    ctx.beginPath(); ctx.roundRect(px,py,pw,32,6); ctx.stroke();
-    ctx.fillStyle='#f5f0e1'; ctx.textAlign='center';
-    ctx.fillText(prompt, W/2, py+20);
+    ctx.font="13px 'Cinzel',serif";
+    const pw=ctx.measureText(prompt).width+28, px=W/2-pw/2, py=H-88;
+    ctx.fillStyle='rgba(11,11,12,.78)'; ctx.beginPath(); ctx.roundRect(px,py,pw,32,6); ctx.fill();
+    ctx.strokeStyle='#ca8a04'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.roundRect(px,py,pw,32,6); ctx.stroke();
+    ctx.fillStyle='#f5f0e1'; ctx.textAlign='center'; ctx.fillText(prompt,W/2,py+20);
   }
 
-  // Minimap
-  const MW=200, MH=28, MX=W/2-MW/2, MY=12;
-  ctx.fillStyle='rgba(0,0,0,.55)';
-  ctx.beginPath(); ctx.roundRect(MX,MY,MW,MH,5); ctx.fill();
-  ctx.strokeStyle='#ca8a04'; ctx.lineWidth=1;
-  ctx.beginPath(); ctx.roundRect(MX,MY,MW,MH,5); ctx.stroke();
-  // Temple marker
-  const tx2 = MX+(TEMPLE_X/WORLD_W)*MW;
-  ctx.fillStyle='#ca8a04'; ctx.fillRect(tx2-2,MY+5,4,MH-10);
-  // Farmer dots
-  farmers.forEach(f => {
-    const fx = MX+(f.x/WORLD_W)*MW;
-    ctx.fillStyle = f.role==='warrior'?'#b91c1c': f.role==='porter'?'#0f766e':'#6b7c2a';
-    ctx.beginPath(); ctx.arc(fx,MY+MH/2,3,0,Math.PI*2); ctx.fill();
-  });
-  // Player dot
-  const ppx = MX+(P.x/WORLD_W)*MW;
-  ctx.fillStyle='#f5f0e1';
-  ctx.beginPath(); ctx.arc(ppx,MY+MH/2,4,0,Math.PI*2); ctx.fill();
-  ctx.strokeStyle='#ca8a04'; ctx.lineWidth=1.5;
-  ctx.beginPath(); ctx.arc(ppx,MY+MH/2,4,0,Math.PI*2); ctx.stroke();
-  // Legend
-  ctx.fillStyle='rgba(245,240,225,.45)'; ctx.font="9px 'Cinzel',serif"; ctx.textAlign='center';
-  ctx.fillText('Fields \u2190  Temple  \u2192 Fields', W/2, MY+MH+13);
-
-  // Controls hint (bottom left, first few seconds)
+  // Controls hint (first 6 seconds)
   if (totalTime < 6) {
-    ctx.globalAlpha = Math.min(1, Math.max(0, 6-totalTime));
+    ctx.globalAlpha=Math.min(1,Math.max(0,6-totalTime));
     ctx.fillStyle='rgba(11,11,12,.6)';
-    ctx.beginPath(); ctx.roundRect(14,H-68,170,46,6); ctx.fill();
+    ctx.beginPath(); ctx.roundRect(14,H-70,180,48,6); ctx.fill();
     ctx.fillStyle='rgba(245,240,225,.7)'; ctx.font="10px 'Cinzel',serif"; ctx.textAlign='left';
-    ctx.fillText('Arrow keys / WASD  Move', 24, H-48);
-    ctx.fillText('[E]  Talk to farmers & temple', 24, H-31);
+    ctx.fillText('Arrow keys / WASD  Move',24,H-50);
+    ctx.fillText('Tap  \u2022  [E]  Talk to farmers',24,H-33);
     ctx.globalAlpha=1;
   }
 }
 
-// ── MAIN LOOP ──────────────────────────────────────────────────────────────────
-let last = 0;
+// ── LOOP ───────────────────────────────────────────────────────────────────────
+let last=0;
 function loop(ts) {
-  const dt = Math.min((ts-last)/1000, 0.08);
-  last = ts; totalTime += dt;
-  update(dt);
-  draw();
+  const dt=Math.min((ts-last)/1000,.08);
+  last=ts; totalTime+=dt;
+  update(dt); draw();
   requestAnimationFrame(loop);
 }
-requestAnimationFrame(ts => { last=ts; requestAnimationFrame(loop); });
+requestAnimationFrame(ts=>{ last=ts; requestAnimationFrame(loop); });
 </script>
 </body>
 </html>
