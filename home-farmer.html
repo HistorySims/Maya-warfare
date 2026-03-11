@@ -1,906 +1,738 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>K’uhul Ajaw — Game 1: The Fields</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --jade: #0f766e;
-      --obsidian: #0b0b0c;
-      --corn: #ca8a04;
-      --water: #06b6d4;
-      --warn: #b91c1c;
-      --stone: #d5c8aa;
-    }
-    
-    * { box-sizing: border-box; }
-    
-    body {
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-      font-family: "Cinzel", serif;
-      background: #091108;
-      color: #f3ead7;
-      touch-action: none;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-      user-select: none;
-      -webkit-user-select: none;
-    }
-
-    #top-bar {
-      background: linear-gradient(180deg, #111413 0%, #0b0b0c 100%);
-      padding: 10px 15px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-bottom: 3px solid #1a2e28;
-      z-index: 20;
-      flex-shrink: 0;
-    }
-    
-    .hud-left { display: flex; flex-direction: column; gap: 4px; }
-    .title { color: #6ee7b7; font-weight: 700; font-size: 16px; letter-spacing: 0.05em; }
-    #seasonLabel { font-size: 12px; color: #a7f3d0; opacity: 0.8; }
-    
-    .chips { display: flex; gap: 8px; }
-    .chip {
-      background: rgba(15, 118, 110, 0.4);
-      border: 1px solid rgba(110, 231, 183, 0.5);
-      border-radius: 6px;
-      padding: 6px 12px;
-      font-size: 14px;
-      font-weight: bold;
-      text-shadow: 1px 1px 2px #000;
-    }
-
-    #game-container {
-      flex-grow: 1;
-      position: relative;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      background: #8fd2ff;
-      overflow: hidden;
-    }
-    
-    canvas { width: 100%; height: 100%; display: block; }
-
-    .log {
-      position: absolute;
-      left: 10px;
-      right: 10px;
-      bottom: 15px;
-      background: rgba(11, 11, 12, 0.75);
-      border: 1px solid rgba(213, 200, 170, 0.3);
-      border-radius: 8px;
-      padding: 8px 12px;
-      font-size: 13px;
-      min-height: 32px;
-      z-index: 6;
-      pointer-events: none;
-      text-shadow: 1px 1px 0 #000;
-    }
-
-    #controls-bar {
-      background: linear-gradient(180deg, #18201e 0%, #0b0b0c 100%);
-      border-top: 3px solid #384240;
-      flex-shrink: 0;
-      z-index: 20;
-    }
-
-    /* Collapsible Menu Styles */
-    #controls-header {
-      padding: 15px 15px 5px 15px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      cursor: pointer;
-    }
-    
-    #controls-header h3 { margin: 0; font-size: 14px; color: #a7f3d0; text-transform: uppercase; }
-    #toggleIcon { color: #a7f3d0; font-size: 14px; transition: transform 0.2s; }
-    
-    #controls-content {
-      padding: 5px 15px 15px 15px;
-      display: block; /* Toggled via JS */
-    }
-
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 20px; align-items: center; font-size: 13px; }
-    .slider-group { display: flex; flex-direction: column; gap: 6px; }
-    .slider-group label { display: flex; justify-content: space-between; color: #d5c8aa; }
-    .slider-group span { font-weight: bold; color: #fff; }
-    
-    input[type="range"] { width: 100%; accent-color: var(--jade); }
-    
-    .stats-group { 
-      display: flex; flex-direction: column; gap: 6px; 
-      border-left: 1px solid #384240; padding-left: 20px; color: #b7a98e;
-    }
-
-    .popup {
-      position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none;
-      align-items: center; justify-content: center; z-index: 100; padding: 18px;
-    }
-    .popup-card {
-      width: min(560px, 95vw); background: rgba(17,20,20,0.96);
-      border: 2px solid #5eead4; border-radius: 12px; padding: 20px;
-      font-size: 15px; line-height: 1.4; box-shadow: 0 10px 25px rgba(0,0,0,0.8);
-    }
-    .popup-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px; }
-    button { background: var(--jade); color: #eafff8; border: 0; border-radius: 7px; padding: 10px 16px; font-weight: bold; cursor: pointer; }
-    button.alt { background: #384240; }
-
-    @media (max-width: 640px) {
-      .grid { grid-template-columns: 1fr; }
-      .stats-group { border-left: none; padding-left: 0; border-top: 1px solid #384240; padding-top: 10px; }
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Home &mdash; The Farmer's Field</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#0b0b0c;overflow:hidden;font-family:'Cinzel',serif;touch-action:none}
+  #canvas{display:block;width:100%;height:100vh;cursor:default}
+  #overlay{
+    position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+    background:rgba(0,0,0,.62);z-index:10;opacity:0;pointer-events:none;
+    transition:opacity .22s ease;
+  }
+  #overlay.visible{opacity:1;pointer-events:all}
+  #card{
+    background:#f5f0e1;border:3px solid #ca8a04;border-radius:6px;
+    padding:28px 32px 22px;max-width:420px;width:90%;
+    box-shadow:0 0 0 6px rgba(0,0,0,.5),0 8px 40px rgba(0,0,0,.8);
+    position:relative;color:#1c1208;
+  }
+  #card h2{
+    font-size:1.25rem;color:#0f766e;text-align:center;
+    letter-spacing:.08em;margin-bottom:6px;text-transform:uppercase;
+  }
+  #card .flavor{
+    font-size:.78rem;color:#5a4a2a;text-align:center;
+    font-style:italic;margin-bottom:14px;line-height:1.5;
+  }
+  #card .stat-row{display:flex;gap:12px;margin-bottom:10px;align-items:center}
+  #card .stat-label{font-size:.72rem;color:#5a4a2a;width:76px;flex-shrink:0;letter-spacing:.05em}
+  #card .bar-bg{flex:1;height:10px;background:#d6cbb0;border-radius:4px;overflow:hidden}
+  #card .bar-fill{height:100%;border-radius:4px;transition:width .3s}
+  #card .bar-val{font-size:.72rem;color:#1c1208;width:20px;text-align:right;flex-shrink:0}
+  #card .corn-row{
+    display:flex;justify-content:space-between;align-items:center;
+    font-size:.75rem;color:#5a4a2a;margin-bottom:16px;padding:6px 0;
+    border-top:1px solid #d6cbb0;border-bottom:1px solid #d6cbb0;
+  }
+  #card .corn-row span{color:#ca8a04;font-weight:600;font-size:.85rem}
+  #card .role-badge{
+    text-align:center;margin-bottom:14px;font-size:.72rem;letter-spacing:.1em;
+    text-transform:uppercase;
+  }
+  #card .btn-row{display:flex;flex-direction:column;gap:8px}
+  #card .btn{
+    width:100%;padding:10px;border:2px solid;border-radius:4px;
+    font-family:'Cinzel',serif;font-size:.78rem;letter-spacing:.06em;
+    cursor:pointer;text-transform:uppercase;transition:background .15s,color .15s;
+  }
+  .btn-warrior{background:#b91c1c;border-color:#991b1b;color:#fff}
+  .btn-warrior:hover{background:#991b1b}
+  .btn-porter{background:#0f766e;border-color:#0d6b63;color:#fff}
+  .btn-porter:hover{background:#0d6b63}
+  .btn-back{background:transparent;border-color:#a89060;color:#5a4a2a}
+  .btn-back:hover{background:#ede5d0}
+  .btn-send-back{background:transparent;border-color:#b91c1c;color:#b91c1c;font-size:.72rem;padding:7px}
+  .btn-send-back:hover{background:#fde8e8}
+  .btn-march{background:#ca8a04;border-color:#a16207;color:#1c1208;font-size:.88rem;font-weight:600;padding:13px}
+  .btn-march:hover{background:#b07a03}
+  #card .roster-list{max-height:240px;overflow-y:auto;margin-bottom:14px}
+  #card .roster-item{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:7px 0;border-bottom:1px solid #d6cbb0;gap:8px;
+  }
+  #card .roster-item:last-child{border-bottom:none}
+  #card .roster-name{font-size:.78rem;color:#1c1208;flex:1}
+  #card .roster-role{
+    font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;
+    padding:2px 8px;border-radius:10px;
+  }
+  .role-warrior-tag{background:#b91c1c;color:#fff}
+  .role-porter-tag{background:#0f766e;color:#fff}
+  #card .summary-row{
+    display:flex;justify-content:space-around;margin-bottom:14px;
+    padding:8px 0;border-top:1px solid #d6cbb0;border-bottom:1px solid #d6cbb0;
+    font-size:.78rem;color:#5a4a2a;
+  }
+  #card .summary-row strong{color:#1c1208;font-size:.88rem;display:block;text-align:center}
+  #mobile-left,#mobile-right{
+    position:fixed;bottom:28px;z-index:5;
+    width:64px;height:64px;border-radius:50%;
+    background:rgba(15,118,110,.55);border:2px solid #0f766e;
+    color:#fff;font-size:1.5rem;display:none;
+    align-items:center;justify-content:center;cursor:pointer;
+    -webkit-tap-highlight-color:transparent;user-select:none;
+  }
+  #mobile-left{left:18px}
+  #mobile-right{right:18px}
+  @media(max-width:640px){#mobile-left,#mobile-right{display:flex}}
+</style>
 </head>
 <body>
-
-  <div id="top-bar">
-    <div class="hud-left">
-      <div class="title">K’UHUL AJAW</div>
-      <div id="seasonLabel">Loading...</div>
-    </div>
-    <div class="chips">
-      <div class="chip" id="foodChip">🌽 0</div>
-      <div class="chip" id="popChip">👥 0</div>
-    </div>
-  </div>
-
-  <div id="game-container">
-    <canvas id="game"></canvas>
-    <div class="log" id="logBox"></div>
-  </div>
-
-  <div id="controls-bar">
-    <div id="controls-header">
-      <h3>Army Drafting</h3>
-      <span id="toggleIcon">▼</span>
-    </div>
-    <div id="controls-content">
-      <div class="grid">
-        <div class="slider-group-container">
-          <div class="slider-group">
-            <label>Soldiers: <span id="soldierVal">0</span></label>
-            <input id="soldierSlider" type="range" min="0" max="0" value="0" />
-          </div>
-          <div class="slider-group" style="margin-top: 10px;">
-            <label>Porters: <span id="porterVal">0</span></label>
-            <input id="porterSlider" type="range" min="0" max="0" value="0" />
-          </div>
-        </div>
-        <div class="stats-group">
-          <div id="farmersText">Farmers: 0</div>
-          <div id="harvestText">Estimated harvest: 0</div>
-          <div id="foodText">Food stores: 0</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="popup" id="routePopup">
-    <div class="popup-card">
-      <div id="popupText"></div>
-      <div class="popup-actions">
-        <button class="alt" id="cancelBtn">Wait</button>
-        <button id="confirmBtn">Proceed</button>
-      </div>
-    </div>
-  </div>
-
+<canvas id="canvas"></canvas>
+<div id="overlay"><div id="card"></div></div>
+<button id="mobile-left" aria-label="Move Left">&#9664;</button>
+<button id="mobile-right" aria-label="Move Right">&#9654;</button>
 <script>
-(() => {
-  const canvas = document.getElementById('game');
-  const ctx = canvas.getContext('2d');
-  const container = document.getElementById('game-container');
+'use strict';
 
+// ── CONSTANTS ──────────────────────────────────────────────────────────────────
+const WORLD_W         = 3400;
+const WORLD_H         = 480;
+const TEMPLE_X        = 1700;
+const GROUND_Y        = 340;
+const P_SPEED         = 160;
+const P_ACCEL         = 900;
+const P_DECEL         = 700;
+const INTERACT_R      = 80;
+const TEMPLE_R        = 140;
+const GATHER_W_X      = TEMPLE_X - 190;
+const GATHER_P_X      = TEMPLE_X + 190;
+
+function sr(n){ return Math.abs(Math.sin(n*9301+49297)*23423.4)%1; }
+
+// ── FARMER DATA ────────────────────────────────────────────────────────────────
+const FARMER_DATA = [
+  { name:"Balam",   zone:'left',   cornH:14, str:8,  end:6,  flavor:"Works the dawn field before the heat rises." },
+  { name:"Ah Kin",  zone:'left',   cornH:11, str:5,  end:9,  flavor:"Steady. Forty seasons and he has never stopped." },
+  { name:"Tz'ikin", zone:'left',   cornH: 9, str:7,  end:7,  flavor:"Quick and light. He moves like a bird through the furrows." },
+  { name:"Kan",     zone:'left',   cornH:16, str:4,  end:8,  flavor:"Old but tireless. His yields are always the highest." },
+  { name:"Ix Chel", zone:'right',  cornH:18, str:4,  end:10, flavor:"She carries twice what the others will. Without complaint." },
+  { name:"Pakal",   zone:'right',  cornH:12, str:9,  end:7,  flavor:"Young, proud, and eager to prove himself in war." },
+  { name:"Yaxun",   zone:'right',  cornH: 8, str:7,  end:8,  flavor:"He has a scar from a market dispute. Holds a grudge well." },
+  { name:"Ixim",    zone:'right',  cornH:20, str:5,  end:6,  flavor:"Named for corn. He loves these fields more than any battle." },
+  { name:"K'awiil", zone:'center', cornH: 5, str:10, end:8,  flavor:"He barely farms. He watches the jungle edge, always restless." },
+  { name:"Sak Bak", zone:'center', cornH: 7, str:6,  end:9,  flavor:"A quiet man. Carries the water jars without complaint." },
+];
+
+function homeX(i) {
+  const d = FARMER_DATA[i];
+  if (d.zone === 'left')   return 300  + Math.floor(sr(i*3)   * 550);
+  if (d.zone === 'right')  return TEMPLE_X + 480 + Math.floor(sr(i*3)   * 560);
+  return TEMPLE_X - 340 + Math.floor(sr(i*3+1) * 680);
+}
+
+// ── GAME STATE ─────────────────────────────────────────────────────────────────
+const P = { x: TEMPLE_X, y: GROUND_Y, vx: 0, facing: 1, walkPhase: 0 };
+
+const farmers = FARMER_DATA.map((d, i) => ({
+  ...d,
+  x: homeX(i),
+  y: GROUND_Y,
+  homeX: homeX(i),
+  role: 'farmer',
+  walkPhase: sr(i*7) * Math.PI * 2,
+  wanderDir: sr(i*11) > 0.5 ? 1 : -1,
+  wanderTimer: sr(i*13) * 3 + 1,
+}));
+
+let camX = P.x - window.innerWidth / 2;
+let keys = {};
+let dialogOpen = false;
+let nearFarmer = -1;
+let nearTemple = false;
+let totalTime  = 0;
+
+// ── CANVAS ─────────────────────────────────────────────────────────────────────
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+resize();
+window.addEventListener('resize', resize);
+
+// ── PARALLAX LAYERS ────────────────────────────────────────────────────────────
+function buildLayer(seed, count, minG, maxG) {
+  const items = []; let x = 0;
+  for (let i = 0; i < count; i++) {
+    x += minG + sr(seed + i*2) * (maxG - minG);
+    items.push({ x, variant: Math.floor(sr(seed + i*2+1) * 4) });
+  }
+  return items;
+}
+const FAR  = buildLayer(1, 80, 40, 90);
+const MID  = buildLayer(2, 60, 50,110);
+const NEAR = buildLayer(3, 50, 60,130);
+
+// ── MAIZE PLANTS ───────────────────────────────────────────────────────────────
+const maize = [];
+for (let i = 0; i < 80; i++) {
+  maize.push({ x: 140  + sr(i*17)*1100,     y: GROUND_Y - sr(i*23)*55 - 5, phase: sr(i*7)*Math.PI*2, sc: 0.7+sr(i*13)*0.5 });
+}
+for (let i = 0; i < 80; i++) {
+  maize.push({ x: TEMPLE_X+420+sr(i*17+500)*1100, y: GROUND_Y - sr(i*23+500)*55 - 5, phase: sr(i*7+500)*Math.PI*2, sc: 0.7+sr(i*13+500)*0.5 });
+}
+
+// ── INPUT ──────────────────────────────────────────────────────────────────────
+window.addEventListener('keydown', e => {
+  keys[e.key] = true;
+  if ((e.key === 'e' || e.key === 'E') && !dialogOpen) tryInteract();
+  if (e.key === 'Escape' && dialogOpen) closeDialog();
+});
+window.addEventListener('keyup', e => { keys[e.key] = false; });
+
+const mbL = document.getElementById('mobile-left');
+const mbR = document.getElementById('mobile-right');
+mbL.addEventListener('touchstart', e => { e.preventDefault(); keys['ArrowLeft']  = true;  }, {passive:false});
+mbL.addEventListener('touchend',   e => { e.preventDefault(); keys['ArrowLeft']  = false; }, {passive:false});
+mbR.addEventListener('touchstart', e => { e.preventDefault(); keys['ArrowRight'] = true;  }, {passive:false});
+mbR.addEventListener('touchend',   e => { e.preventDefault(); keys['ArrowRight'] = false; }, {passive:false});
+mbL.addEventListener('mousedown', () => keys['ArrowLeft']  = true);
+mbL.addEventListener('mouseup',   () => keys['ArrowLeft']  = false);
+mbR.addEventListener('mousedown', () => keys['ArrowRight'] = true);
+mbR.addEventListener('mouseup',   () => keys['ArrowRight'] = false);
+
+// ── DIALOG ─────────────────────────────────────────────────────────────────────
+function tryInteract() {
+  if (nearTemple) { openTempleDialog(); return; }
+  if (nearFarmer >= 0) openFarmerDialog(nearFarmer);
+}
+
+function closeDialog() {
+  document.getElementById('overlay').classList.remove('visible');
+  dialogOpen = false;
+}
+
+function showCard(html) {
+  document.getElementById('card').innerHTML = html;
+  document.getElementById('overlay').classList.add('visible');
+  dialogOpen = true;
+}
+
+function openFarmerDialog(idx) {
+  const f = farmers[idx];
+  const roleLabel = f.role === 'farmer' ? 'Tending the Fields' : f.role === 'warrior' ? 'Selected as Warrior' : 'Selected as Porter';
+  const roleColor = f.role === 'warrior' ? '#b91c1c' : f.role === 'porter' ? '#0f766e' : '#5a4a2a';
+
+  const makeWarriorBtn = f.role !== 'warrior'
+    ? `<button class="btn btn-warrior" onclick="assignRole(${idx},'warrior')">Make Warrior</button>` : '';
+  const makePorterBtn  = f.role !== 'porter'
+    ? `<button class="btn btn-porter"  onclick="assignRole(${idx},'porter')">Make Porter</button>`   : '';
+  const returnBtn = f.role !== 'farmer'
+    ? `<button class="btn btn-send-back" onclick="assignRole(${idx},'farmer')">Return to Fields</button>` : '';
+
+  showCard(`
+    <h2>${f.name}</h2>
+    <div class="flavor">"${f.flavor}"</div>
+    <div class="stat-row">
+      <span class="stat-label">Strength</span>
+      <div class="bar-bg"><div class="bar-fill" style="width:${f.str*10}%;background:#b91c1c"></div></div>
+      <span class="bar-val">${f.str}</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">Endurance</span>
+      <div class="bar-bg"><div class="bar-fill" style="width:${f.end*10}%;background:#0f766e"></div></div>
+      <span class="bar-val">${f.end}</span>
+    </div>
+    <div class="corn-row">
+      <span>Corn harvested this season</span>
+      <span>${f.cornH} loads</span>
+    </div>
+    <div class="role-badge" style="color:${roleColor}">${roleLabel}</div>
+    <div class="btn-row">
+      ${makeWarriorBtn}
+      ${makePorterBtn}
+      ${returnBtn}
+      <button class="btn btn-back" onclick="closeDialog()">Leave</button>
+    </div>
+  `);
+}
+
+function openTempleDialog() {
+  const warriors = farmers.filter(f => f.role === 'warrior');
+  const porters  = farmers.filter(f => f.role === 'porter');
+
+  if (warriors.length === 0 && porters.length === 0) {
+    showCard(`
+      <h2>The Temple Steps</h2>
+      <div class="flavor">The plaza is empty. No warriors have been called. No porters wait with their bundles.<br>Speak to your farmers in the fields first.</div>
+      <div class="btn-row"><button class="btn btn-back" onclick="closeDialog()">Return to the Fields</button></div>
+    `);
+    return;
+  }
+
+  const food = porters.length * 14 + 20;
+  const rosterRows = [...warriors, ...porters].map(f => {
+    const fi = farmers.indexOf(f);
+    const tagClass = f.role === 'warrior' ? 'role-warrior-tag' : 'role-porter-tag';
+    return `<div class="roster-item">
+      <span class="roster-name">${f.name}</span>
+      <span class="roster-role ${tagClass}">${f.role}</span>
+      <button class="btn btn-send-back" onclick="sendBack(${fi})">Send Back</button>
+    </div>`;
+  }).join('');
+
+  const marchBtn = warriors.length > 0
+    ? `<button class="btn btn-march" onclick="beginMarch()">Begin the March</button>`
+    : `<div style="text-align:center;color:#b91c1c;font-size:.75rem;margin-bottom:8px">At least one warrior is required.</div>`;
+
+  showCard(`
+    <h2>The Great Temple</h2>
+    <div class="flavor">Review your column before the march begins.</div>
+    <div class="summary-row">
+      <div><strong>${warriors.length}</strong>Warriors</div>
+      <div><strong>${porters.length}</strong>Porters</div>
+      <div><strong>${food}</strong>Food</div>
+    </div>
+    <div class="roster-list">${rosterRows}</div>
+    <div class="btn-row">
+      ${marchBtn}
+      <button class="btn btn-back" onclick="closeDialog()">Back to the Fields</button>
+    </div>
+  `);
+}
+
+function assignRole(idx, role) {
+  const f = farmers[idx];
+  f.role = role;
+  if (role === 'farmer') {
+    f.x = f.homeX;
+    f.y = GROUND_Y;
+  } else {
+    const gx = role === 'warrior' ? GATHER_W_X : GATHER_P_X;
+    const slot = farmers.filter(ff => ff.role === role).length - 1;
+    f.x = gx + (slot % 5) * 22 - 44;
+    f.y = GROUND_Y;
+  }
+  openFarmerDialog(idx);
+}
+
+function sendBack(fi) {
+  farmers[fi].role   = 'farmer';
+  farmers[fi].x      = farmers[fi].homeX;
+  farmers[fi].y      = GROUND_Y;
+  openTempleDialog();
+}
+
+function beginMarch() {
+  const warriors = farmers.filter(f => f.role === 'warrior');
+  const porters  = farmers.filter(f => f.role === 'porter');
   const state = {
-    worldWidth: 3600,
-    cameraX: 0,
-    dragging: false,
-    lastPointerX: 0,
-    pointerDownX: 0,
-    pointerMoved: false,
-    pop: 34,
-    food: 260,
-    cistern: 75,
-    seasonIndex: 1,
-    isRainy: false,
-    seasonTimer: 0,
-    dryDuration: 78,
-    rainyDuration: 24,
-    lastTs: 0,
-    logs: [],
-    floats: [],
-    people: [],
-    stelae: [],
-    fields: [],
-    houses: [],
-    marching: false,
-    popupRoute: null,
-    tributeGroup: null,
-    lowWaterFlag: false,
-    warnedRot: false,
-    savedState: null
+    soldiers: warriors.length,
+    porters:  porters.length,
+    food:     porters.length * 14 + 20,
+    destination:    'Ox Witz',
+    distanceDays:   15,
+    isReturnTrip:   false,
+    seasonDaysLeft: 60,
   };
+  closeDialog();
+  if (typeof window.onMarchBegin === 'function') {
+    window.onMarchBegin(state);
+  } else {
+    showCard(`
+      <h2>The March Begins</h2>
+      <div class="flavor">${warriors.length} warrior${warriors.length!==1?'s':''} and ${porters.length} porter${porters.length!==1?'s':''} depart at dawn, bearing ${state.food} loads of food. May the sacbe road be clear.</div>
+      <div class="btn-row"><button class="btn btn-back" onclick="closeDialog()">Continue</button></div>
+    `);
+  }
+}
 
-  const palette = {
-    sky1: '#9dd8f7', sky2: '#d5f2ff',
-    jungleDark: '#0f3b1e', jungleMid: '#1e6a35',
-    ground: '#b79f71', furrow: '#7a5f3a',
-    cornGreen: '#3c9a3b', cornGold: '#ca8a04', rotten: '#7a4d2a',
-    limestone: '#d9c7a2', stoneDark: '#a79575', water: '#06b6d4'
-  };
+// ── DRAW HELPERS ───────────────────────────────────────────────────────────────
+function drawTree(x, y, v, sc, alpha) {
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.translate(x, y);
+  ctx.scale(sc, sc);
+  const th = 26 + v * 6;
+  ctx.fillStyle = '#4a3220';
+  ctx.fillRect(-5, -th, 10, th);
+  const gs = ['#166534','#15803d','#16a34a','#14532d'];
+  ctx.fillStyle = gs[v%4];
+  ctx.beginPath(); ctx.ellipse(0, -th-10, 28, 17, 0, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = gs[(v+1)%4];
+  ctx.beginPath(); ctx.ellipse(0, -th-22, 20, 13, 0, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = gs[(v+2)%4];
+  ctx.beginPath(); ctx.ellipse(0, -th-32, 13,  9, 0, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+}
 
-  const city = { x: 1800, pyramidX: 1800, cisternX: 1940, cisternYOff: -28 };
-  const exits = [
-    { x: 420, name: 'Ox Witz', dist: 7, porters: 5 },
-    { x: 3180, name: 'K’an Tuun', dist: 11, porters: 9 }
-  ];
+function drawMaize(x, y, phase, sc) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(sc, sc);
+  const sw = Math.sin(phase) * 2.5;
+  ctx.strokeStyle = '#6b7c2a'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(0,0); ctx.quadraticCurveTo(sw,-20,sw*1.5,-40); ctx.stroke();
+  ctx.strokeStyle = '#84a32e'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(sw*.5,-16); ctx.quadraticCurveTo(sw*.5+15,-20,sw*.5+20,-12); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(sw*.5,-16); ctx.quadraticCurveTo(sw*.5-15,-20,sw*.5-20,-12); ctx.stroke();
+  ctx.fillStyle = '#ca8a04';
+  ctx.fillRect(sw*1.2-2,-35,5,9);
+  ctx.restore();
+}
 
-  function log(msg) {
-    state.logs.unshift(msg);
-    state.logs = state.logs.slice(0, 3);
-    document.getElementById('logBox').textContent = state.logs[0] || '';
+function drawPyramid(cx, gy) {
+  const steps = [{w:200,h:24},{w:162,h:22},{w:128,h:20},{w:96,h:18},{w:68,h:16},{w:42,h:40}];
+  let y = gy;
+  steps.forEach((s, i) => {
+    const x = cx - s.w/2;
+    y -= s.h;
+    ctx.fillStyle = i<5 ? '#b8a880' : '#9e8e6a';
+    ctx.fillRect(x, y, s.w, s.h);
+    ctx.fillStyle = '#d4c5a0';
+    ctx.fillRect(x, y, s.w, 3);
+    ctx.fillStyle = '#9e8e6a';
+    ctx.fillRect(x, y, 5, s.h);
+    ctx.strokeStyle = '#8a7a56'; ctx.lineWidth = 0.8;
+    for (let row = 8; row < s.h; row += 8) {
+      ctx.beginPath(); ctx.moveTo(x, y+row); ctx.lineTo(x+s.w, y+row); ctx.stroke();
+    }
+    const bw = 18, off = i*5;
+    for (let bx = x+(off%bw); bx < x+s.w; bx += bw) {
+      ctx.beginPath(); ctx.moveTo(bx, y); ctx.lineTo(bx, y+s.h); ctx.stroke();
+    }
+  });
+  // Roof comb
+  const ct = y;
+  ctx.fillStyle = '#9e8e6a';
+  ctx.fillRect(cx-18, ct-28, 36, 28);
+  ctx.fillStyle = '#d4c5a0';
+  ctx.fillRect(cx-18, ct-28, 36, 3);
+  ctx.fillStyle = '#0b0b0c';
+  for (let ni = 0; ni < 3; ni++) ctx.fillRect(cx-14+ni*11, ct-22, 6, 14);
+  // Door
+  ctx.fillStyle = '#0b0b0c';
+  ctx.fillRect(cx-10, y-22, 20, 22);
+  ctx.beginPath(); ctx.arc(cx, y-22, 10, Math.PI, 0); ctx.fill();
+}
+
+function drawSprite(x, y, phase, facing, role, isPlayer) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(facing, 1);
+
+  const bob  = Math.sin(phase) * (isPlayer ? 3 : 2);
+  const legS = Math.sin(phase) * 9;
+  const armS = Math.sin(phase + Math.PI) * 7;
+
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,.18)';
+  ctx.beginPath(); ctx.ellipse(0,2,14,4,0,0,Math.PI*2); ctx.fill();
+
+  // Leg color
+  const legC = isPlayer ? '#ca8a04' : role==='warrior' ? '#7f1d1d' : role==='porter' ? '#0c4a6e' : '#5a4a2a';
+  ctx.strokeStyle = legC; ctx.lineWidth = 5; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(-3,-12+bob); ctx.lineTo(-5, legS>0?-legS*.3:0); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo( 3,-12+bob); ctx.lineTo( 5, legS<0? legS*.3:0); ctx.stroke();
+
+  // Body
+  const bodyC = isPlayer ? '#0f766e' : role==='warrior' ? '#991b1b' : role==='porter' ? '#075985' : '#6b7c2a';
+  ctx.fillStyle = bodyC;
+  ctx.beginPath(); ctx.roundRect(-9,-34+bob,18,22,3); ctx.fill();
+  ctx.strokeStyle = isPlayer ? '#ca8a04' : 'rgba(255,255,255,.22)'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(0,-34+bob); ctx.lineTo(0,-12+bob); ctx.stroke();
+
+  // Arms
+  ctx.strokeStyle = bodyC; ctx.lineWidth=4;
+  ctx.beginPath(); ctx.moveTo(-9,-28+bob); ctx.lineTo(-14,-20+bob+armS*.4); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo( 9,-28+bob); ctx.lineTo( 14,-20+bob-armS*.4); ctx.stroke();
+
+  // Porter bundle
+  if (role === 'porter') {
+    ctx.fillStyle = '#92400e'; ctx.fillRect(-7,-46+bob,14,12);
+    ctx.strokeStyle = '#ca8a04'; ctx.lineWidth=1; ctx.strokeRect(-7,-46+bob,14,12);
+    ctx.strokeStyle = '#ca8a04'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(-7,-46+bob); ctx.quadraticCurveTo(-12,-50+bob,-8,-52+bob); ctx.stroke();
+  }
+  // Warrior weapon
+  if (role === 'warrior' && !isPlayer) {
+    ctx.strokeStyle = '#a16207'; ctx.lineWidth=2.5; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(14,-34+bob); ctx.lineTo(16,-56+bob); ctx.stroke();
+    ctx.fillStyle = '#374151';
+    ctx.beginPath(); ctx.moveTo(14,-54+bob); ctx.lineTo(17,-62+bob); ctx.lineTo(11,-60+bob); ctx.closePath(); ctx.fill();
   }
 
-  function hillProfile(x, center, width, height) {
-    const d = Math.abs(x - center);
-    if (d > width) return 0;
-    const t = 1 - (d / width);
-    return Math.pow(t, 1.8) * height;
-  }
+  // Head
+  ctx.fillStyle = '#c27d4a';
+  ctx.beginPath(); ctx.ellipse(0,-42+bob,9,10,0,0,Math.PI*2); ctx.fill();
 
-  function terrainY(x) {
-    const h = canvas.height;
-    const base = h * 0.92;
-    const leftHill = hillProfile(x, 1160, 620, h * 0.42);
-    const rightHill = hillProfile(x, 2440, 620, h * 0.42);
-    const templeDip = hillProfile(x, city.pyramidX, 420, h * 0.08);
-    return base - leftHill - rightHill + templeDip + Math.sin(x * 0.005) * 5;
-  }
-
-  function setupWorld() {
-    state.fields = [ buildField(720, 1420, 6), buildField(2150, 2860, 6) ];
-    state.stelae = exits.map(e => ({ ...e, y: 0 })); // y set in resize()
-    state.houses = [0, 1, 2, 3, 4, 5].map(i => {
-      const left = i < 3;
-      const local = left ? i : i - 3;
-      const x = left ? 980 + local * 70 : 2380 + local * 72;
-      return { x, y: 0 }; // y set in resize()
+  // Headdress
+  if (isPlayer) {
+    const fc = ['#b91c1c','#0f766e','#ca8a04','#7c3aed','#065f46'];
+    [-0.5,-0.25,0,0.25,0.5].forEach((ang,fi) => {
+      ctx.save(); ctx.translate(0,-52+bob); ctx.rotate(ang-0.15);
+      ctx.fillStyle = fc[fi]; ctx.beginPath(); ctx.ellipse(0,-10,3,14,0,0,Math.PI*2); ctx.fill();
+      ctx.restore();
     });
-    
-    state.people = [];
-    for (let i = 0; i < state.pop; i++) {
-      state.people.push({
-        id: i,
-        x: city.pyramidX + (Math.random() * 120 - 60),
-        y: 0,
-        role: 'farmer', targetRole: 'farmer', mode: 'idle', taskNode: null,
-        speed: 26 + Math.random() * 14,
-        dir: 1, bob: Math.random() * Math.PI,
-        carryingWater: false, homeX: city.pyramidX + (Math.random() * 80 - 40)
-      });
+    ctx.fillStyle = '#ca8a04'; ctx.fillRect(-10,-49+bob,20,5);
+    ctx.fillStyle = '#0f766e'; ctx.beginPath(); ctx.arc(0,-47+bob,4,0,Math.PI*2); ctx.fill();
+  } else if (role === 'warrior') {
+    ctx.fillStyle = '#d1d5db';
+    ctx.beginPath(); ctx.ellipse(0,-48+bob,9,7,0,Math.PI,true); ctx.fill();
+    ctx.strokeStyle='#b91c1c'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(0,-52+bob); ctx.quadraticCurveTo(4,-62+bob,0,-66+bob); ctx.stroke();
+  } else {
+    ctx.fillStyle = '#78716c'; ctx.fillRect(-9,-50+bob,18,7);
+  }
+  ctx.restore();
+}
+
+// ── UPDATE ─────────────────────────────────────────────────────────────────────
+function update(dt) {
+  if (dialogOpen) return;
+
+  const goL = keys['ArrowLeft']  || keys['a'] || keys['A'];
+  const goR = keys['ArrowRight'] || keys['d'] || keys['D'];
+
+  if (goR)      P.vx = Math.min(P.vx + P_ACCEL*dt, P_SPEED);
+  else if (goL) P.vx = Math.max(P.vx - P_ACCEL*dt, -P_SPEED);
+  else {
+    if (P.vx>0) P.vx = Math.max(0,  P.vx - P_DECEL*dt);
+    if (P.vx<0) P.vx = Math.min(0,  P.vx + P_DECEL*dt);
+  }
+  if (goR) P.facing = 1;
+  if (goL) P.facing = -1;
+
+  P.x = Math.max(40, Math.min(WORLD_W-40, P.x + P.vx*dt));
+  if (Math.abs(P.vx) > 5) P.walkPhase += dt*8;
+
+  // Camera lerp
+  camX += (P.x - canvas.width/2 - camX) * Math.min(1, dt*7);
+  camX  = Math.max(0, Math.min(WORLD_W - canvas.width, camX));
+
+  // Farmers wander
+  farmers.forEach((f, fi) => {
+    if (f.role !== 'farmer') { f.walkPhase += dt*0.4; return; }
+    f.wanderTimer -= dt;
+    if (f.wanderTimer <= 0) {
+      f.wanderDir   = sr(fi*13 + totalTime*0.1) > 0.5 ? 1 : -1;
+      f.wanderTimer = 2 + sr(fi*17 + totalTime*0.1) * 4;
     }
-    log('A farmer has planted the eastern field.');
-  }
-
-  function buildField(start, end, rows) {
-    const f = { start, end, rows: [] };
-    for (let r = 0; r < rows; r++) {
-      const points = [];
-      const nodeCount = 16;
-      for (let n = 0; n < nodeCount; n++) {
-        const t = n / (nodeCount - 1);
-        const x = start + (end - start) * t;
-        points.push({ x, y: 0, planted: false, reservedBy: null, rotten: false }); // y set in resize()
-      }
-      f.rows.push(points);
-    }
-    return f;
-  }
-
-  function currentCropStage() {
-    if (state.isRainy) return 'rainy';
-    const p = state.seasonTimer / state.dryDuration;
-    const slow = state.cistern < 15 ? 0.62 : 1;
-    const adjusted = p * slow;
-    if (adjusted < 0.18) return 'bare';
-    if (adjusted < 0.44) return 'sprout';
-    if (adjusted < 0.76) return 'growing';
-    return 'harvestable';
-  }
-
-  function maxDraft() { return Math.max(0, state.people.length - 2); }
-
-  function applyDraftTargets() {
-    const s = +document.getElementById('soldierSlider').value;
-    const p = +document.getElementById('porterSlider').value;
-    let needSoldier = s; let needPorter = p;
-    state.people.forEach(person => {
-      if (needSoldier > 0) { person.targetRole = 'soldier'; needSoldier--; }
-      else if (needPorter > 0) { person.targetRole = 'porter'; needPorter--; }
-      else person.targetRole = 'farmer';
-    });
-  }
-
-  function nearestAvailableNode(reverse = false) {
-    const rows = [];
-    for (const field of state.fields) {
-      for (const row of field.rows) rows.push(row);
-    }
-    for (const row of rows) {
-      const list = reverse ? [...row].reverse() : row;
-      for (const node of list) {
-        const stage = currentCropStage();
-        if (!reverse && !node.planted && !node.reservedBy && !node.rotten && stage !== 'rainy') return node;
-        if (reverse && node.planted && !node.reservedBy && stage === 'harvestable') return node;
-      }
-    }
-    return null;
-  }
-
-  function updatePeople(dt) {
-    const stage = currentCropStage();
-    let waterCarriersAssigned = 0;
-    const farmers = state.people.filter(p => p.role === 'farmer' || p.role === 'water');
-    const waterNeeded = state.cistern > 5 && !state.isRainy ? Math.min(2, Math.floor(farmers.length / 8) + 1) : 0;
-
-    for (const person of state.people) {
-      const desired = person.targetRole;
-      if (state.marching && (person.role === 'soldier' || person.role === 'porter')) {
-        const exit = state.popupRoute?.x ?? exits[0].x;
-        moveToward(person, exit, dt);
-        if ((exit < city.pyramidX && person.x < 120) || (exit > city.pyramidX && person.x > state.worldWidth - 120)) {
-          person.mode = 'gone';
-        }
-        continue;
-      }
-
-      if (person.mode === 'gone') continue;
-
-      if (desired !== person.role && desired !== 'farmer') {
-        person.mode = 'toPyramid';
-        moveToward(person, city.pyramidX + (desired === 'soldier' ? -100 : 100), dt);
-        if (Math.abs(person.x - (city.pyramidX + (desired === 'soldier' ? -100 : 100))) < 6) {
-          person.role = desired; person.mode = 'formation'; person.taskNode = null;
-        }
-        continue;
-      }
-
-      if ((person.role === 'soldier' || person.role === 'porter') && desired === 'farmer') {
-        person.mode = 'toField';
-        moveToward(person, city.pyramidX + (Math.random() * 160 - 80), dt);
-        if (Math.abs(person.x - city.pyramidX) < 60) {
-          person.role = 'farmer'; person.mode = 'idle';
-        }
-        continue;
-      }
-
-      if (person.role === 'soldier' || person.role === 'porter') {
-        const offset = person.role === 'soldier' ? -180 : 130;
-        const idx = person.id % 8;
-        const targetX = city.pyramidX + offset + (idx % 4) * 22;
-        moveToward(person, targetX, dt, 12);
-        continue;
-      }
-
-      if (state.isRainy) {
-        moveToward(person, city.pyramidX + ((person.id % 6) - 3) * 18, dt, 16);
-        continue;
-      }
-
-      if (waterCarriersAssigned < waterNeeded && person.targetRole === 'farmer') {
-        person.role = 'water'; person.mode = person.mode === 'watering' ? 'watering' : 'toCistern';
-        waterCarriersAssigned++;
-      } else if (person.role === 'water') {
-        person.role = 'farmer'; person.carryingWater = false;
-      }
-
-      if (person.role === 'water') {
-        if (person.mode === 'toCistern') {
-          moveToward(person, city.cisternX, dt);
-          if (Math.abs(person.x - city.cisternX) < 8) {
-            person.carryingWater = state.cistern > 2;
-            if (person.carryingWater) state.cistern = Math.max(0, state.cistern - 0.03);
-            person.mode = 'toFieldWater';
-          }
-        } else {
-          const target = state.fields[Math.floor(person.id % state.fields.length)];
-          const wx = (target.start + target.end) * 0.5;
-          moveToward(person, wx, dt);
-          if (Math.abs(person.x - wx) < 10) { person.mode = 'toCistern'; person.carryingWater = false; }
-        }
-        continue;
-      }
-
-      if (stage === 'harvestable') {
-        if (!person.taskNode || !person.taskNode.planted) {
-          if (person.taskNode) person.taskNode.reservedBy = null;
-          person.taskNode = nearestAvailableNode(true);
-          if (person.taskNode) person.taskNode.reservedBy = person.id;
-        }
-        if (person.taskNode) {
-          moveToward(person, person.taskNode.x, dt);
-          if (Math.abs(person.x - person.taskNode.x) < 5) {
-            person.taskNode.planted = false; person.taskNode.rotten = false;
-            person.taskNode.reservedBy = null; person.taskNode = null;
-            const gain = 1 + (Math.random() < 0.15 ? 1 : 0);
-            state.food += gain;
-            if (Math.random() < 0.1) addFloat(person.x, terrainY(person.x) - 36, `+${gain} food`, '#facc15');
-          }
-        }
-      } else {
-        if (!person.taskNode || person.taskNode.planted) {
-          if (person.taskNode) person.taskNode.reservedBy = null;
-          person.taskNode = nearestAvailableNode(false);
-          if (person.taskNode) person.taskNode.reservedBy = person.id;
-        }
-        if (person.taskNode) {
-          moveToward(person, person.taskNode.x, dt);
-          if (Math.abs(person.x - person.taskNode.x) < 5) {
-            person.taskNode.planted = true; person.taskNode.reservedBy = null; person.taskNode = null;
-          }
-        } else {
-          moveToward(person, person.homeX, dt, 12);
-        }
-      }
-    }
-    state.people = state.people.filter(p => p.mode !== 'gone');
-  }
-
-  function moveToward(person, x, dt, speedOverride) {
-    const dx = x - person.x;
-    if (Math.abs(dx) < 0.6) return;
-    person.dir = Math.sign(dx);
-    const step = Math.sign(dx) * (speedOverride || person.speed) * dt;
-    person.x += Math.abs(step) > Math.abs(dx) ? dx : step;
-    person.y = terrainY(person.x); // Glues people dynamically to the terrain!
-  }
-
-  function seasonUpdate(dt) {
-    state.seasonTimer += dt;
-    if (!state.isRainy) {
-      state.cistern = Math.max(0, state.cistern - dt * 0.45);
-      if (state.cistern < 18 && !state.lowWaterFlag) { log('The cistern is running low.'); state.lowWaterFlag = true; }
-      if (state.cistern > 20) state.lowWaterFlag = false;
-
-      if (state.cistern < 4 && Math.random() < 0.03) {
-        for (const field of state.fields) {
-          for (const row of field.rows) {
-            const node = row[Math.floor(Math.random() * row.length)];
-            if (node.planted) { node.rotten = true; node.planted = false; }
-          }
-        }
-      }
-
-      if (state.seasonTimer > state.dryDuration * 0.84 && !state.warnedRot) {
-        state.warnedRot = true; log('Late dry season: harvest before the rains.');
-      }
-
-      if (state.seasonTimer >= state.dryDuration) {
-        state.isRainy = true; state.seasonTimer = 0; state.warnedRot = false;
-        for (const field of state.fields) {
-          for (const row of field.rows) {
-            for (const node of row) { if (node.planted) { node.planted = false; node.rotten = true; } node.reservedBy = null; }
-          }
-        }
-        log('Rainy season begins. Paths are muddy and blocked.');
-      }
-    } else {
-      state.cistern = Math.min(100, state.cistern + dt * 2.4);
-      if (Math.random() < 0.25) state.food = Math.max(0, state.food - 1);
-      if (state.seasonTimer > state.rainyDuration * 0.55 && Math.random() < 0.015) {
-        if (state.food > state.people.length * 5 && state.people.length < 58) {
-          state.people.push({ id: state.people.length, x: city.pyramidX, y: terrainY(city.pyramidX), role: 'farmer', targetRole: 'farmer', mode: 'idle', taskNode: null, speed: 30, dir: 1, bob: 0, homeX: city.pyramidX + (Math.random()*80-40)});
-          addFloat(city.pyramidX, terrainY(city.pyramidX)-80, '+1 pop', '#a7f3d0');
-        } else if (state.food < state.people.length * 2 && state.people.length > 10) {
-          state.people.pop(); addFloat(city.pyramidX, terrainY(city.pyramidX)-80, '-1 pop', '#fda4af');
-        }
-      }
-      if (state.seasonTimer >= state.rainyDuration) {
-        state.isRainy = false; state.seasonTimer = 0; state.seasonIndex += 1;
-        for (const field of state.fields) { for (const row of field.rows) { for (const node of row) node.rotten = false; } }
-        log(`Dry Season ${state.seasonIndex} begins.`);
-      }
-    }
-  }
-
-  function updateFloats(dt) {
-    state.floats.forEach(f => { f.y -= dt * 20; f.life -= dt; });
-    state.floats = state.floats.filter(f => f.life > 0);
-  }
-  function addFloat(x, y, text, color) { state.floats.push({ x, y, text, color, life: 1.4 }); }
-
-  function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    drawSkyBackdrop();
-    drawJungleLayer();
-    drawMiddleGround();
-    drawFields();
-    drawCity();
-    drawStelae();
-    drawForegroundStone(); 
-    drawPeople();
-    drawTribute();
-    drawWeather();
-    drawFloats();
-  }
-
-  function wx(x) { return x - state.cameraX; }
-
-  function drawSkyBackdrop() {
-    const skyTop = state.isRainy ? '#93a0ab' : '#8fd2ff';
-    const skyBottom = state.isRainy ? '#c2c8cf' : '#def4ff';
-    const grad = ctx.createLinearGradient(0, 0, 0, canvas.height * 0.3);
-    grad.addColorStop(0, skyTop); grad.addColorStop(1, skyBottom);
-    ctx.fillStyle = grad; ctx.fillRect(0, 0, canvas.width, canvas.height * 0.3);
-
-    for (let i = 0; i < 6; i++) {
-      const cx = ((i * 170) + performance.now() * 0.01) % (canvas.width + 160) - 80;
-      const cy = 26 + (i % 3) * 22;
-      ctx.fillStyle = state.isRainy ? 'rgba(214,220,224,0.75)' : 'rgba(255,255,255,0.9)';
-      ctx.beginPath();
-      ctx.arc(cx, cy, 18, 0, Math.PI * 2); ctx.arc(cx + 18, cy + 2, 16, 0, Math.PI * 2);
-      ctx.arc(cx - 18, cy + 3, 14, 0, Math.PI * 2); ctx.fill();
-    }
-  }
-
-  function drawJungleLayer() {
-    const top = canvas.height * 0.3; const bottom = canvas.height * 0.7;
-    const grad = ctx.createLinearGradient(0, top, 0, bottom);
-    grad.addColorStop(0, '#1f6b34'); grad.addColorStop(1, '#0f3b1e');
-    ctx.fillStyle = grad; ctx.fillRect(0, top, canvas.width, bottom - top);
-    for (let x = -20; x < canvas.width + 40; x += 26) {
-      const canopy = bottom - 20 - Math.sin((x + state.cameraX) * 0.02) * 10;
-      ctx.fillStyle = '#14532d'; ctx.fillRect(x + 6, canopy - 26, 5, 26);
-      ctx.fillStyle = (x / 26) % 2 ? '#166534' : '#15803d';
-      ctx.beginPath(); ctx.arc(x + 8, canopy - 32, 14, 0, Math.PI * 2); ctx.fill();
-    }
-  }
-
-  function drawMiddleGround() {
-    ctx.fillStyle = palette.ground; ctx.beginPath(); ctx.moveTo(0, canvas.height);
-    for (let sx = 0; sx <= canvas.width; sx += 8) { ctx.lineTo(sx, terrainY(sx + state.cameraX)); }
-    ctx.lineTo(canvas.width, canvas.height); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = '#6f4b2b'; ctx.beginPath();
-    for (let sx = 0; sx <= canvas.width; sx += 10) { const y = terrainY(sx + state.cameraX); if (sx === 0) ctx.moveTo(sx, y); else ctx.lineTo(sx, y); }
-    ctx.lineTo(canvas.width, canvas.height); ctx.lineTo(0, canvas.height); ctx.closePath();
-    ctx.globalAlpha = 0.3; ctx.fill(); ctx.globalAlpha = 1;
-  }
-
-  function drawForegroundStone() {
-    const top = canvas.height * 0.92; const heightFromTopToBottom = canvas.height - top;
-    ctx.fillStyle = '#7b6850'; ctx.fillRect(0, top, canvas.width, heightFromTopToBottom);
-    const startX = Math.floor(state.cameraX / 36) * 36;
-    const endX = state.cameraX + canvas.width + 36;
-    for (let wx = startX; wx < endX; wx += 36) {
-      const wobble = (Math.abs(wx / 36) % 2) * 3; const sx = wx - state.cameraX;
-      ctx.fillStyle = '#98846a'; ctx.fillRect(sx, top + wobble, 34, heightFromTopToBottom);
-      ctx.strokeStyle = '#5c4a3d'; ctx.strokeRect(sx, top + wobble, 34, heightFromTopToBottom);
-    }
-  }
-
-  function drawFields() {
-    const stage = currentCropStage();
-    for (const field of state.fields) {
-      for (const row of field.rows) {
-        ctx.strokeStyle = palette.furrow; ctx.lineWidth = 1.3; ctx.beginPath();
-        row.forEach((n, i) => { const sx = wx(n.x); if (i === 0) ctx.moveTo(sx, n.y); else ctx.lineTo(sx, n.y); });
-        ctx.stroke();
-        for (const node of row) {
-          if (node.rotten) drawCropNode(node, 'rotten');
-          else if (node.planted) drawCropNode(node, stage === 'bare' ? 'sprout' : stage);
-        }
-      }
-    }
-  }
-
-  function drawCropNode(node, stage) {
-    const sx = wx(node.x); const y = node.y;
-    if (stage === 'sprout') {
-      ctx.strokeStyle = '#3f9f46'; ctx.beginPath(); ctx.moveTo(sx, y); ctx.lineTo(sx, y - 5); ctx.stroke();
-      ctx.fillStyle = '#58b95e'; ctx.fillRect(sx + 1, y - 4, 2, 1);
-    } else if (stage === 'growing') {
-      ctx.strokeStyle = palette.cornGreen; ctx.beginPath(); ctx.moveTo(sx, y); ctx.lineTo(sx, y - 10); ctx.stroke();
-      ctx.fillRect(sx - 3, y - 8, 3, 1); ctx.fillRect(sx + 1, y - 6, 3, 1);
-    } else if (stage === 'harvestable') {
-      ctx.strokeStyle = palette.cornGreen; ctx.beginPath(); ctx.moveTo(sx, y); ctx.lineTo(sx, y - 14); ctx.stroke();
-      ctx.fillStyle = palette.cornGreen; ctx.fillRect(sx - 4, y - 12, 4, 2); ctx.fillRect(sx + 1, y - 9, 4, 2);
-      ctx.fillStyle = palette.cornGold; ctx.fillRect(sx + 1, y - 12, 3, 4);
-    } else if (stage === 'rotten') {
-      ctx.strokeStyle = palette.rotten; ctx.beginPath(); ctx.moveTo(sx, y); ctx.lineTo(sx + 4, y - 10); ctx.stroke();
-      ctx.fillStyle = palette.rotten; ctx.fillRect(sx + 2, y - 9, 2, 4);
-    }
-  }
-
-  function drawCity() {
-    const py = terrainY(city.pyramidX);
-    for (const house of state.houses) {
-      const sx = wx(house.x);
-      ctx.fillStyle = '#a38f72'; ctx.fillRect(sx - 11, house.y, 22, 12);
-      ctx.fillStyle = '#caa76a'; ctx.beginPath(); ctx.moveTo(sx - 13, house.y); ctx.lineTo(sx, house.y - 9); ctx.lineTo(sx + 13, house.y); ctx.closePath(); ctx.fill();
-    }
-
-    // TIKAL-STYLE PYRAMID (9 Steep Terraces)
-    const levels = 9;
-    for (let i = 0; i < levels; i++) {
-      const width = 200 - i * 16;
-      const y = py - i * 14;
-      ctx.fillStyle = i % 2 ? palette.limestone : '#c7b28e';
-      ctx.fillRect(wx(city.pyramidX) - width / 2, y - 14, width, 14);
-    }
-    
-    // Central Steep Staircase
-    ctx.fillStyle = '#b5a382';
-    ctx.beginPath();
-    ctx.moveTo(wx(city.pyramidX) - 15, py);
-    ctx.lineTo(wx(city.pyramidX) - 8, py - levels * 14);
-    ctx.lineTo(wx(city.pyramidX) + 8, py - levels * 14);
-    ctx.lineTo(wx(city.pyramidX) + 15, py);
-    ctx.fill();
-
-    // Top Shrine
-    const topY = py - levels * 14;
-    ctx.fillStyle = '#d9c7a2';
-    ctx.fillRect(wx(city.pyramidX) - 20, topY - 25, 40, 25);
-    ctx.fillStyle = '#0b0b0c'; // Dark Doorway
-    ctx.fillRect(wx(city.pyramidX) - 6, topY - 18, 12, 18);
-
-    // Iconic Maya Roof Comb
-    ctx.fillStyle = '#c7b28e';
-    ctx.beginPath();
-    ctx.moveTo(wx(city.pyramidX) - 18, topY - 25);
-    ctx.lineTo(wx(city.pyramidX) - 10, topY - 60);
-    ctx.lineTo(wx(city.pyramidX) + 10, topY - 60);
-    ctx.lineTo(wx(city.pyramidX) + 18, topY - 25);
-    ctx.fill();
-    
-    // Roof Comb Details/Window slits
-    ctx.fillStyle = '#a79575';
-    ctx.fillRect(wx(city.pyramidX) - 5, topY - 50, 10, 8);
-    ctx.fillRect(wx(city.pyramidX) - 6, topY - 38, 12, 8);
-
-    // Fire Pit (Moved to side)
-    const tx = city.pyramidX - 140;
-    const sx = wx(tx); const ty = terrainY(tx) - 42;
-    ctx.fillStyle = '#5b4631'; ctx.fillRect(sx - 3, ty, 6, 20);
-    ctx.fillStyle = '#fb923c'; ctx.beginPath(); ctx.arc(sx, ty - 5, 5, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#fde68a'; ctx.beginPath(); ctx.arc(sx + 1, ty - 6, 2.5, 0, Math.PI * 2); ctx.fill();
-
-    // Cistern
-    [city.cisternX - 90, city.cisternX + 90].forEach(cx => {
-      const cisY = terrainY(cx) + city.cisternYOff;
-      ctx.fillStyle = palette.stoneDark; ctx.fillRect(wx(cx) - 36, cisY - 20, 72, 38);
-      ctx.fillStyle = '#3a4b57'; ctx.fillRect(wx(cx) - 30, cisY - 14, 60, 26);
-      const waterH = 24 * (state.cistern / 100);
-      ctx.fillStyle = palette.water; ctx.fillRect(wx(cx) - 30, cisY + 12 - waterH, 60, waterH);
-    });
-  }
-
-  function drawStelae() {
-    for (const s of state.stelae) {
-      const sx = wx(s.x);
-      ctx.fillStyle = '#8c8c8c'; ctx.fillRect(sx - 6, s.y, 12, 54);
-      ctx.fillStyle = '#5f5f5f'; ctx.beginPath(); ctx.arc(sx, s.y + 12, 3, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#1f2937'; ctx.font = '11px Cinzel'; ctx.fillText(s.name, sx - 28, s.y - 5);
-      if (state.isRainy) { ctx.fillStyle = 'rgba(6,182,212,0.55)'; ctx.fillRect(sx - 26, terrainY(s.x)-10, 52, 9); }
-    }
-  }
-
-  function drawPerson(p) {
-    const sx = wx(p.x);
-    const y = p.y + Math.sin(p.bob + performance.now() * 0.008) * 1.4;
-    const isSoldier = p.role === 'soldier';
-    const isPorter = p.role === 'porter';
-    const isWater = p.role === 'water';
-
-    // Body (Bigger: 10x16)
-    ctx.fillStyle = isSoldier ? '#ded7c3' : '#a36131'; 
-    ctx.fillRect(sx - 5, y - 18, 10, 16);
-    
-    // Clothing/Loincloth
-    ctx.fillStyle = isSoldier ? '#111827' : '#e5e7eb';
-    ctx.fillRect(sx - 5, y - 8, 10, 6);
-
-    // Head
-    ctx.fillStyle = '#2f2217';
-    ctx.beginPath(); ctx.arc(sx, y - 22, 5, 0, Math.PI * 2); ctx.fill();
-    
-    // Headbands & Feathers
-    if (!isSoldier) {
-      ctx.fillStyle = '#ef4444';
-      ctx.fillRect(sx - 5, y - 25, 10, 2);
-    } else {
-      ctx.fillStyle = '#10b981';
-      ctx.beginPath(); ctx.moveTo(sx, y-25); ctx.lineTo(sx-8, y-35); ctx.lineTo(sx+2, y-27); ctx.fill();
-    }
-
-    // Role specific items
-    if (p.taskNode && p.role === 'farmer') {
-      ctx.strokeStyle = '#6b4f2e'; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(sx, y - 12); ctx.lineTo(sx + p.dir * 8, y - 4); ctx.stroke();
-      ctx.lineWidth = 1;
-    }
-    if (isSoldier) {
-      ctx.fillStyle = '#b45309';
-      ctx.beginPath(); ctx.arc(sx - p.dir * 4, y - 10, 6, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = '#4b5563'; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.moveTo(sx + p.dir * 4, y - 4); ctx.lineTo(sx + p.dir * 18, y - 28); ctx.stroke();
-      ctx.fillStyle = '#9ca3af';
-      ctx.beginPath(); ctx.arc(sx + p.dir * 18, y - 28, 2, 0, Math.PI * 2); ctx.fill();
-      ctx.lineWidth = 1;
-    }
-    if (isPorter) {
-      ctx.fillStyle = '#6b4428';
-      ctx.fillRect(sx - (p.dir === 1 ? 12 : 2), y - 20, 14, 16);
-      ctx.strokeStyle = '#d6c9a9';
-      ctx.beginPath(); ctx.moveTo(sx, y-22); ctx.lineTo(sx-(p.dir===1?8:-8), y-10); ctx.stroke();
-    }
-    if (isWater && p.carryingWater) {
-      ctx.fillStyle = '#8da3ad';
-      ctx.beginPath(); ctx.arc(sx, y - 28, 6, 0, Math.PI * 2); ctx.fill();
-      ctx.fillRect(sx-3, y-32, 6, 4);
-    }
-  }
-
-  function drawPeople() { for (const p of state.people) if (p.mode !== 'gone') drawPerson(p); }
-
-  function drawTribute() {
-    if (!state.tributeGroup) return; const t = state.tributeGroup;
-    for (let i = 0; i < t.members; i++) {
-      const x = t.x + (t.fromLeft ? -i * 18 : i * 18); const sx = wx(x); const y = terrainY(x);
-      const bob = Math.sin(performance.now() * 0.01 + i) * 2;
-      ctx.fillStyle = '#b45309'; ctx.fillRect(sx - 4, y - 14 + bob, 8, 12);
-      ctx.fillStyle = '#2f2217'; ctx.beginPath(); ctx.arc(sx, y - 16 + bob, 3, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = i % 2 ? '#16a34a' : '#dc2626'; ctx.fillRect(sx - 3, y - 22 + bob, 6, 3);
-      ctx.fillStyle = '#7c3aed'; ctx.fillRect(sx + 5, y - 13 + bob, 4, 6);
-    }
-  }
-
-  function drawWeather() {
-    if (!state.isRainy) return; ctx.strokeStyle = 'rgba(6,182,212,0.45)';
-    for (let i = 0; i < 120; i++) {
-      const x = (i * 49 + performance.now() * 0.4) % canvas.width; const y = (i * 29 + performance.now() * 0.6) % canvas.height;
-      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - 3, y + 10); ctx.stroke();
-    }
-  }
-
-  function drawFloats() {
-    ctx.font = '12px Cinzel';
-    for (const f of state.floats) {
-      const alpha = Math.max(0, f.life / 1.4);
-      ctx.fillStyle = f.color + Math.floor(alpha * 255).toString(16).padStart(2, '0');
-      ctx.fillText(f.text, wx(f.x), f.y);
-    }
-  }
-
-  function updateUI() {
-    const seasonText = state.isRainy ? `Rainy Season ${state.seasonIndex}` : `Dry Season ${state.seasonIndex} — Day ${Math.min(90, Math.floor((state.seasonTimer / state.dryDuration) * 90) + 1)}`;
-    document.getElementById('seasonLabel').textContent = seasonText;
-    document.getElementById('foodChip').textContent = `🌽 ${Math.floor(state.food)}`;
-    document.getElementById('popChip').textContent = `👥 ${state.people.length}`;
-
-    const soldiers = state.people.filter(p => p.targetRole === 'soldier').length;
-    const porters = state.people.filter(p => p.targetRole === 'porter').length;
-    const farmers = state.people.length - soldiers - porters;
-    const planted = state.fields.flatMap(f => f.rows.flatMap(r => r)).filter(n => n.planted).length;
-    const est = Math.floor(planted * 0.8 + farmers * 2.5);
-
-    const max = maxDraft();
-    const sSlider = document.getElementById('soldierSlider'); const pSlider = document.getElementById('porterSlider');
-    sSlider.max = max; pSlider.max = max;
-    if (+sSlider.value + +pSlider.value > max) pSlider.value = Math.max(0, max - +sSlider.value);
-
-    document.getElementById('soldierVal').textContent = soldiers; document.getElementById('porterVal').textContent = porters;
-    document.getElementById('farmersText').textContent = `Farmers: ${farmers}`;
-    document.getElementById('harvestText').textContent = `Estimated harvest: ${est}`;
-    document.getElementById('foodText').textContent = `Food stores: ${Math.floor(state.food)}`;
-  }
-
-  function showRoutePopup(stela) {
-    state.popupRoute = stela;
-    const soldiers = state.people.filter(p => p.role === 'soldier').length; const porters = state.people.filter(p => p.role === 'porter').length;
-    const txt = soldiers <= 0 ? `The road to ${stela.name}. ~${stela.dist} days march. You cannot march alone. Draft warriors first.` : `The road to ${stela.name}. ~${stela.dist} days march. Recommended porters: ${stela.porters}. You have ${soldiers} soldiers and ${porters} porters. Proceed?`;
-    document.getElementById('popupText').textContent = txt; document.getElementById('routePopup').style.display = 'flex';
-  }
-
-  function closePopup() { document.getElementById('routePopup').style.display = 'none'; state.popupRoute = null; }
-
-  function confirmMarch() {
-    const soldiers = state.people.filter(p => p.role === 'soldier').length;
-    if (soldiers <= 0) return closePopup();
-    state.marching = true; log('War band mustered. They march toward the stela.'); saveGameState();
-    setTimeout(() => { state.marching = false; log('March complete.'); window.onTransitionToMarch?.(state.savedState); }, 5000);
-    closePopup();
-  }
-
-  function saveGameState() {
-    state.savedState = { seasonIndex: state.seasonIndex, isRainy: state.isRainy, seasonTimer: state.seasonTimer, food: Math.floor(state.food), cistern: state.cistern, population: state.people.length, fields: state.fields.map(f => f.rows.map(r => r.map(n => ({ planted: n.planted, rotten: n.rotten })))) };
-    window.__game1SavedState = state.savedState;
-  }
-
-  function onPointerDown(e) {
-    state.dragging = true; state.lastPointerX = (e.touches ? e.touches[0].clientX : e.clientX);
-    state.pointerDownX = state.lastPointerX; state.pointerMoved = false;
-  }
-  function onPointerMove(e) {
-    if (!state.dragging) return;
-    const x = (e.touches ? e.touches[0].clientX : e.clientX); const dx = x - state.lastPointerX;
-    state.lastPointerX = x; if (Math.abs(x - state.pointerDownX) > 6) state.pointerMoved = true;
-    state.cameraX -= dx; clampCamera();
-  }
-  function onPointerUp(e) {
-    const x = (e.changedTouches ? e.changedTouches[0].clientX : e.clientX); const y = (e.changedTouches ? e.changedTouches[0].clientY : e.clientY);
-    if (state.dragging && !state.pointerMoved) {
-      const worldX = x + state.cameraX; const hit = state.stelae.find(s => Math.abs(s.x - worldX) < 30 && Math.abs((s.y + 20) - y) < 70);
-      if (hit) showRoutePopup(hit);
-    }
-    state.dragging = false;
-  }
-  function clampCamera() { const max = Math.max(0, state.worldWidth - canvas.width); state.cameraX = Math.max(0, Math.min(max, state.cameraX)); }
-
-  // RECALCULATE Y VALUES SO THEY DON'T FLOAT
-  function resize() {
-    canvas.width = container.clientWidth;
-    canvas.height = container.clientHeight;
-    
-    // Update Field Y coordinates to anchor them to the new ground
-    state.fields.forEach(f => {
-      f.rows.forEach((row, r) => {
-        row.forEach(n => { n.y = terrainY(n.x) - 18 - r * 11 + Math.sin((n.x + r * 25) * 0.008) * 2; });
-      });
-    });
-    
-    // Update Stelae and House Y coordinates
-    state.stelae.forEach(s => s.y = terrainY(s.x) - 74);
-    state.houses.forEach((h, i) => {
-      const left = i < 3; const local = left ? i : i - 3;
-      h.y = terrainY(h.x) - 30 - (local % 2) * 5;
-    });
-
-    clampCamera();
-  }
-
-  function tick(ts) {
-    if (!state.lastTs) state.lastTs = ts;
-    const dt = Math.min(0.04, (ts - state.lastTs) / 1000);
-    state.lastTs = ts;
-    seasonUpdate(dt); updatePeople(dt); updateTribute(dt); updateFloats(dt); applyDraftTargets(); draw(); updateUI();
-    requestAnimationFrame(tick);
-  }
-
-  // COLLAPSIBLE MENU LOGIC
-  let menuOpen = true;
-  document.getElementById('controls-header').addEventListener('click', () => {
-    menuOpen = !menuOpen;
-    document.getElementById('controls-content').style.display = menuOpen ? 'block' : 'none';
-    document.getElementById('toggleIcon').style.transform = menuOpen ? 'rotate(0deg)' : 'rotate(-90deg)';
-    resize(); // Trigger canvas redraw to stretch into the newly freed space
+    const nx = f.x + f.wanderDir * 18 * dt;
+    if (nx < f.homeX - 60 || nx > f.homeX + 60) f.wanderDir *= -1;
+    f.x = Math.max(f.homeX-60, Math.min(f.homeX+60, nx));
+    f.walkPhase += dt*2.5;
   });
 
-  window.addEventListener('resize', resize);
-  canvas.addEventListener('mousedown', onPointerDown); canvas.addEventListener('mousemove', onPointerMove); window.addEventListener('mouseup', onPointerUp);
-  canvas.addEventListener('touchstart', onPointerDown, { passive: true }); canvas.addEventListener('touchmove', onPointerMove, { passive: true }); canvas.addEventListener('touchend', onPointerUp, { passive: true });
+  maize.forEach(m => { m.phase += dt*0.6; });
 
-  document.getElementById('soldierSlider').addEventListener('input', () => { const s = +document.getElementById('soldierSlider').value; const p = +document.getElementById('porterSlider').value; const max = maxDraft(); if (s + p > max) document.getElementById('porterSlider').value = Math.max(0, max - s); applyDraftTargets(); });
-  document.getElementById('porterSlider').addEventListener('input', () => { const s = +document.getElementById('soldierSlider').value; const p = +document.getElementById('porterSlider').value; const max = maxDraft(); if (s + p > max) document.getElementById('soldierSlider').value = Math.max(0, max - p); applyDraftTargets(); });
-  document.getElementById('cancelBtn').onclick = closePopup; document.getElementById('confirmBtn').onclick = confirmMarch;
-  window.triggerTributeArrival = triggerTribute;
+  // Proximity
+  nearFarmer = -1;
+  nearTemple = Math.abs(P.x - TEMPLE_X) < TEMPLE_R;
+  if (!nearTemple) {
+    for (let i=0; i<farmers.length; i++) {
+      if (Math.abs(P.x - farmers[i].x) < INTERACT_R) { nearFarmer = i; break; }
+    }
+  }
+}
 
-  setupWorld();
-  resize();
-  requestAnimationFrame(tick);
-})();
+// ── DRAW ───────────────────────────────────────────────────────────────────────
+function draw() {
+  const W = canvas.width, H = canvas.height;
+  const sc = H / WORLD_H;
+  const gY = GROUND_Y * sc;
+
+  ctx.clearRect(0,0,W,H);
+
+  // Sky
+  const sky = ctx.createLinearGradient(0,0,0,gY);
+  sky.addColorStop(0,'#0c1a0e'); sky.addColorStop(0.5,'#1a3320'); sky.addColorStop(1,'#2d5a35');
+  ctx.fillStyle = sky; ctx.fillRect(0,0,W,gY);
+
+  // Far trees (parallax offset from camera)
+  const farOff = -(camX * 0.18 * sc) + (WORLD_W * sc * 0.5 * (1-0.18)) - (WORLD_W * sc * 0.5 * (1-0.18));
+  FAR.forEach(t => {
+    const sx = t.x * sc + farOff;
+    if (sx > -100 && sx < W+100) drawTree(sx, gY, t.variant, sc*0.55, 0.32);
+  });
+
+  const midOff = -(camX * 0.38 * sc);
+  MID.forEach(t => {
+    const sx = t.x * sc + midOff;
+    if (sx > -100 && sx < W+100) drawTree(sx, gY-2*sc, t.variant, sc*0.74, 0.52);
+  });
+
+  // World-space (camera offset)
+  ctx.save();
+  ctx.translate(-camX * sc, 0);
+
+  // Ground
+  ctx.fillStyle = '#3d2b10'; ctx.fillRect(0, gY, WORLD_W*sc, H-gY);
+  ctx.fillStyle = '#4a6741'; ctx.fillRect(0, gY, WORLD_W*sc, 14*sc);
+
+  // Sacbe road (stone path to temple)
+  const ry = (GROUND_Y+2)*sc;
+  ctx.fillStyle = '#c8bea0'; ctx.fillRect(0, ry, (TEMPLE_X+100)*sc, 11*sc);
+  ctx.strokeStyle = '#a89060'; ctx.lineWidth = 0.8;
+  for (let rx = 0; rx < (TEMPLE_X+100)*sc; rx += 26*sc) {
+    ctx.beginPath(); ctx.moveTo(rx,ry); ctx.lineTo(rx,ry+11*sc); ctx.stroke();
+  }
+
+  // Field labels
+  ctx.globalAlpha = 0.22; ctx.fillStyle = '#ca8a04';
+  ctx.fillRect(100*sc,(GROUND_Y-85)*sc, 1050*sc, 72*sc);
+  ctx.fillRect((TEMPLE_X+380)*sc,(GROUND_Y-85)*sc, 1050*sc, 72*sc);
+  ctx.globalAlpha = 0.55; ctx.fillStyle = '#ca8a04';
+  ctx.font = `${13*sc}px 'Cinzel',serif`; ctx.textAlign = 'center';
+  ctx.fillText('MAIZE FIELDS', 625*sc, (GROUND_Y-55)*sc);
+  ctx.fillText('MAIZE FIELDS', (TEMPLE_X+905)*sc, (GROUND_Y-55)*sc);
+  ctx.globalAlpha = 1;
+
+  // Near trees
+  NEAR.forEach(t => {
+    const sx = t.x*sc;
+    if (sx - camX*sc > -120*sc && sx - camX*sc < W+120*sc)
+      drawTree(sx, gY, t.variant, sc*0.92, 0.68);
+  });
+
+  // Maize plants
+  maize.forEach(m => {
+    const sx = m.x*sc;
+    if (sx - camX*sc > -60*sc && sx - camX*sc < W+60*sc)
+      drawMaize(sx, (m.y+4)*sc, m.phase, m.sc*sc);
+  });
+
+  // Pyramid
+  drawPyramid(TEMPLE_X*sc, GROUND_Y*sc);
+
+  // Temple glow when near
+  if (nearTemple) {
+    ctx.globalAlpha = 0.16 + Math.sin(totalTime*3)*0.05;
+    const tg = ctx.createRadialGradient(TEMPLE_X*sc,(GROUND_Y-50)*sc,20*sc, TEMPLE_X*sc,(GROUND_Y-50)*sc,130*sc);
+    tg.addColorStop(0,'#ca8a04'); tg.addColorStop(1,'transparent');
+    ctx.fillStyle = tg;
+    ctx.beginPath(); ctx.arc(TEMPLE_X*sc,(GROUND_Y-50)*sc,130*sc,0,Math.PI*2); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  // Gather zone markers
+  const wArr = farmers.filter(f=>f.role==='warrior');
+  const pArr = farmers.filter(f=>f.role==='porter');
+  if (wArr.length) {
+    ctx.globalAlpha=0.45; ctx.fillStyle='#b91c1c';
+    ctx.fillRect((GATHER_W_X-52)*sc, (GROUND_Y-1)*sc, 104*sc, 4*sc);
+    ctx.globalAlpha=0.7; ctx.font=`${9*sc}px 'Cinzel',serif`; ctx.textAlign='center';
+    ctx.fillText('WARRIORS', GATHER_W_X*sc, (GROUND_Y+15)*sc);
+    ctx.globalAlpha=1;
+  }
+  if (pArr.length) {
+    ctx.globalAlpha=0.45; ctx.fillStyle='#0f766e';
+    ctx.fillRect((GATHER_P_X-52)*sc, (GROUND_Y-1)*sc, 104*sc, 4*sc);
+    ctx.globalAlpha=0.7; ctx.font=`${9*sc}px 'Cinzel',serif`; ctx.textAlign='center';
+    ctx.fillText('PORTERS', GATHER_P_X*sc, (GROUND_Y+15)*sc);
+    ctx.globalAlpha=1;
+  }
+
+  // Farmers
+  farmers.forEach((f, fi) => {
+    const sx = f.x*sc;
+    if (sx - camX*sc < -80*sc || sx - camX*sc > W+80*sc) return;
+    const isNear = nearFarmer === fi;
+    ctx.save();
+    if (isNear) { ctx.shadowColor='#ca8a04'; ctx.shadowBlur=16; }
+    drawSprite(sx, f.y*sc, f.walkPhase, f.wanderDir>=0 ? 1:-1, f.role, false);
+    ctx.restore();
+    ctx.fillStyle = isNear ? '#ca8a04' : 'rgba(245,240,225,.65)';
+    ctx.font = `${isNear?11:9}px 'Cinzel',serif`; ctx.textAlign='center';
+    ctx.fillText(f.name, sx, (f.y-72)*sc);
+  });
+
+  // Player
+  ctx.save();
+  ctx.shadowColor='#0f766e'; ctx.shadowBlur=22;
+  drawSprite(P.x*sc, P.y*sc, P.walkPhase, P.facing, 'player', true);
+  ctx.restore();
+  ctx.fillStyle='#ca8a04';
+  ctx.font=`${11*sc}px 'Cinzel',serif`; ctx.textAlign='center';
+  ctx.fillText("K'uhul Ajaw", P.x*sc, (P.y-76)*sc);
+
+  ctx.restore(); // end world-space
+
+  // ── HUD ────────────────────────────────────────────────────────────────────
+  let prompt = '';
+  if (!dialogOpen) {
+    if (nearTemple) {
+      const n = farmers.filter(f=>f.role!=='farmer').length;
+      prompt = n ? `[E] Speak at the Temple  (${n} assembled)` : '[E] Speak at the Temple';
+    } else if (nearFarmer >= 0) {
+      prompt = `[E] Speak with ${farmers[nearFarmer].name}`;
+    }
+  }
+  if (prompt) {
+    ctx.font = "13px 'Cinzel',serif";
+    const pw = ctx.measureText(prompt).width + 28;
+    const px = W/2 - pw/2, py = H - 88;
+    ctx.fillStyle = 'rgba(11,11,12,.75)';
+    ctx.beginPath(); ctx.roundRect(px,py,pw,32,6); ctx.fill();
+    ctx.strokeStyle='#ca8a04'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.roundRect(px,py,pw,32,6); ctx.stroke();
+    ctx.fillStyle='#f5f0e1'; ctx.textAlign='center';
+    ctx.fillText(prompt, W/2, py+20);
+  }
+
+  // Minimap
+  const MW=200, MH=28, MX=W/2-MW/2, MY=12;
+  ctx.fillStyle='rgba(0,0,0,.55)';
+  ctx.beginPath(); ctx.roundRect(MX,MY,MW,MH,5); ctx.fill();
+  ctx.strokeStyle='#ca8a04'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.roundRect(MX,MY,MW,MH,5); ctx.stroke();
+  // Temple marker
+  const tx2 = MX+(TEMPLE_X/WORLD_W)*MW;
+  ctx.fillStyle='#ca8a04'; ctx.fillRect(tx2-2,MY+5,4,MH-10);
+  // Farmer dots
+  farmers.forEach(f => {
+    const fx = MX+(f.x/WORLD_W)*MW;
+    ctx.fillStyle = f.role==='warrior'?'#b91c1c': f.role==='porter'?'#0f766e':'#6b7c2a';
+    ctx.beginPath(); ctx.arc(fx,MY+MH/2,3,0,Math.PI*2); ctx.fill();
+  });
+  // Player dot
+  const ppx = MX+(P.x/WORLD_W)*MW;
+  ctx.fillStyle='#f5f0e1';
+  ctx.beginPath(); ctx.arc(ppx,MY+MH/2,4,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='#ca8a04'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.arc(ppx,MY+MH/2,4,0,Math.PI*2); ctx.stroke();
+  // Legend
+  ctx.fillStyle='rgba(245,240,225,.45)'; ctx.font="9px 'Cinzel',serif"; ctx.textAlign='center';
+  ctx.fillText('Fields \u2190  Temple  \u2192 Fields', W/2, MY+MH+13);
+
+  // Controls hint (bottom left, first few seconds)
+  if (totalTime < 6) {
+    ctx.globalAlpha = Math.min(1, Math.max(0, 6-totalTime));
+    ctx.fillStyle='rgba(11,11,12,.6)';
+    ctx.beginPath(); ctx.roundRect(14,H-68,170,46,6); ctx.fill();
+    ctx.fillStyle='rgba(245,240,225,.7)'; ctx.font="10px 'Cinzel',serif"; ctx.textAlign='left';
+    ctx.fillText('Arrow keys / WASD  Move', 24, H-48);
+    ctx.fillText('[E]  Talk to farmers & temple', 24, H-31);
+    ctx.globalAlpha=1;
+  }
+}
+
+// ── MAIN LOOP ──────────────────────────────────────────────────────────────────
+let last = 0;
+function loop(ts) {
+  const dt = Math.min((ts-last)/1000, 0.08);
+  last = ts; totalTime += dt;
+  update(dt);
+  draw();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(ts => { last=ts; requestAnimationFrame(loop); });
 </script>
 </body>
 </html>
