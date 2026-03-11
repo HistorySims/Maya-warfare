@@ -528,10 +528,10 @@ const G = {
 
   thirstDays:    0,      // extra food cost from dehydration
   cenoteFreeDays:0,      // no extra food cost (found cenote)
-  porterDesertCD:0,      // countdown to possible porter desertion
   wounded:       false,  // return trip slow
   injured:       0,      // soldiers injured
   tradeWeapons:  false,
+  deserterRisk:  0,      // float; rises when deserters go unpunished, falls when caught
   campAnim:      0,
 };
 
@@ -583,19 +583,6 @@ function advanceDay() {
 
   if (G.thirstDays > 0)    G.thirstDays--;
   if (G.cenoteFreeDays > 0) G.cenoteFreeDays--;
-
-  // Porter desertion countdown
-  if (G.porterDesertCD > 0) {
-    G.porterDesertCD--;
-    if (G.porterDesertCD === 0 && Math.random() < 0.4 && G.porters > 0) {
-      showAutoEvent(
-        "A Porter Vanishes",
-        "He feared the omen. In the pre-dawn darkness he slipped into the jungle, taking a bundle with him.",
-        () => { G.porters = Math.max(0, G.porters - 1); G.food = Math.max(0, G.food - 6); }
-      );
-      return;
-    }
-  }
 
   // Food
   const eaten = foodPerDay();
@@ -750,10 +737,21 @@ const EVENTS_OUT = [
   },
 
   function evtPorterDown() {
-    showAutoEvent(
+    showChoiceEvent(
       "Porter Down",
-      "A porter collapses face-first on the road. He cannot stand. His food bundle spills across the sacbe stones.",
-      () => { losePorter(1); }
+      "A porter collapses face-first on the road. He cannot stand. His food bundle lies in the dust around him.",
+      [
+        { label: "Soldiers Carry His Load", cls: "safe", act() {
+          losePorter(1);
+          G.food = Math.min(G.food + 6, 9999);
+          G.food = Math.max(0, G.food - foodPerDay() * 0.25);
+          return "Soldiers shoulder his bundle. Most of the food is saved, though the column slows for the rest of the day.";
+        }},
+        { label: "Cache It and Press On", cls: "risky", act() {
+          losePorter(1);
+          return "You mark the spot with stones and march. The cached food will not survive the jungle long — and you know it.";
+        }},
+      ]
     );
   },
 
@@ -770,6 +768,31 @@ const EVENTS_OUT = [
         { label: "Stay on the Road", cls: "risky", act() {
           G.thirstDays = 2;
           return "You press on without water. Food consumption rises sharply for two days.";
+        }},
+      ]
+    );
+  },
+
+  function evtHunt() {
+    showChoiceEvent(
+      "Hungry Column",
+      `Food is running thin — ${Math.ceil(G.food)} days' worth left. Your scouts say the jungle nearby holds peccaries and curassow birds.`,
+      [
+        { label: "Hunt and Forage", cls: "risky", act() {
+          const roll = Math.random();
+          if (roll < 0.5) {
+            const gain = 8 + Math.floor(Math.random() * 10);
+            G.food = Math.min(G.food + gain, 9999);
+            return `Success. Hunters return with smoked meat and jungle fruit — enough for ${gain} more days.`;
+          } else if (roll < 0.8) {
+            return "The jungle gave nothing today. Hours wasted, the men frustrated. Press on.";
+          } else {
+            G.soldiers = Math.max(0, G.soldiers - 1);
+            return "A hunting party disturbed a fer-de-lance nest. One soldier will not continue the march.";
+          }
+        }},
+        { label: "Press Onward", cls: "safe", act() {
+          return "You tighten belts and keep marching. The destination is closer than the jungle's mercy.";
         }},
       ]
     );
@@ -798,18 +821,40 @@ const EVENTS_OUT = [
   },
 
   function evtMud() {
-    showAutoEvent(
+    showChoiceEvent(
       "Mud Season",
-      "The trail dips into lowlands. The ground is soft. Every step sinks ankle-deep. The porters struggle to keep their bundles from the mire.",
-      () => { G.food = Math.max(0, G.food - foodPerDay()); }
+      "The trail dips into lowlands. The ground is soft — every step sinks ankle-deep. The porters are already struggling.",
+      [
+        { label: "Hack an Alternate Path", cls: "safe", act() {
+          G.food = Math.max(0, G.food - foodPerDay() * 0.5);
+          return "Your soldiers find higher ground through the undergrowth. Half a day lost, but the column stays intact.";
+        }},
+        { label: "Push Straight Through", cls: "risky", act() {
+          G.food = Math.max(0, G.food - foodPerDay() * 1.5);
+          if (Math.random() < 0.3) losePorter(1);
+          return "You slog through the mire. A day and a half of food burned. The men emerge filthy and exhausted.";
+        }},
+      ]
     );
   },
 
   function evtOvergrown() {
-    showAutoEvent(
+    showChoiceEvent(
       "Overgrown Trail",
-      "The jungle has swallowed the sacbe. Vines and roots smother the stones. Your soldiers hack through with their macuahuitl for hours.",
-      () => { G.food = Math.max(0, G.food - foodPerDay() * 0.5); }
+      "The jungle has swallowed the sacbe. Vines and roots cover the stones. You cannot march without clearing a path.",
+      [
+        { label: "Soldiers Hack Through", cls: "safe", act() {
+          G.food = Math.max(0, G.food - foodPerDay() * 0.5);
+          return "Your warriors spend the morning cutting vines. The road is cleared. Half a day lost, path is open.";
+        }},
+        { label: "Scout an Alternate Route", cls: "risky", act() {
+          if (Math.random() < 0.55) {
+            return "A scout finds a game trail that rejoins the sacbe ahead. No time lost at all.";
+          }
+          G.food = Math.max(0, G.food - foodPerDay());
+          return "The alternate trail loops back. A full day is wasted before you rejoin the road.";
+        }},
+      ]
     );
   },
 
@@ -852,30 +897,47 @@ const EVENTS_OUT = [
   },
 
   function evtJaguar() {
-    showAutoEvent(
+    showChoiceEvent(
       "Jaguar",
-      "A jaguar stalks the camp at night. Its eyes glow in the firelight. Your soldiers grip their clubs until dawn.",
-      () => {
-        if (Math.random() < 0.4) {
-          G.injured = Math.min(G.soldiers, G.injured + 1);
-        }
-      }
+      "A jaguar stalks the camp at night. Its eyes glow in the firelight. Your soldiers grip their clubs and no one moves.",
+      [
+        { label: "Keep Fires Burning All Night", cls: "safe", act() {
+          G.food = Math.max(0, G.food - 3);
+          return "You keep the fires roaring until dawn. The jaguar circles but never enters the light. Three days of food burned as fuel.";
+        }},
+        { label: "Post Armed Guards", cls: "risky", act() {
+          if (Math.random() < 0.35) {
+            G.injured++;
+            return "The jaguar lunges before dawn. A soldier is mauled — he'll carry that wound into battle. The animal flees.";
+          }
+          return "Your guards hold their nerve through the night. The jaguar slinks away before sunrise. Nothing lost.";
+        }},
+      ]
     );
   },
 
   function evtScouts() {
     const dLeft = Math.max(1, G.distanceDays - G.day);
-    const intel = Math.random() < 0.5
-      ? "few defenders — the city seems lightly guarded"
-      : "heavy fortifications along the walls and smoke from many cook-fires";
-    showAutoEvent(
+    const heavyDef = Math.random() < 0.5;
+    const intel = heavyDef
+      ? "heavy fortifications along the walls and smoke from many cook-fires"
+      : "few defenders — the city seems lightly guarded";
+    showChoiceEvent(
       "Scouts Return",
-      `Your forward scouts report back. ${G.destination} is ${dLeft} days ahead. They saw ${intel}.`,
-      () => {}
+      `Your scouts report back. ${G.destination} is ${dLeft} days ahead. They saw ${intel}. How do you respond?`,
+      [
+        { label: "Push Hard — Arrive Fast", cls: "risky", act() {
+          G.food = Math.max(0, G.food - foodPerDay());
+          return "Longer marching hours, shorter rests. You'll arrive a day sooner, but the men will be tired when battle comes.";
+        }},
+        { label: "Hold Steady Pace", cls: "safe", act() {
+          return "You keep the march as it is. Steady pace, no surprises, no wasted effort.";
+        }},
+      ]
     );
   },
 
-  // ── MORALE ──
+  // ── MORALE & DESERTION ──
   function evtGrumbling() {
     showChoiceEvent(
       "Grumbling",
@@ -883,27 +945,67 @@ const EVENTS_OUT = [
       [
         { label: "Share Extra Rations", cls: "safe", act() {
           G.food = Math.max(0, G.food - 5);
-          return "You share five days of food among the men. The grumbling stops. They call your name in praise around the fire.";
+          G.deserterRisk = Math.max(0, G.deserterRisk - 0.5);
+          return "You share five days of food. The grumbling stops. They call your name in praise — and the threat of desertion eases.";
         }},
         { label: "Remind Them of Glory", cls: "risky", act() {
           if (Math.random() < 0.25) {
             G.soldiers = Math.max(0, G.soldiers - 1);
-            return "Your speech falls flat. By morning, one soldier is gone — slipped into the jungle before dawn.";
+            G.deserterRisk += 0.5;
+            return "Your speech falls flat. By morning, one soldier is gone. Others watched him go without surprise.";
           }
-          return "You speak of jade and captives and the glory of your lineage. The soldiers pound their clubs on the ground. They will march.";
+          return "You speak of jade, captives, and the glory of your lineage. The soldiers pound their clubs on the ground. They will march.";
         }},
       ]
     );
   },
 
-  function evtDesertion() {
-    showAutoEvent(
+  function evtSoldierDesertion() {
+    showChoiceEvent(
       "Desertion",
-      "In the morning, a soldier is gone. His sleeping mat is cold. He took food with him — and left nothing behind.",
-      () => {
-        G.soldiers = Math.max(0, G.soldiers - 1);
-        G.food     = Math.max(0, G.food - 5);
-      }
+      "In the morning, a soldier is gone. His sleeping mat is cold. He took five days of food with him. Your scouts can still see his tracks in the mud.",
+      [
+        { label: "Send Scouts to Track Him", cls: "risky", act() {
+          G.food = Math.max(0, G.food - 4);
+          if (Math.random() < 0.55) {
+            G.deserterRisk = Math.max(0, G.deserterRisk - 1.5);
+            return "Your scouts drag him back before midday. You make an example of him before the column. Future desertions become less likely.";
+          }
+          G.soldiers = Math.max(0, G.soldiers - 1);
+          G.deserterRisk += 0.5;
+          return "He's gone — vanished into the undergrowth. Four days of food and half a day wasted on the chase. The men saw you fail.";
+        }},
+        { label: "Let Him Go, Keep Marching", cls: "safe", act() {
+          G.soldiers = Math.max(0, G.soldiers - 1);
+          G.food = Math.max(0, G.food - 5);
+          G.deserterRisk += 1.5;
+          return "You give no order. The column watches in silence as you march past his empty mat. Others are already calculating the same escape.";
+        }},
+      ]
+    );
+  },
+
+  function evtPorterDesertion() {
+    showChoiceEvent(
+      "Porter Flees",
+      "A porter has vanished in the night — his bundle left behind, straps cut. The food is intact on the ground. Your column is watching you.",
+      [
+        { label: "Track Him Down", cls: "risky", act() {
+          G.food = Math.max(0, G.food - 3);
+          if (Math.random() < 0.55) {
+            G.deserterRisk = Math.max(0, G.deserterRisk - 1);
+            return "Found him a mile back. He returns under guard. The other porters stand a little straighter now.";
+          }
+          G.porters = Math.max(0, G.porters - 1);
+          G.deserterRisk += 0.75;
+          return "He is gone into the jungle. Three days of food spent in the chase. The other porters watched everything.";
+        }},
+        { label: "Salvage His Bundle and March", cls: "safe", act() {
+          G.porters = Math.max(0, G.porters - 1);
+          G.deserterRisk += 1.5;
+          return "You redistribute his load and march. The food is saved. But the other porters exchanged glances as you passed.";
+        }},
+      ]
     );
   },
 
@@ -914,14 +1016,128 @@ const EVENTS_OUT = [
       [
         { label: "Perform a Ritual", cls: "safe", act() {
           G.food = Math.max(0, G.food - foodPerDay() * 0.5);
+          G.deserterRisk = Math.max(0, G.deserterRisk - 0.5);
           return "You halt the column and perform the rites. The porters are calmed. Half a day is lost, but spirits are steady.";
         }},
         { label: "Ignore It", cls: "risky", act() {
-          if (Math.random() < 0.4) {
-            G.porterDesertCD = 2;
-            return "The porters are unsettled. You push on — but they murmur all day, and one looks back toward home.";
+          if (Math.random() < 0.5) {
+            G.deserterRisk += 1;
+            return "The porters are deeply unsettled. You push on — but they murmur all day and one keeps looking back toward home.";
           }
           return "Nothing happens. The men relax by nightfall. Perhaps omens are just birds.";
+        }},
+      ]
+    );
+  },
+
+  function evtSlogging() {
+    showChoiceEvent(
+      "The Long Road",
+      "Three days of the same heat, the same jungle, the same road. The men's feet are cracked. Morale is quietly rotting.",
+      [
+        { label: "Slow the Pace, Rest Well", cls: "safe", act() {
+          G.food = Math.max(0, G.food - foodPerDay());
+          G.deserterRisk = Math.max(0, G.deserterRisk - 0.75);
+          return "You give the column a half day of rest in the shade. Feet dressed, loads readjusted. A day lost, but the men march straight again.";
+        }},
+        { label: "Push Through It", cls: "risky", act() {
+          if (Math.random() < 0.35) {
+            G.deserterRisk += 0.75;
+            return "You drive them on. The grumbling grows quieter — but meaner. Someone will break soon.";
+          }
+          return "They find their rhythm by afternoon. Veterans know how to make peace with the road.";
+        }},
+      ]
+    );
+  },
+
+  // ── EXPLORATION / FLAVOR ──
+  function evtOlmecRuins() {
+    showChoiceEvent(
+      "Ancient Ruins",
+      "Your scouts return wide-eyed. Half a mile off the sacbe: enormous stone heads sit half-buried in the jungle — older than memory, older than the Maya. No one knows who made them.",
+      [
+        { label: "Investigate", cls: "risky", act() {
+          G.food = Math.max(0, G.food - foodPerDay() * 0.5);
+          const roll = Math.random();
+          if (roll < 0.5) {
+            G.food = Math.min(G.food + 8, 9999);
+            return "A sealed cache of offerings inside: jade beads, preserved food. Half a day lost, but the men are awed and a little richer.";
+          } else if (roll < 0.85) {
+            return "Nothing but stone and silence. The heads stare at the canopy. Your men are unsettled by their size. Half a day gone.";
+          } else {
+            G.injured++;
+            return "A soldier falls through a hidden sinkhole at the site's edge. He'll limp the rest of the march.";
+          }
+        }},
+        { label: "Keep Marching", cls: "safe", act() {
+          return "You order the column forward. Whatever the old ones built out there, it is none of your concern today.";
+        }},
+      ]
+    );
+  },
+
+  function evtCenoteJade() {
+    showChoiceEvent(
+      "The Sacred Pool",
+      "The road passes a perfect circular cenote. The water is impossibly blue. Your porters say they can see jade and old pottery at the bottom — offerings from another age.",
+      [
+        { label: "Dive for the Offerings", cls: "risky", act() {
+          const roll = Math.random();
+          if (roll < 0.45) {
+            G.food = Math.min(G.food + 6, 9999);
+            return "A strong swimmer surfaces with two jade beads and a clay bowl. The men are delighted. The gods seem unbothered.";
+          } else if (roll < 0.8) {
+            return "The diver comes up empty-handed. The jade was deeper than it looked. Half an hour lost.";
+          } else {
+            G.soldiers = Math.max(0, G.soldiers - 1);
+            return "Something was wrong in that water. The diver does not come back up. Your soldiers are pale. You march on in silence.";
+          }
+        }},
+        { label: "Drink and Move On", cls: "safe", act() {
+          G.cenoteFreeDays = 1;
+          return "You order the column to fill their gourds but touch nothing else. Some offerings belong to the rain god alone.";
+        }},
+      ]
+    );
+  },
+
+  function evtStoneFormation() {
+    showChoiceEvent(
+      "Strange Stones",
+      "The road runs through an unusual formation — limestone columns rising from the jungle floor like fingers. Your soldiers have never seen anything like it.",
+      [
+        { label: "Camp Here Tonight", cls: "safe", act() {
+          G.food = Math.max(0, G.food - foodPerDay() * 0.5);
+          G.deserterRisk = Math.max(0, G.deserterRisk - 0.5);
+          return "You make camp among the columns. The strangeness delights the men — they name the stones and tell stories. Half a day lost, morale lifted.";
+        }},
+        { label: "Pass Through Quickly", cls: "safe", act() {
+          return "You march through. The stones are beautiful but you have a war to reach. The men sneak glances as they pass.";
+        }},
+      ]
+    );
+  },
+
+  function evtWoundedPorter() {
+    showChoiceEvent(
+      "Limping Porter",
+      "One of your porters has developed a badly infected blister. He can barely walk but is still carrying his bundle, staring at you.",
+      [
+        { label: "Help Him Along", cls: "safe", act() {
+          G.food = Math.max(0, G.food - foodPerDay() * 0.5);
+          G.deserterRisk = Math.max(0, G.deserterRisk - 0.5);
+          return "Soldiers take turns supporting him. He survives the march. The other porters notice you looked after him.";
+        }},
+        { label: "Send Him Home With Rations", cls: "risky", act() {
+          losePorter(1);
+          G.deserterRisk = Math.max(0, G.deserterRisk - 0.5);
+          return "You give him a small ration and point him back down the sacbe. He weeps. The other porters watched carefully — and seem reassured.";
+        }},
+        { label: "Leave Him at the Roadside", cls: "risky", act() {
+          losePorter(1);
+          G.deserterRisk += 1;
+          return "You leave him with one day of food at the side of the road. The other porters' eyes go flat. They carry their bundles without looking at you.";
         }},
       ]
     );
@@ -929,45 +1145,129 @@ const EVENTS_OUT = [
 ];
 
 const EVENTS_RETURN = [
-  function evtWounded() {
-    showAutoEvent(
+  function evtWounded() { // index 0
+    showChoiceEvent(
       "The Wounded",
-      "Your injured soldiers slow the march. Carrying those who cannot walk costs extra food and precious time.",
-      () => { G.wounded = true; }
+      "Your injured soldiers slow the march. Some cannot carry their own weight. The column crawls.",
+      [
+        { label: "Make Litters, Keep Moving", cls: "safe", act() {
+          G.food = Math.max(0, G.food - foodPerDay() * 0.5);
+          G.wounded = true;
+          return "Soldiers cut poles and lash carrying frames. You march slower, but you leave no one behind.";
+        }},
+        { label: "Leave the Gravely Wounded", cls: "risky", act() {
+          G.soldiers = Math.max(0, G.soldiers - 1);
+          G.deserterRisk += 1;
+          return "You give the worst cases a water gourd and a knife. The rest of the column refuses to look back.";
+        }},
+      ]
     );
   },
 
-  function evtAlmostHome() {
-    showAutoEvent(
+  function evtAlmostHome() { // index 1
+    showChoiceEvent(
       "Almost Home",
-      "Through the thinning jungle you can smell cook-fires and hear distant dogs. Home is close. Your soldiers quicken their step.",
-      () => {}
+      "Through the thinning jungle you can smell cook-fires and hear distant dogs barking. Home is perhaps two days away. Your soldiers quicken their step.",
+      [
+        { label: "Push Hard — Go Home Fast", cls: "risky", act() {
+          G.food = Math.max(0, G.food - foodPerDay());
+          return "You set a brutal final pace. Men jog-march on their last reserves. You'll arrive a day early, but exhausted.";
+        }},
+        { label: "Final Steady March", cls: "safe", act() {
+          return "You hold the pace. Steady. Your men will arrive tired but not broken — and your dynasty will see it.";
+        }},
+      ]
     );
   },
 
-  function evtReturnExhaustion() {
-    showAutoEvent(
+  function evtReturnExhaustion() { // index 2
+    showChoiceEvent(
       "Exhaustion",
-      "The column staggers. Men who were proud warriors now stumble like old men. The return road is twice as hard as the journey out.",
-      () => { G.food = Math.max(0, G.food - foodPerDay()); }
+      "The column staggers. Men who were proud warriors now stumble like old men. Someone will fall out if you don't act.",
+      [
+        { label: "Call a Rest Day", cls: "safe", act() {
+          G.food = Math.max(0, G.food - foodPerDay());
+          G.deserterRisk = Math.max(0, G.deserterRisk - 0.5);
+          return "You spend the day in camp. Men dress their wounds, sleep long. A day lost, but the column will march tomorrow.";
+        }},
+        { label: "Ration the Rest, Keep Moving", cls: "risky", act() {
+          G.food = Math.max(0, G.food - foodPerDay() * 0.5);
+          if (Math.random() < 0.35) {
+            G.soldiers = Math.max(0, G.soldiers - 1);
+            G.deserterRisk += 0.5;
+            return "A soldier gives out and will not rise. The column leaves him at a roadside village.";
+          }
+          return "Half-rest, half-march. The men are ragged but moving. You'll make it.";
+        }},
+      ]
     );
   },
 
-  function evtReturnGrumbling() {
+  function evtReturnGrumbling() { // index 3
     showChoiceEvent(
       "Grumbling",
       "The soldiers mutter around the fire. They are wounded, hungry, and far from home. One says: 'Why did we march at all?'",
       [
         { label: "Share Rations", cls: "safe", act() {
           G.food = Math.max(0, G.food - 5);
+          G.deserterRisk = Math.max(0, G.deserterRisk - 0.5);
           return "You share what little is left. The men eat in silence, but they will march tomorrow.";
         }},
         { label: "Speak of Glory", cls: "risky", act() {
           if (Math.random() < 0.35) {
             G.soldiers = Math.max(0, G.soldiers - 1);
+            G.deserterRisk += 0.5;
             return "A soldier disappears that night. He wanted no more glory — only home.";
           }
           return "You speak of the captives taken, the city humbled. The men nod slowly. They will march.";
+        }},
+      ]
+    );
+  },
+
+  function evtReturnPorterMutiny() { // index 4 — boosted by deserterRisk
+    showChoiceEvent(
+      "Porter Mutiny",
+      "Two porters approach at dawn, bundles on the ground. They point back toward home. They are done. The food is intact. Your column is watching.",
+      [
+        { label: "Force Them to Carry On", cls: "risky", act() {
+          if (Math.random() < 0.45) {
+            return "Under the eyes of armed soldiers they shoulder the bundles again. They will not speak for two days — but they march.";
+          }
+          losePorter(2);
+          G.deserterRisk += 2;
+          return "Your soldiers draw clubs. The porters scatter into the jungle at a run. Both are gone. The food lies in the road.";
+        }},
+        { label: "Release Them, Take the Food", cls: "safe", act() {
+          losePorter(2);
+          G.food = Math.max(0, G.food - 4);
+          G.deserterRisk = Math.max(0, G.deserterRisk - 0.5);
+          return "You wave them off. Soldiers shoulder their loads. The remaining porters look relieved — and a little more loyal.";
+        }},
+      ]
+    );
+  },
+
+  function evtReturnSoldierDesertion() { // index 5 — boosted by deserterRisk
+    showChoiceEvent(
+      "Desertion",
+      "A soldier is gone at dawn — his mat cold, food taken. Your scouts can still see his tracks heading away from the army.",
+      [
+        { label: "Send Scouts After Him", cls: "risky", act() {
+          G.food = Math.max(0, G.food - 4);
+          if (Math.random() < 0.5) {
+            G.deserterRisk = Math.max(0, G.deserterRisk - 1.5);
+            return "Scouts bring him back before noon. You make an example of it. The column marches straighter.";
+          }
+          G.soldiers = Math.max(0, G.soldiers - 1);
+          G.deserterRisk += 0.5;
+          return "He's gone into the jungle. Food and time wasted. The others watched you fail.";
+        }},
+        { label: "Let Him Go", cls: "safe", act() {
+          G.soldiers = Math.max(0, G.soldiers - 1);
+          G.food = Math.max(0, G.food - 4);
+          G.deserterRisk += 1.5;
+          return "You give no order. The column watches in silence. The number of people calculating their own escape is now higher.";
         }},
       ]
     );
@@ -976,8 +1276,24 @@ const EVENTS_RETURN = [
 
 function triggerEvent() {
   const pool = G.isReturn
-    ? [...EVENTS_RETURN, ...EVENTS_OUT.slice(0, 7)]
-    : EVENTS_OUT;
+    ? [...EVENTS_RETURN, ...EVENTS_OUT.slice(0, 10)]
+    : [...EVENTS_OUT];
+
+  // Boost food-crisis hunt event when hungry
+  if (G.food < 25) {
+    pool.push(EVENTS_OUT[3], EVENTS_OUT[3]);
+  }
+
+  // Boost desertion events based on accumulated risk
+  const riskBoost = Math.min(4, Math.floor(G.deserterRisk));
+  for (let i = 0; i < riskBoost; i++) {
+    if (G.isReturn) {
+      pool.push(EVENTS_RETURN[4], EVENTS_RETURN[5]);
+    } else {
+      pool.push(EVENTS_OUT[12], EVENTS_OUT[13]);
+    }
+  }
+
   pool[Math.floor(Math.random() * pool.length)]();
 }
 
@@ -1122,10 +1438,10 @@ function resetGame() {
     nextEventIn:    2 + Math.floor(Math.random() * 3),
     thirstDays:     0,
     cenoteFreeDays: 0,
-    porterDesertCD: 0,
     wounded:        false,
     injured:        0,
     tradeWeapons:   false,
+    deserterRisk:   0,
   });
   document.getElementById('rain-banner').style.display = 'none';
   updateHUD();
