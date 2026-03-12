@@ -818,15 +818,16 @@ function drawVictory() {
     ctx.fillStyle = COL.gold; ctx.font = '13px Cinzel, serif';
     ctx.fillText(`${porters} porter${porters !== 1 ? 's' : ''} loaded ${food} rations from the city stores.`, W / 2, H / 2 - 16);
     ctx.fillStyle = '#8ab89a'; ctx.font = '12px Cinzel, serif';
-    ctx.fillText('Tribute carts will follow you home until the first rains.', W / 2, H / 2 + 4);
+    ctx.fillText('The Ajaw kneels. Tribute will flow without end.', W / 2, H / 2 + 4);
     ctx.fillStyle = '#6a9a7a';
-    ctx.fillText('After the rains, the carts will stop. What comes next is your choice.', W / 2, H / 2 + 22);
+    ctx.fillText('He names you supreme power. He swears on his lineage.', W / 2, H / 2 + 22);
   } else {
-    ctx.fillText('Tribute terms renewed under the sword.', W / 2, H / 2 - 36);
+    ctx.fillStyle = '#a8d8b0';
+    ctx.fillText('The Ajaw weeps. He begs you to remember his loyalty.', W / 2, H / 2 - 36);
     ctx.fillStyle = COL.gold;
-    ctx.fillText(`${food} rations loaded. Carts will follow until the rains return.`, W / 2, H / 2 - 16);
+    ctx.fillText(`${food} rations loaded. He swears the betrayal will never happen again.`, W / 2, H / 2 - 16);
     ctx.fillStyle = '#8ab89a'; ctx.font = '12px Cinzel, serif';
-    ctx.fillText('Ox Witz remembers this visit. Next time will cost more.', W / 2, H / 2 + 4);
+    ctx.fillText('He says he feared you before. Now he has felt your wrath. Now he truly knows.', W / 2, H / 2 + 4);
   }
 
   // Three tribute cart figures, animated
