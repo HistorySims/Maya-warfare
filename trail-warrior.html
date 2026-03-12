@@ -375,11 +375,12 @@
 
   <!-- HUD -->
   <div id="hud">
-    <div class="hud-item" id="hud-food">🌽 Food: <span id="v-food">80</span></div>
-    <div class="hud-item" id="hud-soldiers">⚔️ Soldiers: <span id="v-soldiers">6</span></div>
+    <div class="hud-item" id="hud-food">🌽 Rations: <span id="v-food">80</span></div>
+    <div class="hud-item" id="hud-soldiers">⚔️ Warriors: <span id="v-soldiers">6</span></div>
     <div class="hud-item" id="hud-porters">📦 Porters: <span id="v-porters">4</span></div>
-    <div class="hud-item">📅 Day <span id="v-day">1</span> of <span id="v-total">15</span></div>
-    <div class="hud-item" id="hud-season">☀️ Season: <span id="v-season">60</span>d left</div>
+    <div class="hud-item">📅 Day <span id="v-day">1</span></div>
+    <div class="hud-item">🗺 <span id="v-dist">15</span>d left</div>
+    <div class="hud-item" id="hud-season">☀️ Dry: <span id="v-season">60</span>d left</div>
   </div>
 
   <div id="rain-banner">⛈ The Rains Are Here</div>
@@ -508,9 +509,10 @@ const G = {
   soldiers:      MARCH_INIT.soldiers,
   porters:       MARCH_INIT.porters,
   food:          MARCH_INIT.food,
-  day:           1,
-  seasonLeft:    MARCH_INIT.seasonDaysLeft,
-  distanceDays:  MARCH_INIT.distanceDays,
+  day:               1,
+  seasonLeft:        MARCH_INIT.seasonDaysLeft,
+  distanceDays:      MARCH_INIT.distanceDays,      // fixed reference (never changes)
+  distanceRemaining: MARCH_INIT.distanceDays,      // counts down to 0 on arrival
   destination:   MARCH_INIT.destination,
   isReturn:      MARCH_INIT.isReturnTrip,
 
@@ -558,7 +560,7 @@ function updateHUD() {
   document.getElementById('v-soldiers').textContent = G.soldiers;
   document.getElementById('v-porters').textContent  = G.porters;
   document.getElementById('v-day').textContent      = G.day;
-  document.getElementById('v-total').textContent    = G.distanceDays;
+  document.getElementById('v-dist').textContent     = Math.max(0, G.distanceRemaining);
   document.getElementById('v-season').textContent   = G.seasonLeft;
 
   const fh = document.getElementById('hud-food');
@@ -570,7 +572,7 @@ function updateHUD() {
   const seh = document.getElementById('hud-season');
   seh.className = 'hud-item' + (G.seasonLeft <= 10 ? ' danger' : G.seasonLeft <= 20 ? ' warn' : '');
 
-  const pct = Math.min(1, (G.day - 1) / G.distanceDays);
+  const pct = Math.min(1, (G.distanceDays - G.distanceRemaining) / G.distanceDays);
   document.getElementById('progress-bar').style.width = (pct * 100).toFixed(1) + '%';
 }
 
@@ -580,6 +582,7 @@ function updateHUD() {
 function advanceDay() {
   G.day++;
   G.seasonLeft--;
+  G.distanceRemaining--;   // normal day's march progress
 
   if (G.thirstDays > 0)    G.thirstDays--;
   if (G.cenoteFreeDays > 0) G.cenoteFreeDays--;
@@ -621,7 +624,7 @@ function advanceDay() {
   if (checkDeath()) return;
 
   // Arrival?
-  if (G.day > G.distanceDays) { doArrive(); return; }
+  if (G.distanceRemaining <= 0) { doArrive(); return; }
 
   G.sinceEvent++;
 
@@ -653,6 +656,18 @@ function losePorter(n = 1) {
   const lost = Math.min(G.porters, n);
   G.porters = Math.max(0, G.porters - lost);
   G.food    = Math.max(0, G.food - lost * 8);
+}
+
+// loseDay: the column didn't advance; undo today's distance progress and eat rations
+function loseDay(n = 1) {
+  G.distanceRemaining += n;
+  G.food = Math.max(0, G.food - foodPerDay() * n);
+}
+
+// gainDay: forced march; cover extra distance today at no additional food cost here
+// (callers may add their own extra food penalty)
+function gainDay(n = 1) {
+  G.distanceRemaining = Math.max(0, G.distanceRemaining - n);
 }
 
 // ─────────────────────────────────────────────
@@ -729,7 +744,7 @@ const EVENTS_OUT = [
           return "You drive the column. A porter collapses and does not rise. His bundle is split among those who remain.";
         }},
         { label: "Make Shade Camp", cls: "safe", act() {
-          G.food = Math.max(0, G.food - foodPerDay());
+          loseDay();
           return "You call a halt beneath the ceiba trees. A day is lost, but your porters survive.";
         }},
       ]
@@ -776,14 +791,14 @@ const EVENTS_OUT = [
   function evtHunt() {
     showChoiceEvent(
       "Hungry Column",
-      `Food is running thin — ${Math.ceil(G.food)} days' worth left. Your scouts say the jungle nearby holds peccaries and curassow birds.`,
+      `Food is running thin — ${Math.ceil(G.food)} rations left. Your scouts say the jungle nearby holds peccaries and curassow birds.`,
       [
         { label: "Hunt and Forage", cls: "risky", act() {
           const roll = Math.random();
           if (roll < 0.5) {
             const gain = 8 + Math.floor(Math.random() * 10);
             G.food = Math.min(G.food + gain, 9999);
-            return `Success. Hunters return with smoked meat and jungle fruit — enough for ${gain} more days.`;
+            return `Success. Hunters return with smoked meat and jungle fruit — ${gain} rations recovered.`;
           } else if (roll < 0.8) {
             return "The jungle gave nothing today. Hours wasted, the men frustrated. Press on.";
           } else {
@@ -808,12 +823,12 @@ const EVENTS_OUT = [
           if (Math.random() < 0.3) {
             G.soldiers = Math.max(0, G.soldiers - 1);
             G.food = Math.max(0, G.food - 10);
-            return "The current takes a soldier. You watch him disappear downstream. Ten days of food washes away.";
+            return "The current takes a soldier. You watch him disappear downstream. Ten rations wash away with him.";
           }
           return "Your column crosses safely, chest-deep in cold water. The porters barely keep the bundles dry.";
         }},
         { label: "Fallen Tree Bridge", cls: "safe", act() {
-          G.food = Math.max(0, G.food - foodPerDay());
+          loseDay();
           return "It takes most of the day to find and cross the log bridge. Safe — but a day is lost.";
         }},
       ]
@@ -851,7 +866,7 @@ const EVENTS_OUT = [
           if (Math.random() < 0.55) {
             return "A scout finds a game trail that rejoins the sacbe ahead. No time lost at all.";
           }
-          G.food = Math.max(0, G.food - foodPerDay());
+          loseDay();
           return "The alternate trail loops back. A full day is wasted before you rejoin the road.";
         }},
       ]
@@ -867,7 +882,7 @@ const EVENTS_OUT = [
         { label: "Trade Weapons", cls: "risky", act() {
           G.food = Math.min(G.food + 20, 9999);
           G.tradeWeapons = true;
-          return "You trade the blades. Twenty days of food changes hands. Your soldiers grip their remaining weapons nervously.";
+          return "You trade the blades. Twenty rations change hands. Your soldiers grip their remaining weapons nervously.";
         }},
         { label: "Decline", cls: "safe", act() {
           return "You pass the merchant by. A wise lord does not weaken his army before battle.";
@@ -884,7 +899,7 @@ const EVENTS_OUT = [
         { label: "Search It", cls: "risky", act() {
           if (Math.random() < 0.7) {
             G.food = Math.min(G.food + 12, 9999);
-            return "Inside: dried maize and smoked meat sealed in clay vessels. A gift from the ancestors — twelve days of food.";
+            return "Inside: dried maize and smoked meat sealed in clay vessels. A gift from the ancestors — twelve rations recovered.";
           }
           G.soldiers = Math.max(0, G.soldiers - 1);
           return "Something stirs in the shadows. A soldier cries out — a fer-de-lance had nested in the dark. He will not march further.";
@@ -903,7 +918,7 @@ const EVENTS_OUT = [
       [
         { label: "Keep Fires Burning All Night", cls: "safe", act() {
           G.food = Math.max(0, G.food - 3);
-          return "You keep the fires roaring until dawn. The jaguar circles but never enters the light. Three days of food burned as fuel.";
+          return "You keep the fires roaring until dawn. The jaguar circles but never enters the light. Three rations burned as fuel.";
         }},
         { label: "Post Armed Guards", cls: "risky", act() {
           if (Math.random() < 0.35) {
@@ -917,18 +932,19 @@ const EVENTS_OUT = [
   },
 
   function evtScouts() {
-    const dLeft = Math.max(1, G.distanceDays - G.day);
+    const dLeft = Math.max(1, G.distanceRemaining);
     const heavyDef = Math.random() < 0.5;
     const intel = heavyDef
       ? "heavy fortifications along the walls and smoke from many cook-fires"
       : "few defenders — the city seems lightly guarded";
     showChoiceEvent(
       "Scouts Return",
-      `Your scouts report back. ${G.destination} is ${dLeft} days ahead. They saw ${intel}. How do you respond?`,
+      `Your scouts report back. ${G.destination} is ${dLeft} day${dLeft===1?'':'s'} ahead. They saw ${intel}. How do you respond?`,
       [
         { label: "Push Hard — Arrive Fast", cls: "risky", act() {
+          gainDay(1);
           G.food = Math.max(0, G.food - foodPerDay());
-          return "Longer marching hours, shorter rests. You'll arrive a day sooner, but the men will be tired when battle comes.";
+          return "Longer marching hours, shorter rests. You will arrive a day sooner — but the men will be tired when battle comes.";
         }},
         { label: "Hold Steady Pace", cls: "safe", act() {
           return "You keep the march as it is. Steady pace, no surprises, no wasted effort.";
@@ -946,7 +962,7 @@ const EVENTS_OUT = [
         { label: "Share Extra Rations", cls: "safe", act() {
           G.food = Math.max(0, G.food - 5);
           G.deserterRisk = Math.max(0, G.deserterRisk - 0.5);
-          return "You share five days of food. The grumbling stops. They call your name in praise — and the threat of desertion eases.";
+          return "You share five rations. The grumbling stops. They call your name in praise — and the threat of desertion eases.";
         }},
         { label: "Remind Them of Glory", cls: "risky", act() {
           if (Math.random() < 0.25) {
@@ -963,7 +979,7 @@ const EVENTS_OUT = [
   function evtSoldierDesertion() {
     showChoiceEvent(
       "Desertion",
-      "In the morning, a soldier is gone. His sleeping mat is cold. He took five days of food with him. Your scouts can still see his tracks in the mud.",
+      "In the morning, a soldier is gone. His sleeping mat is cold. He took five rations with him. Your scouts can still see his tracks in the mud.",
       [
         { label: "Send Scouts to Track Him", cls: "risky", act() {
           G.food = Math.max(0, G.food - 4);
@@ -973,7 +989,7 @@ const EVENTS_OUT = [
           }
           G.soldiers = Math.max(0, G.soldiers - 1);
           G.deserterRisk += 0.5;
-          return "He's gone — vanished into the undergrowth. Four days of food and half a day wasted on the chase. The men saw you fail.";
+          return "He's gone — vanished into the undergrowth. Four rations and half a day wasted on the chase. The men saw you fail.";
         }},
         { label: "Let Him Go, Keep Marching", cls: "safe", act() {
           G.soldiers = Math.max(0, G.soldiers - 1);
@@ -998,7 +1014,7 @@ const EVENTS_OUT = [
           }
           G.porters = Math.max(0, G.porters - 1);
           G.deserterRisk += 0.75;
-          return "He is gone into the jungle. Three days of food spent in the chase. The other porters watched everything.";
+          return "He is gone into the jungle. Three rations spent in the chase. The other porters watched everything.";
         }},
         { label: "Salvage His Bundle and March", cls: "safe", act() {
           G.porters = Math.max(0, G.porters - 1);
@@ -1036,9 +1052,9 @@ const EVENTS_OUT = [
       "Three days of the same heat, the same jungle, the same road. The men's feet are cracked. Morale is quietly rotting.",
       [
         { label: "Slow the Pace, Rest Well", cls: "safe", act() {
-          G.food = Math.max(0, G.food - foodPerDay());
+          loseDay();
           G.deserterRisk = Math.max(0, G.deserterRisk - 0.75);
-          return "You give the column a half day of rest in the shade. Feet dressed, loads readjusted. A day lost, but the men march straight again.";
+          return "You give the column a day of rest in the shade. Feet dressed, loads readjusted. A day lost, but the men march straight again.";
         }},
         { label: "Push Through It", cls: "risky", act() {
           if (Math.random() < 0.35) {
@@ -1170,8 +1186,9 @@ const EVENTS_RETURN = [
       "Through the thinning jungle you can smell cook-fires and hear distant dogs barking. Home is perhaps two days away. Your soldiers quicken their step.",
       [
         { label: "Push Hard — Go Home Fast", cls: "risky", act() {
+          gainDay(1);
           G.food = Math.max(0, G.food - foodPerDay());
-          return "You set a brutal final pace. Men jog-march on their last reserves. You'll arrive a day early, but exhausted.";
+          return "You set a brutal final pace. Men jog-march on their last reserves. You arrive a day early — exhausted but home.";
         }},
         { label: "Final Steady March", cls: "safe", act() {
           return "You hold the pace. Steady. Your men will arrive tired but not broken — and your dynasty will see it.";
@@ -1186,7 +1203,7 @@ const EVENTS_RETURN = [
       "The column staggers. Men who were proud warriors now stumble like old men. Someone will fall out if you don't act.",
       [
         { label: "Call a Rest Day", cls: "safe", act() {
-          G.food = Math.max(0, G.food - foodPerDay());
+          loseDay();
           G.deserterRisk = Math.max(0, G.deserterRisk - 0.5);
           return "You spend the day in camp. Men dress their wounds, sleep long. A day lost, but the column will march tomorrow.";
         }},
@@ -1304,17 +1321,17 @@ function showCamp() {
   G.paused = true;
   document.getElementById('v-camp-day').textContent = G.day;
 
-  const dLeft = Math.max(0, G.distanceDays - G.day + 1);
+  const dLeft = Math.max(0, G.distanceRemaining);
   const destWord = G.isReturn ? 'days to home' : `days to ${G.destination}`;
 
   const cls = (v, warnV, badV) =>
     v <= badV ? 'bad' : v <= warnV ? 'warn' : 'val';
 
   document.getElementById('camp-stats').innerHTML = `
-    <div><span class="lbl">Day: </span><span class="val">${G.day} of ${G.distanceDays}</span></div>
-    <div><span class="lbl">Soldiers: </span><span class="${cls(G.soldiers,3,1)}">${G.soldiers}</span></div>
+    <div><span class="lbl">Day: </span><span class="val">${G.day}</span></div>
+    <div><span class="lbl">Warriors: </span><span class="${cls(G.soldiers,3,1)}">${G.soldiers}</span></div>
     <div><span class="lbl">Porters: </span><span class="${cls(G.porters,2,0)}">${G.porters}</span></div>
-    <div><span class="lbl">Food: </span><span class="${cls(G.food,25,10)}">${Math.ceil(G.food)}</span></div>
+    <div><span class="lbl">Rations: </span><span class="${cls(G.food,25,10)}">${Math.ceil(G.food)}</span></div>
     <div><span class="lbl">Distance: </span><span class="val">${dLeft} ${destWord}</span></div>
     <div><span class="lbl">Dry season: </span><span class="${cls(G.seasonLeft,20,10)}">${G.seasonLeft} days left</span></div>
   `;
@@ -1356,11 +1373,12 @@ function doArrive() {
     ? 'Home. Your people watch from the fields as your army returns. The long march is done.'
     : `You have reached ${G.destination}. Your army stands at the tree line, exhausted but ready.`;
 
+  const daysMarched = G.day - 1;   // day counter starts at 1 and increments before arrival
   document.getElementById('end-stats').innerHTML = `
-    <div>⚔️ Soldiers remaining: <strong>${G.soldiers}</strong></div>
+    <div>⚔️ Warriors remaining: <strong>${G.soldiers}</strong></div>
     <div>📦 Porters remaining:  <strong>${G.porters}</strong></div>
-    <div>🌽 Food remaining:     <strong>${Math.ceil(G.food)}</strong></div>
-    <div>📅 Days marched:       <strong>${G.day}</strong></div>
+    <div>🌽 Rations remaining:  <strong>${Math.ceil(G.food)}</strong></div>
+    <div>📅 Days marched:       <strong>${daysMarched}</strong> of ${G.distanceDays} planned</div>
     ${G.tradeWeapons ? '<div style="color:#b45309;margin-top:4px">⚠️ Soldier weapons were traded on the road</div>' : ''}
     ${G.raining      ? '<div style="color:#3b82f6;margin-top:4px">🌧 Arrived during the rains</div>' : ''}
   `;
@@ -1373,15 +1391,18 @@ function doArrive() {
 
   btn.onclick = () => {
     const exportState = {
-      soldiers:     G.soldiers,
-      porters:      G.porters,
-      food:         Math.ceil(G.food),
-      destination:  G.destination,
-      daysMarch:    G.day,
-      tradeWeapons: G.tradeWeapons,
-      injured:      G.injured,
-      raining:      G.raining,
-      isReturn:     G.isReturn,
+      soldiers:      G.soldiers,
+      porters:       G.porters,
+      food:          Math.ceil(G.food),
+      destination:   G.destination,
+      daysMarched:   G.day - 1,         // actual days of travel (off-by-one corrected)
+      distanceDays:  G.distanceDays,    // planned march length (for context in part 3)
+      daysOver:      Math.max(0, G.day - 1 - G.distanceDays), // 0 if on time / forced-marched
+      tradeWeapons:  G.tradeWeapons,
+      injured:       G.injured,
+      raining:       G.raining,
+      isReturn:      G.isReturn,
+      deserterRisk:  Math.round(G.deserterRisk * 10) / 10,
     };
     console.log('[March] Export state ->', exportState);
     if (typeof window.onMarchComplete === 'function') window.onMarchComplete(exportState);
@@ -1421,9 +1442,10 @@ function resetGame() {
     soldiers:       MARCH_INIT.soldiers,
     porters:        MARCH_INIT.porters,
     food:           MARCH_INIT.food,
-    day:            1,
-    seasonLeft:     MARCH_INIT.seasonDaysLeft,
-    distanceDays:   MARCH_INIT.distanceDays,
+    day:               1,
+    seasonLeft:        MARCH_INIT.seasonDaysLeft,
+    distanceDays:      MARCH_INIT.distanceDays,
+    distanceRemaining: MARCH_INIT.distanceDays,
     destination:    MARCH_INIT.destination,
     isReturn:       MARCH_INIT.isReturnTrip,
     paused:         false,
