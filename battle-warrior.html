@@ -101,7 +101,7 @@ canvas.addEventListener('touchend', e => {
   for (const t of e.changedTouches) {
     const [tx, ty] = toCanvas(t.clientX, t.clientY);
     // Victory / defeat screen taps
-    if (gamePhase === 'victory' && ty > H / 2 + 52 && ty < H / 2 + 106) { returnToTrail(); return; }
+    if (gamePhase === 'victory' && ty > H / 2 + 114 && ty < H / 2 + 168) { returnToTrail(); return; }
     if (gamePhase === 'defeat'  && ty > H / 2 + 10 && ty < H / 2 + 68) { returnDefeated(); return; }
     // Joystick / attack release
     if (tx < W / 2) { touch.jActive = false; touch.jx = 0; touch.jy = 0; }
@@ -730,48 +730,125 @@ function drawMobile() {
   ctx.restore();
 }
 
+// ── TRIBUTE CART FIGURE (drawn on victory screen) ─────────────────────────────
+function drawTributeCartFigure(cx, cy, t) {
+  const bob = Math.sin(t * 2.2) * 2;
+  const legS = Math.sin(t * 3) * 9;
+  const armS = Math.sin(t * 3 + Math.PI) * 7;
+  ctx.save();
+  ctx.translate(cx, cy);
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,.3)';
+  ctx.beginPath(); ctx.ellipse(0, 2, 13, 4, 0, 0, Math.PI * 2); ctx.fill();
+  // Legs
+  ctx.strokeStyle = '#312e81'; ctx.lineWidth = 5; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(-3, -14 + bob); ctx.lineTo(-5, legS > 0 ? -legS * .3 : 0); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo( 3, -14 + bob); ctx.lineTo( 5, legS < 0 ?  legS * .3 : 0); ctx.stroke();
+  // Body
+  ctx.fillStyle = '#312e81';
+  ctx.beginPath(); ctx.roundRect(-9, -34 + bob, 18, 22, 3); ctx.fill();
+  // Arms
+  ctx.strokeStyle = '#312e81'; ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.moveTo(-9, -28 + bob); ctx.lineTo(-14, -20 + bob + armS * .4); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo( 9, -28 + bob); ctx.lineTo( 14, -20 + bob - armS * .4); ctx.stroke();
+  // Bundle / cart on back
+  ctx.fillStyle = '#92400e'; ctx.fillRect(-10, -52 + bob, 20, 14);
+  ctx.strokeStyle = '#ca8a04'; ctx.lineWidth = 1.5; ctx.strokeRect(-10, -52 + bob, 20, 14);
+  // Gold medallion on bundle
+  ctx.fillStyle = '#ca8a04'; ctx.beginPath(); ctx.arc(0, -46 + bob, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#92400e'; ctx.beginPath(); ctx.arc(0, -46 + bob, 2, 0, Math.PI * 2); ctx.fill();
+  // Head
+  ctx.fillStyle = '#c27d4a'; ctx.beginPath(); ctx.ellipse(0, -42 + bob, 9, 10, 0, 0, Math.PI * 2); ctx.fill();
+  // Feather headdress
+  const fc = ['#b91c1c', '#16a34a', '#ca8a04', '#7c3aed', '#0f766e', '#dc2626', '#0ea5e9'];
+  [-0.55, -0.28, 0, 0.28, 0.55, -0.4, 0.4].forEach((ang, fi) => {
+    ctx.save(); ctx.translate(0, -52 + bob); ctx.rotate(ang);
+    ctx.fillStyle = fc[fi % fc.length];
+    ctx.beginPath(); ctx.ellipse(0, -9, 2.5, 12, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  });
+  ctx.fillStyle = '#fbbf24'; ctx.fillRect(-10, -50 + bob, 20, 4);
+  ctx.restore();
+}
+
 // ── VICTORY / DEFEAT ──────────────────────────────────────────────────────────
 function drawVictory() {
-  ctx.fillStyle = 'rgba(0,0,0,0.72)'; ctx.fillRect(0, 0, W, H);
-  ctx.fillStyle = '#0e1a10';
-  ctx.beginPath(); ctx.roundRect(W / 2 - 230, H / 2 - 165, 460, 330, 14); ctx.fill();
+  ctx.fillStyle = 'rgba(0,0,0,0.78)'; ctx.fillRect(0, 0, W, H);
+
+  // Expanded panel
+  const px = W / 2 - 240, pw = 480;
+  const py = H / 2 - 200, ph = 398;
+  ctx.fillStyle = '#0b1a0e';
+  ctx.beginPath(); ctx.roundRect(px, py, pw, ph, 14); ctx.fill();
   ctx.strokeStyle = COL.jade; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.roundRect(W / 2 - 230, H / 2 - 165, 460, 330, 14); ctx.stroke();
+  ctx.beginPath(); ctx.roundRect(px, py, pw, ph, 14); ctx.stroke();
+  // Gold inner line
+  ctx.strokeStyle = 'rgba(196,160,32,.25)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.roundRect(px + 6, py + 6, pw - 12, ph - 12, 10); ctx.stroke();
 
   ctx.textAlign = 'center';
-  ctx.fillStyle = COL.gold; ctx.font = 'bold 27px Cinzel, serif';
-  ctx.fillText(`${battleState.destination} Has Fallen!`, W / 2, H / 2 - 118);
 
+  // Title
+  ctx.fillStyle = COL.gold; ctx.font = 'bold 26px Cinzel, serif';
+  ctx.fillText(`${battleState.destination} Has Fallen!`, W / 2, H / 2 - 156);
+
+  // Combat stats
   const alive = soldiers.filter(s => !s.dead && !s.dying).length;
-  ctx.fillStyle = '#eee8da'; ctx.font = '15px Cinzel, serif';
-  ctx.fillText(`Warriors lost: ${startingSoldiers - alive}`, W / 2, H / 2 - 70);
-  ctx.fillText(`HP remaining: ${Math.max(0, Math.ceil(player.hp))} / ${player.maxHp}`, W / 2, H / 2 - 42);
-
+  ctx.fillStyle = '#eee8da'; ctx.font = '14px Cinzel, serif';
+  ctx.fillText(`Warriors lost: ${startingSoldiers - alive}   ·   Your HP: ${Math.max(0, Math.ceil(player.hp))} / ${player.maxHp}`, W / 2, H / 2 - 118);
   if (battleState.isReconquest && killZoneLosses > 0) {
-    ctx.fillStyle = '#ef4444';
-    ctx.fillText(`Kill zone cost: ${killZoneLosses} warriors`, W / 2, H / 2 - 14);
+    ctx.fillStyle = '#ef4444'; ctx.font = '13px Cinzel, serif';
+    ctx.fillText(`Kill zone took ${killZoneLosses} warrior${killZoneLosses !== 1 ? 's' : ''}`, W / 2, H / 2 - 96);
   }
 
-  // Tribute terms
+  // Divider
+  ctx.strokeStyle = 'rgba(196,160,32,.4)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(px + 30, H / 2 - 76); ctx.lineTo(px + pw - 30, H / 2 - 76); ctx.stroke();
+
+  // Tribute header
+  ctx.fillStyle = COL.jade; ctx.font = 'bold 11px Cinzel, serif';
+  ctx.fillText('TRIBUTE TERMS', W / 2, H / 2 - 56);
+
   const porters = (savedState?.expedition?.porters ?? 0);
   const food    = porters * 14 + 20;
+
   ctx.fillStyle = '#a8d8b0'; ctx.font = '13px Cinzel, serif';
   if (!battleState.isReconquest) {
-    ctx.fillText('Your kinsman is installed as Ajaw of Ox Witz.', W / 2, H / 2 + 14);
-    ctx.fillStyle = COL.gold;
-    ctx.fillText(`Porters load ${food} rations from the city stores.`, W / 2, H / 2 + 34);
+    ctx.fillText('Your kinsman is installed as Ajaw of Ox Witz.', W / 2, H / 2 - 36);
+    ctx.fillStyle = COL.gold; ctx.font = '13px Cinzel, serif';
+    ctx.fillText(`${porters} porter${porters !== 1 ? 's' : ''} loaded ${food} rations from the city stores.`, W / 2, H / 2 - 16);
+    ctx.fillStyle = '#8ab89a'; ctx.font = '12px Cinzel, serif';
+    ctx.fillText('Tribute carts will follow you home until the first rains.', W / 2, H / 2 + 4);
+    ctx.fillStyle = '#6a9a7a';
+    ctx.fillText('After the rains, the carts will stop. What comes next is your choice.', W / 2, H / 2 + 22);
   } else {
-    ctx.fillText(`Tribute terms renewed. ${food} rations loaded for the march.`, W / 2, H / 2 + 14);
+    ctx.fillText('Tribute terms renewed under the sword.', W / 2, H / 2 - 36);
+    ctx.fillStyle = COL.gold;
+    ctx.fillText(`${food} rations loaded. Carts will follow until the rains return.`, W / 2, H / 2 - 16);
+    ctx.fillStyle = '#8ab89a'; ctx.font = '12px Cinzel, serif';
+    ctx.fillText('Ox Witz remembers this visit. Next time will cost more.', W / 2, H / 2 + 4);
   }
+
+  // Three tribute cart figures, animated
+  const t = totalMs / 1000;
+  const cartY = H / 2 + 72;
+  drawTributeCartFigure(W / 2 - 70, cartY, t);
+  drawTributeCartFigure(W / 2,       cartY, t + 0.8);
+  drawTributeCartFigure(W / 2 + 70,  cartY, t + 1.6);
+  // Arrow showing direction of travel
+  ctx.fillStyle = 'rgba(196,160,32,.5)'; ctx.font = '18px serif';
+  ctx.fillText('← ← ←', W / 2, cartY + 22);
+  ctx.fillStyle = '#6a9a7a'; ctx.font = '10px Cinzel, serif';
+  ctx.fillText('heading for your city', W / 2, cartY + 38);
 
   // Button
   ctx.fillStyle = COL.jade;
-  ctx.beginPath(); ctx.roundRect(W / 2 - 130, H / 2 + 56, 260, 46, 9); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(W / 2 - 140, H / 2 + 118, 280, 46, 9); ctx.fill();
   ctx.fillStyle = '#fff'; ctx.font = 'bold 15px Cinzel, serif';
-  ctx.fillText('Begin the March Home', W / 2, H / 2 + 85);
+  ctx.fillText('Begin the March Home', W / 2, H / 2 + 147);
 
-  ctx.fillStyle = '#666'; ctx.font = '12px Cinzel, serif';
-  ctx.fillText('Click / tap to continue', W / 2, H / 2 + 130);
+  ctx.fillStyle = '#555'; ctx.font = '11px Cinzel, serif';
+  ctx.fillText('Click / tap to continue', W / 2, H / 2 + 186);
 }
 
 function drawDefeat() {
@@ -1087,7 +1164,7 @@ function draw() {
 // ── CLICK / TAP ───────────────────────────────────────────────────────────────
 canvas.addEventListener('click', ev => {
   const [cx2, cy2] = toCanvas(ev.clientX, ev.clientY);
-  if (gamePhase === 'victory' && cy2 > H / 2 + 52 && cy2 < H / 2 + 106) returnToTrail();
+  if (gamePhase === 'victory' && cy2 > H / 2 + 114 && cy2 < H / 2 + 168) returnToTrail();
   if (gamePhase === 'defeat'  && cy2 > H / 2 + 10 && cy2 < H / 2 + 68) returnDefeated();
 });
 
