@@ -1078,8 +1078,23 @@ function draw() {
 canvas.addEventListener('click', ev => {
   const [cx2, cy2] = toCanvas(ev.clientX, ev.clientY);
   if (gamePhase === 'victory' && cy2 > H / 2 + 38 && cy2 < H / 2 + 96) returnToTrail();
-  if (gamePhase === 'defeat'  && cy2 > H / 2 + 10 && cy2 < H / 2 + 68) location.reload();
+  if (gamePhase === 'defeat'  && cy2 > H / 2 + 10 && cy2 < H / 2 + 68) returnDefeated();
 });
+
+function returnDefeated() {
+  try {
+    const s = JSON.parse(localStorage.getItem(LS_KEY)) || {};
+    if (s.expedition) {
+      s.expedition.soldiers  = 0;
+      s.expedition.porters   = s.expedition.porters ?? 0;
+      s.expedition.leg       = 'returned';
+      s.expedition.victory   = false;
+      s.game = 'farm';
+    }
+    localStorage.setItem(LS_KEY, JSON.stringify(s));
+  } catch(e) {}
+  location.href = 'home-farmer.html';
+}
 
 function returnToTrail() {
   try {
@@ -1090,6 +1105,7 @@ function returnToTrail() {
       s.expedition.leg       = 'homebound';
       s.expedition.distance  = s.expedition.distanceTotal || 10;
       s.expedition.playerHp  = Math.max(0, Math.ceil(player.hp));
+      s.expedition.victory   = true;
       s.game = 'trail';
     }
     localStorage.setItem(LS_KEY, JSON.stringify(s));
