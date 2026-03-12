@@ -99,7 +99,11 @@ canvas.addEventListener('touchmove', e => {
 canvas.addEventListener('touchend', e => {
   e.preventDefault();
   for (const t of e.changedTouches) {
-    const [tx] = toCanvas(t.clientX, t.clientY);
+    const [tx, ty] = toCanvas(t.clientX, t.clientY);
+    // Victory / defeat screen taps
+    if (gamePhase === 'victory' && ty > H / 2 + 52 && ty < H / 2 + 106) { returnToTrail(); return; }
+    if (gamePhase === 'defeat'  && ty > H / 2 + 10 && ty < H / 2 + 68) { returnDefeated(); return; }
+    // Joystick / attack release
     if (tx < W / 2) { touch.jActive = false; touch.jx = 0; touch.jy = 0; }
     else { touch.attack = false; }
   }
@@ -148,7 +152,7 @@ function createPlayer(wx, y) {
 
 function createSoldier(wx, y) {
   const e = makeEnt('soldier', wx, y);
-  e.hp = 30; e.maxHp = 30;
+  e.hp = 75; e.maxHp = 75;
   e.speed = 92; e.atkCdMax = 650;
   e.atkRange = 40; e.atkArc = 46;
   e.atkDmg = () => 6 + Math.floor(Math.random() * 4);
@@ -748,17 +752,23 @@ function drawVictory() {
     ctx.fillText(`Kill zone cost: ${killZoneLosses} warriors`, W / 2, H / 2 - 14);
   }
 
-  // Your kinsman installed (first conquest)
+  // Tribute terms
+  const porters = (savedState?.expedition?.porters ?? 0);
+  const food    = porters * 14 + 20;
+  ctx.fillStyle = '#a8d8b0'; ctx.font = '13px Cinzel, serif';
   if (!battleState.isReconquest) {
-    ctx.fillStyle = '#a8d8b0'; ctx.font = '13px Cinzel, serif';
-    ctx.fillText('Your kinsman is installed as Ajaw.', W / 2, H / 2 + 14);
+    ctx.fillText('Your kinsman is installed as Ajaw of Ox Witz.', W / 2, H / 2 + 14);
+    ctx.fillStyle = COL.gold;
+    ctx.fillText(`Porters load ${food} rations from the city stores.`, W / 2, H / 2 + 34);
+  } else {
+    ctx.fillText(`Tribute terms renewed. ${food} rations loaded for the march.`, W / 2, H / 2 + 14);
   }
 
   // Button
   ctx.fillStyle = COL.jade;
-  ctx.beginPath(); ctx.roundRect(W / 2 - 130, H / 2 + 42, 260, 46, 9); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(W / 2 - 130, H / 2 + 56, 260, 46, 9); ctx.fill();
   ctx.fillStyle = '#fff'; ctx.font = 'bold 15px Cinzel, serif';
-  ctx.fillText('Begin the March Home', W / 2, H / 2 + 71);
+  ctx.fillText('Begin the March Home', W / 2, H / 2 + 85);
 
   ctx.fillStyle = '#666'; ctx.font = '12px Cinzel, serif';
   ctx.fillText('Click / tap to continue', W / 2, H / 2 + 130);
@@ -877,7 +887,7 @@ function enemyAI(e, dt) {
     e.y  += (dy / len) * e.speed * 0.5 * (dt / 1000);
   } else if (e.atkCd <= 0) {
     e.atkCd = e.atkCdMax; e.atkTimer = 280;
-    doAttack(e, liveFriendlies());
+    doAttack(e, [target]);  // only strike the target they're chasing
   }
   e.y = Math.max(LANE_TOP + 8, Math.min(LANE_BOT - 4, e.y));
 }
@@ -1077,7 +1087,7 @@ function draw() {
 // ── CLICK / TAP ───────────────────────────────────────────────────────────────
 canvas.addEventListener('click', ev => {
   const [cx2, cy2] = toCanvas(ev.clientX, ev.clientY);
-  if (gamePhase === 'victory' && cy2 > H / 2 + 38 && cy2 < H / 2 + 96) returnToTrail();
+  if (gamePhase === 'victory' && cy2 > H / 2 + 52 && cy2 < H / 2 + 106) returnToTrail();
   if (gamePhase === 'defeat'  && cy2 > H / 2 + 10 && cy2 < H / 2 + 68) returnDefeated();
 });
 
@@ -1101,7 +1111,9 @@ function returnToTrail() {
     const s = JSON.parse(localStorage.getItem(LS_KEY)) || {};
     const alive = soldiers.filter(x => !x.dead && !x.dying).length;
     if (s.expedition) {
+      const porters = s.expedition.porters ?? 0;
       s.expedition.soldiers  = alive;
+      s.expedition.food      = porters * 14 + 20;  // porters fill up from city stores
       s.expedition.leg       = 'homebound';
       s.expedition.distance  = s.expedition.distanceTotal || 10;
       s.expedition.playerHp  = Math.max(0, Math.ceil(player.hp));
