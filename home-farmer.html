@@ -73,10 +73,12 @@ const LS_KEY = 'mayaThreeGameState';
 let cropStore             = 20;   // accumulated food rations
 let tributeActive         = false;
 let tributeCyclesSinceVictory = 0;
-const TRIBUTE_STOP_CYCLES = 3;
+const TRIBUTE_STOP_CYCLES = 1;    // tribute ends after the first rainy season
 let tributeStopNotified   = false;
 let victoryCount          = 0;
 const tributeCarts        = [];   // animated tribute cart NPCs
+let tributeSpawnTimer     = 0;
+const TRIBUTE_INTERVAL    = 11;   // seconds between carts — next visible before last arrives
 
 // ── CONSTANTS ──────────────────────────────────────────────────────────────────
 const WORLD_W    = 3400;
@@ -366,25 +368,48 @@ function beginMarch() {
 }
 
 // ── TRIBUTE CARTS ─────────────────────────────────────────────────────────────
+function spawnOneTributeCart() {
+  tributeCarts.push({
+    x: WORLD_W + 50,
+    y: GROUND_Y,
+    facing: -1,
+    walkPhase: Math.random() * Math.PI * 2,
+    done: false,
+  });
+}
+
 function spawnTributeCarts() {
-  for (let i = 0; i < 3; i++) {
-    tributeCarts.push({
-      x: WORLD_W + 40 + i * 90,
-      y: GROUND_Y,
-      facing: -1,
-      walkPhase: Math.random() * Math.PI * 2,
-      done: false, stayTimer: 0,
-    });
-  }
+  // Seed the stream: first cart close, two more already on the road behind it
+  spawnOneTributeCart();
+  tributeCarts[tributeCarts.length - 1].x = WORLD_W + 50;
+  spawnOneTributeCart();
+  tributeCarts[tributeCarts.length - 1].x = WORLD_W + 580;  // ~12s behind
+  spawnOneTributeCart();
+  tributeCarts[tributeCarts.length - 1].x = WORLD_W + 1140; // ~24s behind
+  tributeSpawnTimer = TRIBUTE_INTERVAL; // next auto-spawn after first interval
 }
 
 function updateTributeCarts(dt) {
+  // Auto-spawn while tribute is flowing
+  if (tributeActive) {
+    tributeSpawnTimer -= dt;
+    if (tributeSpawnTimer <= 0) {
+      tributeSpawnTimer = TRIBUTE_INTERVAL;
+      spawnOneTributeCart();
+    }
+  }
   tributeCarts.forEach(c => {
-    if (c.done) { c.stayTimer -= dt; return; }
+    if (c.done) return;
     c.x -= 48 * dt;
     c.walkPhase += dt * 6;
-    if (c.x <= TEMPLE_X + 220) { c.done = true; c.stayTimer = 999; } // stay permanently until next season
+    if (c.x <= TEMPLE_X + 220) c.done = true;
   });
+  // Prune carts that have arrived and tribute has ended
+  if (!tributeActive) {
+    for (let i = tributeCarts.length - 1; i >= 0; i--) {
+      if (tributeCarts[i].done) tributeCarts.splice(i, 1);
+    }
+  }
 }
 
 function drawTributeCarts(sc) {
@@ -431,14 +456,17 @@ function drawTributeCarts(sc) {
 
 // ── TRIBUTE / RETURN DIALOGS ───────────────────────────────────────────────────
 function showTributeStopped() {
-  tributeStopNotified = false; // reset so player can decide
+  tributeStopNotified = false;
   showCard(`
-    <h2>The Tribute Has Stopped</h2>
-    <div class="flavor">Word comes from the east: the carts no longer move. Ox Witz has grown bold behind rebuilt walls. They are done paying.</div>
-    <div style="font-size:.78rem;color:#5a4a2a;margin-bottom:14px;line-height:1.6">Your fields grow fewer hands each season. Fewer farmers, fewer rations. If you march again, the walls will be doubled and the battle harder. But tribute could flow again.</div>
+    <h2>An Insult From Ox Witz</h2>
+    <div class="flavor">A lone messenger walks in from the east — no cart behind him. He carries a bundle of rotten maize and a carved stone tablet.</div>
+    <div style="font-size:.8rem;color:#1c1208;background:#f0e8d0;border-left:3px solid #ca8a04;padding:10px 12px;margin:10px 0;border-radius:2px;font-style:italic;line-height:1.7">
+      "Ox Witz will not be bled dry by jungle kings who crawl home through the mud. Send your farmers. We are done."
+    </div>
+    <div style="font-size:.75rem;color:#5a4a2a;margin-bottom:14px;line-height:1.6">They have had time to rebuild their walls. The next battle will be harder — but tribute could flow again.</div>
     <div class="btn-row">
-      <button class="btn btn-warrior" onclick="flagReconquest()">March Again — Take It Back</button>
-      <button class="btn btn-back" onclick="closeDialog()">Let It Go</button>
+      <button class="btn btn-warrior" onclick="flagReconquest()">March Again — Make Them Pay</button>
+      <button class="btn btn-back" onclick="closeDialog()">Swallow the Insult</button>
     </div>
   `);
 }
