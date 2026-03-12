@@ -428,16 +428,26 @@
 <script>
 'use strict';
 // ─────────────────────────────────────────────
-//  STARTING STATE  (hardcoded; wire to Game 1 later)
+//  SHARED STORAGE KEY
 // ─────────────────────────────────────────────
+const LS_KEY = 'mayaThreeGameState';
+
+// ─────────────────────────────────────────────
+//  STARTING STATE  (read from localStorage or use defaults)
+// ─────────────────────────────────────────────
+let _ls = null;
+try { _ls = JSON.parse(localStorage.getItem(LS_KEY)); } catch(e) {}
+const _exp  = (_ls?.game === 'trail') ? _ls.expedition : null;
+const _isRet = _exp?.leg === 'homebound';
+
 const MARCH_INIT = {
-  soldiers:       6,
-  porters:        4,
-  food:           80,
-  destination:    "Ox Witz",
-  distanceDays:   15,
-  isReturnTrip:   false,
-  seasonDaysLeft: 60,
+  soldiers:       _isRet ? (_exp.soldiers      ?? 3)  : (_exp?.soldiers      ?? 6),
+  porters:        _isRet ? (_exp.porters        ?? 0)  : (_exp?.porters        ?? 4),
+  food:           _isRet ? (_exp.food           ?? 40) : (_exp?.food           ?? 80),
+  destination:    _isRet ? 'Home'                      : (_exp?.target         ?? 'Ox Witz'),
+  distanceDays:   _exp?.distance ?? (_exp?.distanceTotal ?? 15),
+  isReturnTrip:   _isRet,
+  seasonDaysLeft: _exp?.seasonDaysLeft ?? 60,
 };
 
 // ─────────────────────────────────────────────
@@ -1390,24 +1400,27 @@ function doArrive() {
   document.getElementById('end-overlay').style.display = 'flex';
 
   btn.onclick = () => {
+    // Update shared state then navigate to next game
+    try {
+      const s = JSON.parse(localStorage.getItem(LS_KEY)) || {};
+      if (!s.expedition) s.expedition = {};
+      s.expedition.soldiers  = G.soldiers;
+      s.expedition.porters   = G.porters;
+      s.expedition.food      = Math.ceil(G.food);
+      s.expedition.leg       = G.isReturn ? 'returned' : 'atbattle';
+      s.game                 = G.isReturn ? 'farm' : 'battle';
+      localStorage.setItem(LS_KEY, JSON.stringify(s));
+    } catch(e) {}
+    // Legacy hook
     const exportState = {
-      soldiers:      G.soldiers,
-      porters:       G.porters,
-      food:          Math.ceil(G.food),
-      destination:   G.destination,
-      daysMarched:   G.day - 1,         // actual days of travel (off-by-one corrected)
-      distanceDays:  G.distanceDays,    // planned march length (for context in part 3)
-      daysOver:      Math.max(0, G.day - 1 - G.distanceDays), // 0 if on time / forced-marched
-      tradeWeapons:  G.tradeWeapons,
-      injured:       G.injured,
-      raining:       G.raining,
-      isReturn:      G.isReturn,
-      deserterRisk:  Math.round(G.deserterRisk * 10) / 10,
+      soldiers: G.soldiers, porters: G.porters, food: Math.ceil(G.food),
+      destination: G.destination, daysMarched: G.day - 1,
+      distanceDays: G.distanceDays, tradeWeapons: G.tradeWeapons,
+      injured: G.injured, raining: G.raining, isReturn: G.isReturn,
+      deserterRisk: Math.round(G.deserterRisk * 10) / 10,
     };
-    console.log('[March] Export state ->', exportState);
     if (typeof window.onMarchComplete === 'function') window.onMarchComplete(exportState);
-    document.getElementById('end-overlay').style.display = 'none';
-    resetGame();
+    window.location.href = G.isReturn ? 'home-farmer.html' : 'battle-warrior.html';
   };
 }
 
@@ -1426,10 +1439,17 @@ function doGameOver() {
   `;
   const btn = document.getElementById('end-btn');
   btn.className = 'fail';
-  btn.textContent = 'Begin Again';
+  btn.textContent = 'Return to the Fields';
   btn.onclick = () => {
-    document.getElementById('end-overlay').style.display = 'none';
-    resetGame();
+    try {
+      const s = JSON.parse(localStorage.getItem(LS_KEY)) || {};
+      if (!s.expedition) s.expedition = {};
+      s.expedition.soldiers = 0; s.expedition.porters = 0; s.expedition.food = 0;
+      s.expedition.leg = 'returned'; s.expedition.victory = false;
+      s.game = 'farm';
+      localStorage.setItem(LS_KEY, JSON.stringify(s));
+    } catch(e) {}
+    window.location.href = 'home-farmer.html';
   };
   document.getElementById('end-overlay').style.display = 'flex';
 }

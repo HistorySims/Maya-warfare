@@ -66,6 +66,18 @@
 <script>
 'use strict';
 
+// ── SHARED STATE KEY ───────────────────────────────────────────────────────────
+const LS_KEY = 'mayaThreeGameState';
+
+// ── GAME LOOP STATE ────────────────────────────────────────────────────────────
+let cropStore             = 20;   // accumulated food rations
+let tributeActive         = false;
+let tributeCyclesSinceVictory = 0;
+const TRIBUTE_STOP_CYCLES = 3;
+let tributeStopNotified   = false;
+let victoryCount          = 0;
+const tributeCarts        = [];   // animated tribute cart NPCs
+
 // ── CONSTANTS ──────────────────────────────────────────────────────────────────
 const WORLD_W    = 3400;
 const WORLD_H    = 480;
@@ -249,24 +261,52 @@ function openTempleDialog() {
     showCard(`<h2>The Temple Steps</h2><div class="flavor">The plaza is empty. Speak to your farmers in the fields first.</div><div class="btn-row"><button class="btn btn-back" onclick="closeDialog()">Return to the Fields</button></div>`);
     return;
   }
-  const food = porters.length*14+20;
+
+  // March planning math
+  const DEST      = 'Ox Witz';
+  const DIST      = 15;
+  const partySize = warriors.length + porters.length + 1; // +1 for player
+  const fpd       = (partySize * 0.5).toFixed(1);         // food per day
+  const needed    = Math.ceil(partySize * 0.5 * DIST);
+  const porterCap = porters.length * 14 + 20;
+  const avail     = Math.min(Math.floor(cropStore), porterCap);
+  const shortfall = needed - avail;
+  const ok        = shortfall <= 0;
+  const foodColor = ok ? '#16a34a' : '#b91c1c';
+
   const rows = [...warriors,...porters].map(f=>{
     const fi=farmers.indexOf(f);
     const tc=f.role==='warrior'?'role-warrior-tag':'role-porter-tag';
     return `<div class="roster-item"><span class="roster-name">${f.name}</span><span class="roster-role ${tc}">${f.role}</span><button class="btn btn-send-back" onclick="sendBack(${fi})">Send Back</button></div>`;
   }).join('');
+
+  const reconFlag = tributeStopNotified ? `<div style="color:#b91c1c;font-size:.72rem;margin-bottom:8px;padding:4px 8px;background:rgba(185,28,28,.1);border-radius:4px">⚔️ Reconquest — doubled walls await at Ox Witz</div>` : '';
+
   let marchSection;
   if (season === 'rainy') {
     marchSection = `<div style="text-align:center;color:#1d4ed8;font-size:.8rem;padding:10px;background:rgba(29,78,216,.1);border-radius:4px;margin-bottom:8px">The rains have come. No column marches through mud season.<br><em style="font-size:.7rem;opacity:.8">Wait for the dry season to return.</em></div>`;
   } else if (!warriors.length) {
     marchSection = `<div style="text-align:center;color:#b91c1c;font-size:.75rem;margin-bottom:8px">At least one warrior is required.</div>`;
+  } else if (!ok) {
+    marchSection = `<div style="text-align:center;color:#b91c1c;font-size:.75rem;margin-bottom:8px">Short ${shortfall} rations — grow more or reduce the column.</div><button class="btn btn-march" style="opacity:.45;cursor:not-allowed" disabled>Cannot March — Rations Short</button>`;
   } else {
-    marchSection = `<button class="btn btn-march" onclick="beginMarch()">Begin the March</button>`;
+    marchSection = `<button class="btn btn-march" onclick="beginMarch()">Begin the March →</button>`;
   }
+
   showCard(`
     <h2>The Great Temple</h2>
-    <div class="flavor">Review your column before the march begins.</div>
-    <div class="summary-row"><div><strong>${warriors.length}</strong>Warriors</div><div><strong>${porters.length}</strong>Porters</div><div><strong>${food}</strong>Food</div></div>
+    <div class="flavor">Destination: ${DEST} · ${DIST}-day march</div>
+    <div class="summary-row">
+      <div><strong>${warriors.length}</strong>Warriors</div>
+      <div><strong>${porters.length}</strong>Porters</div>
+      <div><strong>${avail}</strong><span style="font-size:.65rem;color:#5a4a2a"> / ${porterCap} cap</span> Rations</div>
+    </div>
+    <div style="font-size:.72rem;color:#5a4a2a;margin-bottom:10px;padding:6px 8px;background:rgba(0,0,0,.04);border-radius:4px;line-height:1.7">
+      <div>🗺 Distance: ${DIST} days &nbsp;·&nbsp; Food/day: ${fpd} rations</div>
+      <div style="color:${foodColor}">🌽 Need <strong>${needed}</strong> rations — have <strong>${avail}</strong>${ok ? ' ✓' : ' ✗ short ' + shortfall}</div>
+      <div style="color:#5a4a2a">📦 Porter carry: ${porterCap} rations (${porters.length} porter${porters.length!==1?'s':''})</div>
+    </div>
+    ${reconFlag}
     <div class="roster-list">${rows}</div>
     <div class="btn-row">${marchSection}<button class="btn btn-back" onclick="closeDialog()">Back to the Fields</button></div>
   `);
@@ -283,11 +323,213 @@ function sendBack(fi) {
   openTempleDialog();
 }
 function beginMarch() {
-  const w=farmers.filter(f=>f.role==='warrior'), p=farmers.filter(f=>f.role==='porter');
-  const state={soldiers:w.length,porters:p.length,food:p.length*14+20,destination:'Ox Witz',distanceDays:15,isReturnTrip:false,seasonDaysLeft:60};
+  const ws = farmers.filter(f=>f.role==='warrior');
+  const ps = farmers.filter(f=>f.role==='porter');
+  const DIST      = 15;
+  const porterCap = ps.length * 14 + 20;
+  const food      = Math.min(Math.floor(cropStore), porterCap);
+  cropStore      -= food;  // porters carry food away
+
+  const state = {
+    game: 'trail',
+    expedition: {
+      soldiers:       ws.length,
+      porters:        ps.length,
+      food:           food,
+      target:         'Ox Witz',
+      distanceTotal:  DIST,
+      leg:            'outbound',
+      distance:       DIST,
+      isReconquest:   tributeStopNotified,
+      wallLevel:      tributeStopNotified ? 2 : 1,
+      seasonDaysLeft: 60,
+      warriors_sent:  ws.length,
+      porters_sent:   ps.length,
+      warriorIndices: ws.map(f => farmers.indexOf(f)),
+      porterIndices:  ps.map(f => farmers.indexOf(f)),
+    },
+    farm: {
+      farmerCount: farmers.filter(f=>f.role==='farmer' && !f.gone).length,
+      tributeActive, tributeCyclesSinceVictory, victoryCount,
+    }
+  };
+
+  try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch(e) {}
+
+  if (typeof window.onMarchBegin==='function') {
+    // legacy hook support
+    window.onMarchBegin({ soldiers: ws.length, porters: ps.length, food,
+      destination: 'Ox Witz', distanceDays: DIST, isReturnTrip: false, seasonDaysLeft: 60 });
+  }
   closeDialog();
-  if (typeof window.onMarchBegin==='function') window.onMarchBegin(state);
-  else showCard(`<h2>The March Begins</h2><div class="flavor">${w.length} warrior${w.length!==1?'s':''} and ${p.length} porter${p.length!==1?'s':''} depart at dawn, bearing ${state.food} loads of food.</div><div class="btn-row"><button class="btn btn-back" onclick="closeDialog()">Continue</button></div>`);
+  window.location.href = 'trail-warrior.html';
+}
+
+// ── TRIBUTE CARTS ─────────────────────────────────────────────────────────────
+function spawnTributeCarts() {
+  for (let i = 0; i < 3; i++) {
+    tributeCarts.push({
+      x: WORLD_W + 40 + i * 90,
+      y: GROUND_Y,
+      facing: -1,
+      walkPhase: Math.random() * Math.PI * 2,
+      done: false, stayTimer: 0,
+    });
+  }
+}
+
+function updateTributeCarts(dt) {
+  tributeCarts.forEach(c => {
+    if (c.done) { c.stayTimer -= dt; return; }
+    c.x -= 48 * dt;
+    c.walkPhase += dt * 6;
+    if (c.x <= TEMPLE_X + 220) { c.done = true; c.stayTimer = 999; } // stay permanently until next season
+  });
+}
+
+function drawTributeCarts(sc) {
+  tributeCarts.forEach(c => {
+    const sx = c.x * sc;
+    if (sx - camX*sc < -80*sc || sx - camX*sc > canvas.width + 80*sc) return;
+    ctx.save();
+    ctx.translate(sx, c.y * sc);
+    ctx.scale(c.facing, 1);
+    const bob = Math.sin(c.walkPhase) * 2;
+    const legS = Math.sin(c.walkPhase) * 9;
+    // Shadow
+    ctx.fillStyle='rgba(0,0,0,.18)'; ctx.beginPath(); ctx.ellipse(0,2,14,4,0,0,Math.PI*2); ctx.fill();
+    // Legs (bright indigo)
+    ctx.strokeStyle='#312e81'; ctx.lineWidth=5*sc; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(-3*sc,(-14+bob)*sc); ctx.lineTo(-5*sc,(legS>0?-legS*.3:0)*sc); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo( 3*sc,(-14+bob)*sc); ctx.lineTo( 5*sc,(legS<0? legS*.3:0)*sc); ctx.stroke();
+    // Body
+    ctx.fillStyle='#312e81';
+    ctx.beginPath(); ctx.roundRect(-9*sc,(-34+bob)*sc,18*sc,22*sc,3*sc); ctx.fill();
+    // Cart bundle on back
+    ctx.fillStyle='#b45309'; ctx.fillRect(-10*sc,(-52+bob)*sc,20*sc,14*sc);
+    ctx.strokeStyle='#ca8a04'; ctx.lineWidth=1.5*sc; ctx.strokeRect(-10*sc,(-52+bob)*sc,20*sc,14*sc);
+    ctx.fillStyle='#ca8a04'; ctx.beginPath(); ctx.arc(0,(-46+bob)*sc,3.5*sc,0,Math.PI*2); ctx.fill();
+    // Arms
+    const armS = Math.sin(c.walkPhase+Math.PI)*7;
+    ctx.strokeStyle='#312e81'; ctx.lineWidth=4*sc;
+    ctx.beginPath(); ctx.moveTo(-9*sc,(-28+bob)*sc); ctx.lineTo((-14)*sc,(-20+bob+armS*.4)*sc); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo( 9*sc,(-28+bob)*sc); ctx.lineTo( 14*sc, (-20+bob-armS*.4)*sc); ctx.stroke();
+    // Head
+    ctx.fillStyle='#c27d4a'; ctx.beginPath(); ctx.ellipse(0,(-42+bob)*sc,9*sc,10*sc,0,0,Math.PI*2); ctx.fill();
+    // Bright feather headdress
+    const fc=['#b91c1c','#16a34a','#ca8a04','#7c3aed','#0f766e','#dc2626','#0ea5e9'];
+    [-0.55,-0.28,0,0.28,0.55,-0.4,0.4].forEach((ang,fi) => {
+      ctx.save(); ctx.translate(0,(-52+bob)*sc); ctx.rotate(ang);
+      ctx.fillStyle=fc[fi%fc.length];
+      ctx.beginPath(); ctx.ellipse(0,-9*sc,2.5*sc,12*sc,0,0,Math.PI*2); ctx.fill();
+      ctx.restore();
+    });
+    ctx.fillStyle='#fbbf24'; ctx.fillRect(-10*sc,(-50+bob)*sc,20*sc,4*sc);
+    ctx.restore();
+  });
+}
+
+// ── TRIBUTE / RETURN DIALOGS ───────────────────────────────────────────────────
+function showTributeStopped() {
+  tributeStopNotified = false; // reset so player can decide
+  showCard(`
+    <h2>The Tribute Has Stopped</h2>
+    <div class="flavor">Word comes from the east: the carts no longer move. Ox Witz has grown bold behind rebuilt walls. They are done paying.</div>
+    <div style="font-size:.78rem;color:#5a4a2a;margin-bottom:14px;line-height:1.6">Your fields grow fewer hands each season. Fewer farmers, fewer rations. If you march again, the walls will be doubled and the battle harder. But tribute could flow again.</div>
+    <div class="btn-row">
+      <button class="btn btn-warrior" onclick="flagReconquest()">March Again — Take It Back</button>
+      <button class="btn btn-back" onclick="closeDialog()">Let It Go</button>
+    </div>
+  `);
+}
+
+function flagReconquest() {
+  tributeStopNotified = true;
+  closeDialog();
+}
+
+function showWelcomeBack(soldiersSurvived, portersSurvived, exp) {
+  const ws = exp.warriors_sent || exp.soldiers_sent || 0;
+  const ps = exp.porters_sent  || 0;
+  const wLost = Math.max(0, ws - soldiersSurvived);
+  const pLost = Math.max(0, ps - portersSurvived);
+  const tributeLine = (exp.victory !== false && exp.victory !== undefined)
+    ? `<div style="color:#ca8a04;margin:8px 0;font-size:.78rem">🎁 Tribute carts from ${exp.target ?? 'Ox Witz'} are on their way.</div>`
+    : `<div style="color:#b91c1c;margin:8px 0;font-size:.78rem">The battle was lost. No tribute will come.</div>`;
+  showCard(`
+    <h2>The March Home</h2>
+    <div class="flavor">Your warriors cross the fields at dawn. The people come to see who returned.</div>
+    <div class="summary-row">
+      <div><strong>${soldiersSurvived}</strong>Warriors back</div>
+      <div><strong>${portersSurvived}</strong>Porters back</div>
+    </div>
+    ${wLost > 0 ? `<div style="color:#b91c1c;font-size:.78rem;margin-bottom:6px">⚔️ ${wLost} warrior${wLost!==1?'s':''} fell on the road or in battle.</div>` : ''}
+    ${pLost > 0 ? `<div style="color:#5a4a2a;font-size:.78rem;margin-bottom:6px">📦 ${pLost} porter${pLost!==1?'s':''} did not return.</div>` : ''}
+    ${tributeLine}
+    <div class="btn-row"><button class="btn btn-back" onclick="closeDialog()">Return to the Fields</button></div>
+  `);
+}
+
+// ── CHECK RETURN STATE ON LOAD ─────────────────────────────────────────────────
+function checkReturnState() {
+  let s = null;
+  try { s = JSON.parse(localStorage.getItem(LS_KEY)); } catch(e) {}
+  if (!s || s.game !== 'farm') return;
+
+  const exp  = s.expedition;
+  const farm = s.farm;
+  if (!exp || (exp.leg !== 'returned' && exp.leg !== 'processed')) return;
+  if (exp.leg === 'processed') return;
+
+  // Restore farm variables
+  if (farm) {
+    if (farm.tributeActive)            tributeActive = farm.tributeActive;
+    if (farm.tributeCyclesSinceVictory) tributeCyclesSinceVictory = farm.tributeCyclesSinceVictory;
+    if (farm.victoryCount)             victoryCount = farm.victoryCount;
+  }
+
+  const soldiersSurvived = exp.soldiers ?? 0;
+  const portersSurvived  = exp.porters  ?? 0;
+
+  // Mark dead farmers as gone (those who marched and didn't return)
+  const wIdx = [...(exp.warriorIndices || [])];
+  const pIdx = [...(exp.porterIndices  || [])];
+  const wLost = Math.max(0, wIdx.length - soldiersSurvived);
+  const pLost = Math.max(0, pIdx.length - portersSurvived);
+  for (let i = 0; i < wLost && wIdx.length; i++) {
+    const ri = Math.floor(Math.random() * wIdx.length);
+    const fi = wIdx.splice(ri, 1)[0];
+    if (fi >= 0 && fi < farmers.length) farmers[fi].gone = true;
+  }
+  for (let i = 0; i < pLost && pIdx.length; i++) {
+    const ri = Math.floor(Math.random() * pIdx.length);
+    const fi = pIdx.splice(ri, 1)[0];
+    if (fi >= 0 && fi < farmers.length) farmers[fi].gone = true;
+  }
+  // Return survivors to farming
+  [...wIdx, ...pIdx].forEach(fi => {
+    if (fi >= 0 && fi < farmers.length && !farmers[fi].gone) {
+      farmers[fi].role = 'farmer'; farmers[fi].x = farmers[fi].homeX;
+      farmers[fi].y = GROUND_Y; farmers[fi].task = 'tend'; farmers[fi].taskTimer = 3;
+    }
+  });
+
+  // Handle tribute
+  const victory = exp.victory !== false; // default true if not set
+  if (victory) {
+    victoryCount++;
+    tributeActive = true;
+    tributeCyclesSinceVictory = 0;
+    spawnTributeCarts();
+  }
+
+  // Mark as processed
+  try {
+    s.expedition.leg = 'processed';
+    localStorage.setItem(LS_KEY, JSON.stringify(s));
+  } catch(e) {}
+
+  showWelcomeBack(soldiersSurvived, portersSurvived, exp);
 }
 
 // ── DRAW HELPERS ───────────────────────────────────────────────────────────────
@@ -564,11 +806,23 @@ function updateSeason(dt) {
   seasonTimer += dt;
   if (season === 'dry') {
     cropGrowth = Math.min(1, seasonTimer / DRY_DUR);
+    // Accumulate food based on active farmers (more farmers = more yield)
+    const activeFarmers = farmers.filter(f => f.role==='farmer' && !f.gone).length;
+    cropStore = Math.min(200, cropStore + activeFarmers * 0.3 * dt);
     if (seasonTimer >= DRY_DUR) { season='rainy'; seasonTimer=0; cropGrowth=1; }
   } else {
     // During rain, stalks slowly die back so new planting cycle is visible
     cropGrowth = Math.max(0, 1 - seasonTimer / RAINY_DUR);
-    if (seasonTimer >= RAINY_DUR) { season='dry'; seasonTimer=0; cropGrowth=0; }
+    if (seasonTimer >= RAINY_DUR) {
+      season='dry'; seasonTimer=0; cropGrowth=0;
+      if (tributeActive) {
+        tributeCyclesSinceVictory++;
+        if (tributeCyclesSinceVictory >= TRIBUTE_STOP_CYCLES && !tributeStopNotified) {
+          tributeActive = false;
+          showTributeStopped();
+        }
+      }
+    }
   }
 }
 
@@ -592,8 +846,9 @@ function update(dt) {
   camX += (P.x - canvas.width/2 - camX) * Math.min(1, dt*7);
   camX  = Math.max(0, Math.min(WORLD_W - canvas.width, camX));
 
-  farmers.forEach((f,fi) => updateFarmer(f,fi,dt));
+  farmers.forEach((f,fi) => { if (!f.gone) updateFarmer(f,fi,dt); });
   maize.forEach(m => { m.phase += dt*(season==='rainy'?1.1:0.6); });
+  updateTributeCarts(dt);
 
   // Rain particle update (screen-space)
   if (season === 'rainy') {
@@ -609,6 +864,7 @@ function update(dt) {
   nearTemple = Math.abs(P.x - TEMPLE_X) < TEMPLE_R;
   if (!nearTemple) {
     for (let i=0; i<farmers.length; i++) {
+      if (farmers[i].gone) continue;
       if (Math.abs(P.x-farmers[i].x) < INTERACT_R) { nearFarmer=i; break; }
     }
   }
@@ -648,6 +904,24 @@ function drawSeasonHUD(W, H) {
     : 'Rainy Season';
   ctx.fillStyle='rgba(245,240,225,.82)'; ctx.font="10px 'Cinzel',serif"; ctx.textAlign='center';
   ctx.fillText(phase, W/2, bY+bH+14);
+
+  // Food store indicator (top-right)
+  const foodStr = `🌽 ${Math.floor(cropStore)} rations stored`;
+  ctx.font="10px 'Cinzel',serif"; ctx.textAlign='right';
+  ctx.fillStyle='rgba(0,0,0,.6)';
+  const fw = ctx.measureText(foodStr).width + 16;
+  ctx.beginPath(); ctx.roundRect(W-fw-8, 10, fw+8, 22, 4); ctx.fill();
+  ctx.fillStyle='#ca8a04'; ctx.fillText(foodStr, W-12, 25);
+  ctx.textAlign='left';
+
+  // Tribute active indicator
+  if (tributeActive && tributeCarts.length > 0) {
+    ctx.fillStyle='rgba(0,0,0,.55)';
+    ctx.beginPath(); ctx.roundRect(8, 10, 170, 22, 4); ctx.fill();
+    ctx.fillStyle='#fbbf24'; ctx.textAlign='left';
+    ctx.fillText('🎁 Tribute arriving from Ox Witz', 14, 25);
+    ctx.textAlign='left';
+  }
 }
 
 // ── DRAW MINIMAP ───────────────────────────────────────────────────────────────
@@ -661,6 +935,7 @@ function drawMinimap(W, H) {
   ctx.fillStyle='#ca8a04'; ctx.fillRect(tx-2,MY+4,4,MH-8);
   // Farmer dots
   farmers.forEach(f=>{
+    if (f.gone) return;
     const fx=MX+(f.x/WORLD_W)*MW;
     ctx.fillStyle=f.role==='warrior'?'#b91c1c': f.role==='porter'?'#0f766e':'#6b7c2a';
     ctx.beginPath(); ctx.arc(fx,MY+MH/2,2.5,0,Math.PI*2); ctx.fill();
@@ -774,6 +1049,7 @@ function draw() {
 
   // Farmers
   farmers.forEach((f,fi)=>{
+    if (f.gone) return;
     const sx=f.x*sc;
     if(sx-camX*sc<-80*sc||sx-camX*sc>W+80*sc) return;
     const isNear=nearFarmer===fi;
@@ -785,6 +1061,9 @@ function draw() {
     ctx.font=`${isNear?11:9}px 'Cinzel',serif`; ctx.textAlign='center';
     ctx.fillText(f.name,sx,(f.y-74)*sc);
   });
+
+  // Tribute carts
+  drawTributeCarts(sc);
 
   // Player
   ctx.save(); ctx.shadowColor='#0f766e'; ctx.shadowBlur=22;
@@ -841,6 +1120,7 @@ function loop(ts) {
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(ts=>{ last=ts; requestAnimationFrame(loop); });
+checkReturnState();
 </script>
 </body>
 </html>
