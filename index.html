@@ -1,11 +1,254 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta http-equiv="refresh" content="0; url=home-farmer.html" />
-<title>Maya Warfare</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>K'uhul Ajaw — Lord of the Jungle Cities</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:#0b0b0c;overflow:hidden;
+    font-family:'Cinzel',serif;
+    display:flex;align-items:center;justify-content:center;
+    min-height:100vh;
+  }
+  canvas#bg{position:fixed;inset:0;z-index:0}
+
+  #card{
+    position:relative;z-index:2;
+    background:#f5f0e1;border:3px solid #ca8a04;border-radius:6px;
+    padding:32px 36px 28px;max-width:500px;width:92%;
+    box-shadow:0 0 0 6px rgba(0,0,0,.55),0 12px 60px rgba(0,0,0,.9);
+    opacity:0;transform:translateY(18px);
+    transition:opacity .55s ease, transform .55s ease;
+  }
+  #card.visible{opacity:1;transform:translateY(0)}
+
+  .eyebrow{
+    font-size:.65rem;letter-spacing:.22em;text-transform:uppercase;
+    color:#0f766e;text-align:center;margin-bottom:6px;
+  }
+  h1{
+    font-size:1.55rem;color:#1c1208;text-align:center;letter-spacing:.06em;
+    text-transform:uppercase;line-height:1.2;margin-bottom:4px;
+  }
+  .subtitle{
+    font-size:.72rem;color:#6b7c2a;text-align:center;letter-spacing:.14em;
+    text-transform:uppercase;margin-bottom:18px;
+  }
+  .divider{
+    height:1px;background:linear-gradient(to right,transparent,#ca8a04,transparent);
+    margin:0 0 18px;
+  }
+  .story{
+    font-size:.82rem;color:#2a1e0e;line-height:1.75;margin-bottom:18px;
+  }
+  .story em{color:#0f766e;font-style:normal;font-weight:600}
+  .how-to{
+    background:rgba(0,0,0,.04);border-left:3px solid #ca8a04;
+    padding:12px 14px;border-radius:2px;margin-bottom:20px;
+  }
+  .how-to h3{
+    font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;
+    color:#ca8a04;margin-bottom:10px;
+  }
+  .how-to ol{
+    padding-left:0;list-style:none;
+    display:flex;flex-direction:column;gap:7px;
+  }
+  .how-to li{
+    font-size:.75rem;color:#1c1208;line-height:1.5;
+    display:grid;grid-template-columns:1.4rem 1fr;gap:2px;
+  }
+  .how-to li .num{color:#ca8a04;font-weight:700}
+  .how-to li .desc em{color:#0f766e;font-style:normal}
+  .btn-begin{
+    display:block;width:100%;padding:14px;
+    background:#ca8a04;border:2px solid #a16207;border-radius:4px;
+    font-family:'Cinzel',serif;font-size:.92rem;font-weight:700;
+    letter-spacing:.1em;text-transform:uppercase;color:#1c1208;
+    cursor:pointer;text-align:center;
+    transition:background .15s,transform .1s;
+  }
+  .btn-begin:hover{background:#b07a03}
+  .btn-begin:active{transform:scale(.98)}
+  .footer-note{
+    text-align:center;font-size:.62rem;color:#a89060;
+    margin-top:12px;letter-spacing:.08em;
+  }
+</style>
 </head>
 <body>
-<p>Redirecting to <a href="home-farmer.html">Maya Home Farmer</a>...</p>
+<canvas id="bg"></canvas>
+
+<div id="card">
+  <div class="eyebrow">A Dynasty Begins</div>
+  <h1>K'uhul Ajaw</h1>
+  <div class="subtitle">Lord of the Jungle Cities</div>
+  <div class="divider"></div>
+
+  <p class="story">
+    You rule a small Maya city-state deep in the lowland jungle.
+    Your fields are narrow, your warriors few, and your name unknown
+    beyond the nearest river bend.<br><br>
+    To the east, the city of <em>Ox Witz</em> has grown fat on trade and
+    slave labour. Their walls climb above the canopy. They have never
+    paid tribute to anyone.<br><br>
+    You will change that — if your farmers can feed your army,
+    and your army can survive the march.
+  </p>
+
+  <div class="how-to">
+    <h3>How to Play</h3>
+    <ol>
+      <li><span class="num">1</span><span class="desc">
+        <em>Farm.</em> Walk the fields, talk to your farmers.
+        Assign them as warriors or porters at the temple.
+        Crops grow through the dry season — more farmers, more food.
+      </span></li>
+      <li><span class="num">2</span><span class="desc">
+        <em>Plan the march.</em> The temple shows how far it is,
+        how much food you'll need, and whether your porters can carry enough.
+        Don't march short.
+      </span></li>
+      <li><span class="num">3</span><span class="desc">
+        <em>March.</em> Events on the road drain food and morale.
+        Every choice matters — especially when a porter deserts.
+      </span></li>
+      <li><span class="num">4</span><span class="desc">
+        <em>Fight.</em> Your surviving warriors storm Ox Witz.
+        Win and tribute carts will roll home. Lose and you walk back empty.
+      </span></li>
+      <li><span class="num">5</span><span class="desc">
+        <em>Watch the tribute.</em> It won't last long. When the insult
+        comes, you decide whether to march again — into doubled walls.
+      </span></li>
+    </ol>
+  </div>
+
+  <button class="btn-begin" onclick="begin()">Begin Your Reign</button>
+  <p class="footer-note">Arrow keys or WASD to move &nbsp;·&nbsp; Tap or [E] to speak</p>
+</div>
+
+<script>
+// Clear any stale game state so each playthrough starts fresh
+try { localStorage.removeItem('mayaThreeGameState'); } catch(e) {}
+
+// ── BACKGROUND CANVAS — starfield + jungle silhouette ─────────────────────────
+const canvas = document.getElementById('bg');
+const ctx    = canvas.getContext('2d');
+
+function resize() {
+  canvas.width  = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// Seeded pseudo-random
+function sr(n){ return Math.abs(Math.sin(n*9301+49297)*23423.4)%1; }
+
+// Stars
+const STARS = Array.from({length:160}, (_,i) => ({
+  x: sr(i*3)   * 3000,
+  y: sr(i*7)   * 400,
+  r: 0.5 + sr(i*11) * 1.4,
+  twinkle: sr(i*17) * Math.PI * 2,
+}));
+
+// Tree silhouette (far, mid)
+function drawSilhouette(layer, yBase, sc, alpha) {
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = layer === 'far' ? '#060e06' : '#030a03';
+  for (let i = 0; i < 28; i++) {
+    const seed = i * 47 + layer.length;
+    const x    = sr(seed)   * canvas.width;
+    const h    = (18 + sr(seed+1) * 22) * sc;
+    const w    = (8  + sr(seed+2) * 10) * sc;
+    // trunk
+    ctx.fillRect(x - w*.15, yBase - h, w*.3, h);
+    // canopy layers
+    [[0,h,w,w*.55],[0,h*.7,w*.8,w*.45],[0,h*.45,w*.62,w*.35]].forEach(([ox,oy,cw,ch]) => {
+      ctx.beginPath();
+      ctx.ellipse(x+ox*sc, yBase-oy, cw*.5, ch*.5, 0, 0, Math.PI*2);
+      ctx.fill();
+    });
+  }
+  ctx.restore();
+}
+
+let t = 0;
+function draw(ts) {
+  t = ts / 1000;
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  // Sky gradient
+  const sky = ctx.createLinearGradient(0, 0, 0, H);
+  sky.addColorStop(0,   '#04070f');
+  sky.addColorStop(0.6, '#080e08');
+  sky.addColorStop(1,   '#0c1a0c');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, W, H);
+
+  // Stars
+  const starW = W / canvas.width * W;
+  ctx.save();
+  STARS.forEach(s => {
+    const sx = (s.x / 3000) * W;
+    const sy = (s.y / 400)  * (H * 0.55);
+    const tw = 0.7 + 0.3 * Math.sin(t * 1.1 + s.twinkle);
+    ctx.globalAlpha = tw * 0.72;
+    ctx.fillStyle = '#e7e0d2';
+    ctx.beginPath();
+    ctx.arc(sx, sy, s.r, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.restore();
+
+  // Jungle silhouettes (two layers, slow parallax)
+  const yH = H * 0.82;
+  drawSilhouette('far', yH + Math.sin(t * 0.08) * 2,  H / 480 * 0.58, 0.55);
+  drawSilhouette('mid', yH + 10 + Math.sin(t * 0.12) * 1.5, H / 480 * 0.82, 0.8);
+
+  // Ground strip
+  const grd = ctx.createLinearGradient(0, yH, 0, H);
+  grd.addColorStop(0, '#0d1a0a');
+  grd.addColorStop(1, '#060d05');
+  ctx.fillStyle = grd;
+  ctx.fillRect(0, yH, W, H - yH);
+
+  // Fireflies
+  for (let i = 0; i < 18; i++) {
+    const fx = ((sr(i*3) * W + t * (12 + sr(i*7)*8)) % W);
+    const fy = yH - 8 - sr(i*11) * 60 + Math.sin(t * (0.4 + sr(i*13)*0.6) + i) * 12;
+    const pulse = 0.4 + 0.6 * Math.sin(t * (1.8 + sr(i*17)*1.2) + sr(i*19)*6);
+    ctx.globalAlpha = pulse * 0.7;
+    ctx.fillStyle = '#b8ff70';
+    ctx.beginPath();
+    ctx.arc(fx, fy, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  requestAnimationFrame(draw);
+}
+requestAnimationFrame(draw);
+
+// Fade card in
+setTimeout(() => document.getElementById('card').classList.add('visible'), 120);
+
+function begin() {
+  const card = document.getElementById('card');
+  card.style.transition = 'opacity .35s ease, transform .35s ease';
+  card.style.opacity = '0';
+  card.style.transform = 'translateY(-12px)';
+  setTimeout(() => { window.location.href = 'home-farmer.html'; }, 340);
+}
+</script>
 </body>
 </html>
