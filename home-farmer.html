@@ -77,8 +77,11 @@ const TRIBUTE_STOP_CYCLES = 1;    // tribute ends after the first rainy season
 let tributeStopNotified   = false;
 let victoryCount          = 0;
 const tributeCarts        = [];   // animated tribute cart NPCs
+const tributeBoxes        = [];   // boxes left on ground: { x, food, collected }
 let tributeSpawnTimer     = 0;
 const TRIBUTE_INTERVAL    = 11;   // seconds between carts — next visible before last arrives
+let nearTributeCarrier    = -1;   // index of interactable carrier
+let nearTributeBox        = -1;   // index of collectable box
 
 // ── CONSTANTS ──────────────────────────────────────────────────────────────────
 const WORLD_W    = 3400;
@@ -225,6 +228,8 @@ mbR.addEventListener('mouseup',   ()=>keys['ArrowRight']=false);
 
 // ── DIALOG ─────────────────────────────────────────────────────────────────────
 function tryInteract() {
+  if (nearTributeBox >= 0) { collectTributeBox(nearTributeBox); return; }
+  if (nearTributeCarrier >= 0) { openCarrierDialog(); return; }
   if (nearTemple) { openTempleDialog(); return; }
   if (nearFarmer >= 0) openFarmerDialog(nearFarmer);
 }
@@ -232,8 +237,13 @@ function closeDialog() {
   document.getElementById('overlay').classList.remove('visible');
   dialogOpen = false;
 }
-function showCard(html) {
-  document.getElementById('card').innerHTML = html;
+function showCard(html, opts = {}) {
+  const card = document.getElementById('card');
+  card.innerHTML = html;
+  card.style.borderColor = opts.red ? '#b91c1c' : '#ca8a04';
+  card.style.boxShadow = opts.red
+    ? '0 0 0 6px rgba(0,0,0,.5),0 8px 40px rgba(185,28,28,.6)'
+    : '0 0 0 6px rgba(0,0,0,.5),0 8px 40px rgba(0,0,0,.8)';
   document.getElementById('overlay').classList.add('visible');
   dialogOpen = true;
 }
@@ -344,7 +354,7 @@ function beginMarch() {
       distance:       DIST,
       isReconquest:   tributeStopNotified,
       wallLevel:      tributeStopNotified ? 2 : 1,
-      seasonDaysLeft: 60,
+      seasonDaysLeft: season === 'dry' ? Math.max(1, Math.round(60 * (1 - seasonTimer / DRY_DUR))) : 1,
       warriors_sent:  ws.length,
       porters_sent:   ps.length,
       warriorIndices: ws.map(f => farmers.indexOf(f)),
@@ -369,11 +379,16 @@ function beginMarch() {
 
 // ── TRIBUTE CARTS ─────────────────────────────────────────────────────────────
 function spawnOneTributeCart() {
+  const dropX = TEMPLE_X + 280 - (tributeCarts.length % 4) * 55;
   tributeCarts.push({
     x: WORLD_W + 50,
     y: GROUND_Y,
     facing: -1,
     walkPhase: Math.random() * Math.PI * 2,
+    state: 'walking',   // 'walking' | 'dropping' | 'leaving' | 'done'
+    dropX,
+    dropTimer: 0,
+    boxCreated: false,
     done: false,
   });
 }
@@ -400,48 +415,99 @@ function updateTributeCarts(dt) {
   }
   tributeCarts.forEach(c => {
     if (c.done) return;
-    c.x -= 48 * dt;
     c.walkPhase += dt * 6;
-    if (c.x <= TEMPLE_X + 220) c.done = true;
-  });
-  // Prune carts that have arrived and tribute has ended
-  if (!tributeActive) {
-    for (let i = tributeCarts.length - 1; i >= 0; i--) {
-      if (tributeCarts[i].done) tributeCarts.splice(i, 1);
+    if (c.state === 'walking') {
+      c.x -= 48 * dt;
+      if (c.x <= c.dropX) {
+        c.x = c.dropX;
+        c.state = 'dropping';
+        c.dropTimer = 0;
+      }
+    } else if (c.state === 'dropping') {
+      c.dropTimer += dt;
+      if (!c.boxCreated && c.dropTimer >= 0.6) {
+        tributeBoxes.push({ x: c.x - 18, food: 14, collected: false });
+        c.boxCreated = true;
+      }
+      if (c.dropTimer >= 2.2) {
+        c.state = 'leaving';
+        c.facing = 1;  // turn around, head back east
+      }
+    } else if (c.state === 'leaving') {
+      c.x += 60 * dt;
+      if (c.x > WORLD_W + 120) c.done = true;
     }
+  });
+  // Prune done carts
+  for (let i = tributeCarts.length - 1; i >= 0; i--) {
+    if (tributeCarts[i].done) tributeCarts.splice(i, 1);
+  }
+  // Prune collected boxes
+  for (let i = tributeBoxes.length - 1; i >= 0; i--) {
+    if (tributeBoxes[i].collected) tributeBoxes.splice(i, 1);
   }
 }
 
 function drawTributeCarts(sc) {
-  tributeCarts.forEach(c => {
+  // Draw uncollected tribute boxes on the ground
+  tributeBoxes.forEach((box, bi) => {
+    if (box.collected) return;
+    const sx = box.x * sc;
+    if (sx - camX*sc < -80*sc || sx - camX*sc > canvas.width + 80*sc) return;
+    const isNear = nearTributeBox === bi;
+    ctx.save();
+    ctx.translate(sx, GROUND_Y * sc);
+    if (isNear) { ctx.shadowColor = '#ca8a04'; ctx.shadowBlur = 16 * sc; }
+    ctx.fillStyle = '#b45309'; ctx.fillRect(-10*sc, -20*sc, 20*sc, 16*sc);
+    ctx.strokeStyle = '#ca8a04'; ctx.lineWidth = 1.5*sc; ctx.strokeRect(-10*sc, -20*sc, 20*sc, 16*sc);
+    ctx.beginPath(); ctx.moveTo(-10*sc, -12*sc); ctx.lineTo(10*sc, -12*sc); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, -20*sc); ctx.lineTo(0, -4*sc); ctx.stroke();
+    if (isNear) {
+      ctx.fillStyle = '#ca8a04'; ctx.font = `${9*sc}px 'Cinzel',serif`;
+      ctx.textAlign = 'center'; ctx.fillText('Tap \u2022 Collect', 0, -26*sc);
+    }
+    ctx.restore();
+  });
+
+  tributeCarts.forEach((c, ci) => {
     const sx = c.x * sc;
     if (sx - camX*sc < -80*sc || sx - camX*sc > canvas.width + 80*sc) return;
+    const dropping = c.state === 'dropping';
+    const bob  = dropping ? Math.sin(totalTime * 4) * 1 : Math.sin(c.walkPhase) * 2;
+    const legS = dropping ? 0 : Math.sin(c.walkPhase) * 9;
+    const isNear = nearTributeCarrier === ci;
     ctx.save();
     ctx.translate(sx, c.y * sc);
     ctx.scale(c.facing, 1);
-    const bob = Math.sin(c.walkPhase) * 2;
-    const legS = Math.sin(c.walkPhase) * 9;
+    if (isNear) { ctx.shadowColor = '#ca8a04'; ctx.shadowBlur = 16 * sc; }
     // Shadow
     ctx.fillStyle='rgba(0,0,0,.18)'; ctx.beginPath(); ctx.ellipse(0,2,14,4,0,0,Math.PI*2); ctx.fill();
-    // Legs (bright indigo)
+    // Legs
+    const bentFwd = dropping ? 0.28 : 0;
     ctx.strokeStyle='#312e81'; ctx.lineWidth=5*sc; ctx.lineCap='round';
-    ctx.beginPath(); ctx.moveTo(-3*sc,(-14+bob)*sc); ctx.lineTo(-5*sc,(legS>0?-legS*.3:0)*sc); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo( 3*sc,(-14+bob)*sc); ctx.lineTo( 5*sc,(legS<0? legS*.3:0)*sc); ctx.stroke();
-    // Body
+    ctx.beginPath(); ctx.moveTo(-3*sc,(-14+bob)*sc); ctx.lineTo((-5-bentFwd*6)*sc,(legS>0?-legS*.3:2*bentFwd)*sc); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo( 3*sc,(-14+bob)*sc); ctx.lineTo(( 5+bentFwd*6)*sc,(legS<0? legS*.3:2*bentFwd)*sc); ctx.stroke();
+    // Body (tilt forward when dropping)
+    ctx.save();
+    if (dropping) { ctx.translate(0, (-20+bob)*sc); ctx.rotate(0.32); ctx.translate(0, (20-bob)*sc); }
     ctx.fillStyle='#312e81';
     ctx.beginPath(); ctx.roundRect(-9*sc,(-34+bob)*sc,18*sc,22*sc,3*sc); ctx.fill();
-    // Cart bundle on back
-    ctx.fillStyle='#b45309'; ctx.fillRect(-10*sc,(-52+bob)*sc,20*sc,14*sc);
-    ctx.strokeStyle='#ca8a04'; ctx.lineWidth=1.5*sc; ctx.strokeRect(-10*sc,(-52+bob)*sc,20*sc,14*sc);
-    ctx.fillStyle='#ca8a04'; ctx.beginPath(); ctx.arc(0,(-46+bob)*sc,3.5*sc,0,Math.PI*2); ctx.fill();
-    // Arms
-    const armS = Math.sin(c.walkPhase+Math.PI)*7;
+    // Bundle on back only while walking/leaving
+    if (!dropping && !c.boxCreated) {
+      ctx.fillStyle='#b45309'; ctx.fillRect(-10*sc,(-52+bob)*sc,20*sc,14*sc);
+      ctx.strokeStyle='#ca8a04'; ctx.lineWidth=1.5*sc; ctx.strokeRect(-10*sc,(-52+bob)*sc,20*sc,14*sc);
+      ctx.fillStyle='#ca8a04'; ctx.beginPath(); ctx.arc(0,(-46+bob)*sc,3.5*sc,0,Math.PI*2); ctx.fill();
+    }
+    // Arms — lowered when dropping
+    const armS = dropping ? 0 : Math.sin(c.walkPhase+Math.PI)*7;
+    const armY = dropping ? -10 : -20;
     ctx.strokeStyle='#312e81'; ctx.lineWidth=4*sc;
-    ctx.beginPath(); ctx.moveTo(-9*sc,(-28+bob)*sc); ctx.lineTo((-14)*sc,(-20+bob+armS*.4)*sc); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo( 9*sc,(-28+bob)*sc); ctx.lineTo( 14*sc, (-20+bob-armS*.4)*sc); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-9*sc,(-28+bob)*sc); ctx.lineTo(-14*sc,(armY+bob+armS*.4)*sc); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo( 9*sc,(-28+bob)*sc); ctx.lineTo( 14*sc,(armY+bob-armS*.4)*sc); ctx.stroke();
+    ctx.restore();
     // Head
     ctx.fillStyle='#c27d4a'; ctx.beginPath(); ctx.ellipse(0,(-42+bob)*sc,9*sc,10*sc,0,0,Math.PI*2); ctx.fill();
-    // Bright feather headdress
+    // Feather headdress
     const fc=['#b91c1c','#16a34a','#ca8a04','#7c3aed','#0f766e','#dc2626','#0ea5e9'];
     [-0.55,-0.28,0,0.28,0.55,-0.4,0.4].forEach((ang,fi) => {
       ctx.save(); ctx.translate(0,(-52+bob)*sc); ctx.rotate(ang);
@@ -451,6 +517,13 @@ function drawTributeCarts(sc) {
     });
     ctx.fillStyle='#fbbf24'; ctx.fillRect(-10*sc,(-50+bob)*sc,20*sc,4*sc);
     ctx.restore();
+    // Speak prompt
+    if (isNear && !dialogOpen) {
+      ctx.save(); ctx.translate(sx, c.y * sc);
+      ctx.fillStyle = '#ca8a04'; ctx.font = `${9*sc}px 'Cinzel',serif`; ctx.textAlign = 'center';
+      ctx.fillText('Tap \u2022 Speak', 0, (-68+bob)*sc);
+      ctx.restore();
+    }
   });
 }
 
@@ -458,9 +531,9 @@ function drawTributeCarts(sc) {
 function showTributeStopped() {
   tributeStopNotified = false;
   showCard(`
-    <h2>An Insult From Ox Witz</h2>
+    <h2 style="color:#b91c1c">An Insult From Ox Witz</h2>
     <div class="flavor">A lone messenger walks in from the east — no cart behind him. He carries a bundle of rotten maize and a carved stone tablet.</div>
-    <div style="font-size:.8rem;color:#1c1208;background:#f0e8d0;border-left:3px solid #ca8a04;padding:10px 12px;margin:10px 0;border-radius:2px;font-style:italic;line-height:1.7">
+    <div style="font-size:.8rem;color:#7f1d1d;background:#fde8e8;border-left:4px solid #b91c1c;padding:10px 12px;margin:10px 0;border-radius:2px;font-style:italic;line-height:1.7">
       "Ox Witz will not be bled dry by jungle kings who crawl home through the mud. Send your farmers. We are done."
     </div>
     <div style="font-size:.75rem;color:#5a4a2a;margin-bottom:14px;line-height:1.6">They have had time to rebuild their walls. The next battle will be harder — but tribute could flow again.</div>
@@ -468,12 +541,28 @@ function showTributeStopped() {
       <button class="btn btn-warrior" onclick="flagReconquest()">March Again — Make Them Pay</button>
       <button class="btn btn-back" onclick="closeDialog()">Swallow the Insult</button>
     </div>
-  `);
+  `, { red: true });
 }
 
 function flagReconquest() {
   tributeStopNotified = true;
   closeDialog();
+}
+
+function openCarrierDialog() {
+  showCard(`
+    <h2>Tribute Bearer</h2>
+    <div class="flavor">"Great lord. We carry what Ox Witz owes you. Your victory is spoken of in the plazas. We honor your power."</div>
+    <div style="font-size:.78rem;color:#5a4a2a;margin-bottom:14px;line-height:1.6">He bows his head and sets the bundle at your feet. Collect it when you are ready.</div>
+    <div class="btn-row"><button class="btn btn-back" onclick="closeDialog()">Receive Him</button></div>
+  `);
+}
+
+function collectTributeBox(i) {
+  const box = tributeBoxes[i];
+  if (!box || box.collected) return;
+  box.collected = true;
+  cropStore = Math.min(200, cropStore + box.food);
 }
 
 function showWelcomeBack(soldiersSurvived, portersSurvived, exp) {
@@ -889,6 +978,8 @@ function update(dt) {
 
   // Proximity checks
   nearFarmer = -1;
+  nearTributeCarrier = -1;
+  nearTributeBox = -1;
   nearTemple = Math.abs(P.x - TEMPLE_X) < TEMPLE_R;
   if (!nearTemple) {
     for (let i=0; i<farmers.length; i++) {
@@ -896,6 +987,16 @@ function update(dt) {
       if (Math.abs(P.x-farmers[i].x) < INTERACT_R) { nearFarmer=i; break; }
     }
   }
+  tributeCarts.forEach((c, i) => {
+    if (c.done) return;
+    if (c.state === 'walking' || c.state === 'dropping') {
+      if (Math.abs(P.x - c.x) < INTERACT_R) nearTributeCarrier = i;
+    }
+  });
+  tributeBoxes.forEach((box, i) => {
+    if (box.collected) return;
+    if (Math.abs(P.x - box.x) < INTERACT_R) nearTributeBox = i;
+  });
 }
 
 // ── DRAW RAIN ──────────────────────────────────────────────────────────────────
@@ -1112,7 +1213,11 @@ function draw() {
   // Interact prompt (tap-friendly label)
   let prompt='';
   if (!dialogOpen) {
-    if (nearTemple) {
+    if (nearTributeBox >= 0) {
+      prompt = `Tap \u2022 Collect Tribute Box (+${tributeBoxes[nearTributeBox]?.food ?? 14} rations)`;
+    } else if (nearTributeCarrier >= 0) {
+      prompt = `Tap \u2022 Speak with the Tribute Bearer`;
+    } else if (nearTemple) {
       const n=farmers.filter(f=>f.role!=='farmer').length;
       prompt = n ? `Tap \u2022 Speak at the Temple  (${n} assembled)` : `Tap \u2022 Speak at the Temple`;
     } else if (nearFarmer>=0) {

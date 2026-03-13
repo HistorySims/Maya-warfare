@@ -177,8 +177,8 @@
   }
   .ev-btn:hover { filter: brightness(1.15); }
   .ev-btn:disabled { opacity: 0.6; cursor: default; }
-  .ev-btn.safe    { background: #0f766e; color: #e7e0d2; }
-  .ev-btn.risky   { background: #b45309; color: #fff; }
+  .ev-btn.safe    { background: #5c3d11; color: #e7e0d2; }
+  .ev-btn.risky   { background: #5c3d11; color: #e7e0d2; }
   .ev-btn.neutral { background: #5c3d11; color: #e7e0d2; }
 
   #event-result {
@@ -720,11 +720,12 @@ function showChoiceEvent(title, desc, choices) {
       resultEl.textContent = txt;
       resultEl.style.display = 'block';
       updateHUD();
-      setTimeout(() => {
+      const cont = makeBtn('Continue', 'neutral', () => {
         ov.style.display = 'none';
         G.paused = false;
         checkDeath();
-      }, 2400);
+      });
+      btns.appendChild(cont);
     });
     btns.appendChild(btn);
   });
@@ -1404,11 +1405,12 @@ function doArrive() {
     try {
       const s = JSON.parse(localStorage.getItem(LS_KEY)) || {};
       if (!s.expedition) s.expedition = {};
-      s.expedition.soldiers  = G.soldiers;
-      s.expedition.porters   = G.porters;
-      s.expedition.food      = Math.ceil(G.food);
-      s.expedition.leg       = G.isReturn ? 'returned' : 'atbattle';
-      s.game                 = G.isReturn ? 'farm' : 'battle';
+      s.expedition.soldiers       = G.soldiers;
+      s.expedition.porters        = G.porters;
+      s.expedition.food           = Math.ceil(G.food);
+      s.expedition.seasonDaysLeft = G.seasonLeft;
+      s.expedition.leg            = G.isReturn ? 'returned' : 'atbattle';
+      s.game                      = G.isReturn ? 'farm' : 'battle';
       localStorage.setItem(LS_KEY, JSON.stringify(s));
     } catch(e) {}
     // Legacy hook
@@ -1941,9 +1943,10 @@ function loop(ts) {
     if (G.raining) spd *= 0.6;
     if (G.wounded) spd *= 0.75;
 
-    farX  += spd * FAR_SPD  * dt;
-    midX  += spd * MID_SPD  * dt;
-    nearX += spd * NEAR_SPD * dt;
+    const dir = G.isReturn ? -1 : 1;
+    farX  += spd * FAR_SPD  * dt * dir;
+    midX  += spd * MID_SPD  * dt * dir;
+    nearX += spd * NEAR_SPD * dt * dir;
 
     // Day progression
     G.dayFrac += dt / secPerDay();
@@ -1996,7 +1999,15 @@ function loop(ts) {
     }
   }
 
-  drawParty(t);
+  if (G.isReturn) {
+    ctx.save();
+    ctx.translate(W, 0);
+    ctx.scale(-1, 1);
+    drawParty(t);
+    ctx.restore();
+  } else {
+    drawParty(t);
+  }
 
   requestAnimationFrame(loop);
 }
