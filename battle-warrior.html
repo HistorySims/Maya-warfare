@@ -1190,12 +1190,14 @@ function returnToTrail() {
     const alive = soldiers.filter(x => !x.dead && !x.dying).length;
     if (s.expedition) {
       const porters = s.expedition.porters ?? 0;
-      s.expedition.soldiers  = alive;
-      s.expedition.food      = porters * 14 + 20;  // porters fill up from city stores
-      s.expedition.leg       = 'homebound';
-      s.expedition.distance  = s.expedition.distanceTotal || 10;
-      s.expedition.playerHp  = Math.max(0, Math.ceil(player.hp));
-      s.expedition.victory   = true;
+      s.expedition.soldiers       = alive;
+      s.expedition.porters        = porters;          // porters stay behind and march home
+      s.expedition.food           = porters * 14 + 20;  // porters fill up from city stores
+      s.expedition.leg            = 'homebound';
+      s.expedition.distance       = s.expedition.distanceTotal || 10;
+      s.expedition.playerHp       = Math.max(0, Math.ceil(player.hp));
+      s.expedition.victory        = true;
+      // seasonDaysLeft passes through unchanged from what trail saved
       s.game = 'trail';
     }
     localStorage.setItem(LS_KEY, JSON.stringify(s));
