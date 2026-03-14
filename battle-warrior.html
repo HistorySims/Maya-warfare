@@ -101,7 +101,7 @@ canvas.addEventListener('touchend', e => {
   for (const t of e.changedTouches) {
     const [tx, ty] = toCanvas(t.clientX, t.clientY);
     // Victory / defeat screen taps
-    if (gamePhase === 'victory' && ty > H / 2 + 114 && ty < H / 2 + 168) { returnToTrail(); return; }
+    if (gamePhase === 'victory' && totalMs - victoryAt > 2000 && ty > H / 2 + 114 && ty < H / 2 + 168) { returnToTrail(); return; }
     if (gamePhase === 'defeat'  && ty > H / 2 + 10 && ty < H / 2 + 68) { returnDefeated(); return; }
     // Joystick / attack release
     if (tx < W / 2) { touch.jActive = false; touch.jx = 0; touch.jy = 0; }
@@ -120,6 +120,7 @@ let advanceAlpha = 0;
 let startingSoldiers, killZoneLosses;
 let totalMs = 0;
 let victoryFlag = false;
+let victoryAt = -Infinity;   // ms timestamp when victory triggered
 
 // ── ENTITY FACTORY ────────────────────────────────────────────────────────────
 function makeEnt(type, wx, y) {
@@ -842,14 +843,16 @@ function drawVictory() {
   ctx.fillStyle = '#6a9a7a'; ctx.font = '10px Cinzel, serif';
   ctx.fillText('heading for your city', W / 2, cartY + 38);
 
-  // Button
-  ctx.fillStyle = COL.jade;
+  // Button — locked for 2 s after victory so rapid swing-clicking can't skip
+  const secLeft = Math.ceil((2000 - (totalMs - victoryAt)) / 1000);
+  const ready = totalMs - victoryAt > 2000;
+  ctx.fillStyle = ready ? COL.jade : '#2a4a35';
   ctx.beginPath(); ctx.roundRect(W / 2 - 140, H / 2 + 118, 280, 46, 9); ctx.fill();
-  ctx.fillStyle = '#fff'; ctx.font = 'bold 15px Cinzel, serif';
-  ctx.fillText('Begin the March Home', W / 2, H / 2 + 147);
+  ctx.fillStyle = ready ? '#fff' : '#6a8a72'; ctx.font = 'bold 15px Cinzel, serif';
+  ctx.fillText(ready ? 'Begin the March Home' : `Begin the March Home (${secLeft})`, W / 2, H / 2 + 147);
 
   ctx.fillStyle = '#555'; ctx.font = '11px Cinzel, serif';
-  ctx.fillText('Click / tap to continue', W / 2, H / 2 + 186);
+  ctx.fillText(ready ? 'Click / tap to continue' : 'Read the terms…', W / 2, H / 2 + 186);
 }
 
 function drawDefeat() {
@@ -1114,7 +1117,7 @@ function updateZones(dt) {
   const living = liveEnemies();
   if (living.length === 0 && !zone.cleared) {
     zone.cleared = true;
-    if (zone.isFinal) { gamePhase = 'victory'; victoryFlag = true; return; }
+    if (zone.isFinal) { gamePhase = 'victory'; victoryFlag = true; victoryAt = totalMs; return; }
   }
 
   // Advance prompt
@@ -1129,7 +1132,7 @@ function updateZones(dt) {
 function advanceZone() {
   advanceAlpha = 0;
   currentZone++;
-  if (currentZone >= zones.length) { gamePhase = 'victory'; victoryFlag = true; }
+  if (currentZone >= zones.length) { gamePhase = 'victory'; victoryFlag = true; victoryAt = totalMs; }
 }
 
 function updateCamera(dt) {
@@ -1165,7 +1168,7 @@ function draw() {
 // ── CLICK / TAP ───────────────────────────────────────────────────────────────
 canvas.addEventListener('click', ev => {
   const [cx2, cy2] = toCanvas(ev.clientX, ev.clientY);
-  if (gamePhase === 'victory' && cy2 > H / 2 + 114 && cy2 < H / 2 + 168) returnToTrail();
+  if (gamePhase === 'victory' && totalMs - victoryAt > 2000 && cy2 > H / 2 + 114 && cy2 < H / 2 + 168) returnToTrail();
   if (gamePhase === 'defeat'  && cy2 > H / 2 + 10 && cy2 < H / 2 + 68) returnDefeated();
 });
 
