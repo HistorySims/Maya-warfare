@@ -375,15 +375,15 @@
 
   <!-- HUD -->
   <div id="hud">
-    <div class="hud-item" id="hud-food">🌽 Rations: <span id="v-food">80</span></div>
-    <div class="hud-item" id="hud-soldiers">⚔️ Warriors: <span id="v-soldiers">6</span></div>
-    <div class="hud-item" id="hud-porters">📦 Porters: <span id="v-porters">4</span></div>
-    <div class="hud-item">📅 Day <span id="v-day">1</span></div>
-    <div class="hud-item">🗺 <span id="v-dist">15</span>d left</div>
-    <div class="hud-item" id="hud-season">☀️ Dry: <span id="v-season">60</span>d left</div>
+    <div class="hud-item" id="hud-food">🌽 <span id="lbl-food">Rations:</span> <span id="v-food">80</span></div>
+    <div class="hud-item" id="hud-soldiers">⚔️ <span id="lbl-soldiers">Warriors:</span> <span id="v-soldiers">6</span></div>
+    <div class="hud-item" id="hud-porters">📦 <span id="lbl-porters">Porters:</span> <span id="v-porters">4</span></div>
+    <div class="hud-item">📅 <span id="lbl-day">Day</span> <span id="v-day">1</span></div>
+    <div class="hud-item">🗺 <span id="v-dist">15</span><span id="lbl-dleft">d left</span></div>
+    <div class="hud-item" id="hud-season">☀️ <span id="lbl-dry">Dry:</span> <span id="v-season">60</span><span id="lbl-sleft">d left</span></div>
   </div>
 
-  <div id="rain-banner">⛈ The Rains Are Here</div>
+  <div id="rain-banner">⛈ <span id="lbl-rains">The Rains Are Here</span></div>
 
   <!-- EVENT CARD -->
   <div id="event-overlay">
@@ -401,11 +401,11 @@
   <!-- CAMP SCREEN -->
   <div id="camp-overlay">
     <div id="camp-card">
-      <div id="camp-title">Camp — Night <span id="v-camp-day">1</span></div>
+      <div id="camp-title"><span id="lbl-camp">Camp — Night</span> <span id="v-camp-day">1</span></div>
       <canvas id="camp-fire-canvas" width="90" height="65"></canvas>
       <div id="camp-stats"></div>
       <div id="camp-warning"></div>
-      <button id="camp-btn">Continue March</button>
+      <button id="camp-btn" id="camp-btn">Continue March</button>
     </div>
   </div>
 
@@ -428,6 +428,13 @@
 <script>
 'use strict';
 // ─────────────────────────────────────────────
+//  LANGUAGE
+// ─────────────────────────────────────────────
+const LANG = localStorage.getItem('mayaLang') || 'en';
+const ES   = LANG === 'es';
+function t(en, es) { return ES ? es : en; }
+
+// ─────────────────────────────────────────────
 //  SHARED STORAGE KEY
 // ─────────────────────────────────────────────
 const LS_KEY = 'mayaThreeGameState';
@@ -449,6 +456,18 @@ const MARCH_INIT = {
   isReturnTrip:   _isRet,
   seasonDaysLeft: _exp?.seasonDaysLeft ?? 60,
 };
+
+// Apply language to static HTML labels
+document.getElementById('lbl-food').textContent     = t('Rations:','Raciones:');
+document.getElementById('lbl-soldiers').textContent = t('Warriors:','Guerreros:');
+document.getElementById('lbl-porters').textContent  = t('Porters:','Cargadores:');
+document.getElementById('lbl-day').textContent      = t('Day','Día');
+document.getElementById('lbl-dleft').textContent    = t('d left','d rest.');
+document.getElementById('lbl-dry').textContent      = t('Dry:','Seca:');
+document.getElementById('lbl-sleft').textContent    = t('d left','d rest.');
+document.getElementById('lbl-rains').textContent    = t('The Rains Are Here','Las Lluvias Han Llegado');
+document.getElementById('lbl-camp').textContent     = t('Camp — Night','Campamento — Noche');
+document.getElementById('camp-btn').textContent     = t('Continue March','Continuar la Marcha');
 
 // ─────────────────────────────────────────────
 //  CANVAS
@@ -605,8 +624,8 @@ function advanceDay() {
   if (G.food <= 0 && !G.starving) {
     G.starving = true;
     showAutoEvent(
-      "The Army Starves",
-      "There is nothing left to eat. Soldiers begin to desert in the night.",
+      t("The Army Starves","El Ejército se Muere de Hambre"),
+      t("There is nothing left to eat. Soldiers begin to desert in the night.","No queda nada que comer. Los soldados empiezan a desertar en la noche."),
       () => { G.soldiers = Math.max(0, G.soldiers - 1); }
     );
     return;
@@ -617,14 +636,15 @@ function advanceDay() {
   // Season warnings
   if (!G.raining && G.seasonLeft === 10 && !G.rainWarned) {
     G.rainWarned = true;
-    showBanner("⛈ The Rains Approach! — 10 days of dry season remain", 7000);
+    showBanner(t("⛈ The Rains Approach! — 10 days of dry season remain","⛈ ¡Se Acercan las Lluvias! — 10 días de temporada seca quedan"), 7000);
   }
   if (!G.raining && G.seasonLeft <= 0) {
     G.raining = true;
     document.getElementById('rain-banner').style.display = 'block';
     showAutoEvent(
-      "The Rains Begin",
-      "The first drops fall. Within an hour the road is a river of mud. The porters can barely stand. Everything is twice as hard from here.",
+      t("The Rains Begin","Comienzan las Lluvias"),
+      t("The first drops fall. Within an hour the road is a river of mud. The porters can barely stand. Everything is twice as hard from here.",
+        "Caen las primeras gotas. En una hora el camino es un río de barro. Los cargadores apenas pueden mantenerse en pie. Todo es el doble de difícil desde aquí."),
       () => {}
     );
     return;
@@ -692,7 +712,7 @@ function showAutoEvent(title, desc, onClose) {
   btns.innerHTML = '';
   document.getElementById('event-result').style.display = 'none';
 
-  const btn = makeBtn('Continue', 'neutral', () => {
+  const btn = makeBtn(t('Continue','Continuar'), 'neutral', () => {
     onClose();
     ov.style.display = 'none';
     G.paused = false;
@@ -747,16 +767,19 @@ const EVENTS_OUT = [
   // ── HEAT & EXHAUSTION ──
   function evtBurningRoad() {
     showChoiceEvent(
-      "The Burning Road",
-      "The sun beats down on the sacbe. There is no shade. Your porters stagger beneath their loads — two have already fallen and risen again.",
+      t("The Burning Road","El Camino Ardiente"),
+      t("The sun beats down on the sacbe. There is no shade. Your porters stagger beneath their loads — two have already fallen and risen again.",
+        "El sol golpea el sacbe. No hay sombra. Tus cargadores se tambalean bajo sus cargas — dos ya han caído y se han levantado."),
       [
-        { label: "Push On", cls: "risky", act() {
+        { label: t("Push On","Seguir Adelante"), cls: "risky", act() {
           losePorter(1);
-          return "You drive the column. A porter collapses and does not rise. His bundle is split among those who remain.";
+          return t("You drive the column. A porter collapses and does not rise. His bundle is split among those who remain.",
+                   "Empujas la columna. Un cargador colapsa y no se levanta. Su carga se reparte entre los que quedan.");
         }},
-        { label: "Make Shade Camp", cls: "safe", act() {
+        { label: t("Make Shade Camp","Acampar a la Sombra"), cls: "safe", act() {
           loseDay();
-          return "You call a halt beneath the ceiba trees. A day is lost, but your porters survive.";
+          return t("You call a halt beneath the ceiba trees. A day is lost, but your porters survive.",
+                   "Ordenas una parada bajo las ceibas. Se pierde un día, pero tus cargadores sobreviven.");
         }},
       ]
     );
@@ -764,18 +787,21 @@ const EVENTS_OUT = [
 
   function evtPorterDown() {
     showChoiceEvent(
-      "Porter Down",
-      "A porter collapses face-first on the road. He cannot stand. His food bundle lies in the dust around him.",
+      t("Porter Down","Cargador Caído"),
+      t("A porter collapses face-first on the road. He cannot stand. His food bundle lies in the dust around him.",
+        "Un cargador cae de bruces en el camino. No puede levantarse. Su fardo de comida yace en el polvo a su alrededor."),
       [
-        { label: "Soldiers Carry His Load", cls: "safe", act() {
+        { label: t("Soldiers Carry His Load","Soldados Cargan su Bulto"), cls: "safe", act() {
           losePorter(1);
           G.food = Math.min(G.food + 6, 9999);
           G.food = Math.max(0, G.food - foodPerDay() * 0.25);
-          return "Soldiers shoulder his bundle. Most of the food is saved, though the column slows for the rest of the day.";
+          return t("Soldiers shoulder his bundle. Most of the food is saved, though the column slows for the rest of the day.",
+                   "Los soldados cargan su bulto. La mayor parte de la comida se salva, aunque la columna se ralentiza el resto del día.");
         }},
-        { label: "Cache It and Press On", cls: "risky", act() {
+        { label: t("Cache It and Press On","Esconderla y Seguir"), cls: "risky", act() {
           losePorter(1);
-          return "You mark the spot with stones and march. The cached food will not survive the jungle long — and you know it.";
+          return t("You mark the spot with stones and march. The cached food will not survive the jungle long — and you know it.",
+                   "Marcas el lugar con piedras y marchas. La comida escondida no sobrevivirá mucho en la selva — y lo sabes.");
         }},
       ]
     );
@@ -783,17 +809,20 @@ const EVENTS_OUT = [
 
   function evtThirst() {
     showChoiceEvent(
-      "Thirst",
-      "The water gourds are nearly empty. A soldier spotted a cenote off the trail — fresh water — but it means leaving the sacbe.",
+      t("Thirst","Sed"),
+      t("The water gourds are nearly empty. A soldier spotted a cenote off the trail — fresh water — but it means leaving the sacbe.",
+        "Los cántaros de agua casi están vacíos. Un soldado vio un cenote cerca del camino — agua fresca — pero significa abandonar el sacbe."),
       [
-        { label: "Detour to Cenote", cls: "safe", act() {
+        { label: t("Detour to Cenote","Desviarse al Cenote"), cls: "safe", act() {
           G.food = Math.max(0, G.food - foodPerDay() * 0.5);
           G.cenoteFreeDays = 2;
-          return "The cool water revives your column. Half a day is lost, but for two days you need no extra water.";
+          return t("The cool water revives your column. Half a day is lost, but for two days you need no extra water.",
+                   "El agua fresca revive tu columna. Se pierde medio día, pero durante dos días no necesitas agua extra.");
         }},
-        { label: "Stay on the Road", cls: "risky", act() {
+        { label: t("Stay on the Road","Seguir en el Camino"), cls: "risky", act() {
           G.thirstDays = 2;
-          return "You press on without water. Food consumption rises sharply for two days.";
+          return t("You press on without water. Food consumption rises sharply for two days.",
+                   "Avanzas sin agua. El consumo de comida aumenta drásticamente durante dos días.");
         }},
       ]
     );
@@ -801,24 +830,29 @@ const EVENTS_OUT = [
 
   function evtHunt() {
     showChoiceEvent(
-      "Hungry Column",
-      `Food is running thin — ${Math.ceil(G.food)} rations left. Your scouts say the jungle nearby holds peccaries and curassow birds.`,
+      t("Hungry Column","Columna Hambrienta"),
+      t(`Food is running thin — ${Math.ceil(G.food)} rations left. Your scouts say the jungle nearby holds peccaries and curassow birds.`,
+        `La comida escasea — quedan ${Math.ceil(G.food)} raciones. Tus exploradores dicen que la selva cercana tiene pecaríes y pavones.`),
       [
-        { label: "Hunt and Forage", cls: "risky", act() {
+        { label: t("Hunt and Forage","Cazar y Buscar Comida"), cls: "risky", act() {
           const roll = Math.random();
           if (roll < 0.5) {
             const gain = 8 + Math.floor(Math.random() * 10);
             G.food = Math.min(G.food + gain, 9999);
-            return `Success. Hunters return with smoked meat and jungle fruit — ${gain} rations recovered.`;
+            return t(`Success. Hunters return with smoked meat and jungle fruit — ${gain} rations recovered.`,
+                     `Éxito. Los cazadores regresan con carne ahumada y fruta de la selva — ${gain} raciones recuperadas.`);
           } else if (roll < 0.8) {
-            return "The jungle gave nothing today. Hours wasted, the men frustrated. Press on.";
+            return t("The jungle gave nothing today. Hours wasted, the men frustrated. Press on.",
+                     "La selva no dio nada hoy. Horas perdidas, los hombres frustrados. Sigue adelante.");
           } else {
             G.soldiers = Math.max(0, G.soldiers - 1);
-            return "A hunting party disturbed a fer-de-lance nest. One soldier will not continue the march.";
+            return t("A hunting party disturbed a fer-de-lance nest. One soldier will not continue the march.",
+                     "Un grupo de caza perturbó un nido de barba amarilla. Un soldado no continuará la marcha.");
           }
         }},
-        { label: "Press Onward", cls: "safe", act() {
-          return "You tighten belts and keep marching. The destination is closer than the jungle's mercy.";
+        { label: t("Press Onward","Seguir Adelante"), cls: "safe", act() {
+          return t("You tighten belts and keep marching. The destination is closer than the jungle's mercy.",
+                   "Aprietan los cinturones y siguen marchando. El destino está más cerca que la misericordia de la selva.");
         }},
       ]
     );
@@ -827,20 +861,24 @@ const EVENTS_OUT = [
   // ── TERRAIN ──
   function evtRiver() {
     showChoiceEvent(
-      "The River",
-      "A swollen river blocks the road. The water is fast and chest-deep. Fallen trees upstream offer a possible crossing.",
+      t("The River","El Río"),
+      t("A swollen river blocks the road. The water is fast and chest-deep. Fallen trees upstream offer a possible crossing.",
+        "Un río crecido bloquea el camino. El agua es rápida y llega al pecho. Árboles caídos río arriba ofrecen un posible cruce."),
       [
-        { label: "Ford the River", cls: "risky", act() {
+        { label: t("Ford the River","Vadear el Río"), cls: "risky", act() {
           if (Math.random() < 0.3) {
             G.soldiers = Math.max(0, G.soldiers - 1);
             G.food = Math.max(0, G.food - 10);
-            return "The current takes a soldier. You watch him disappear downstream. Ten rations wash away with him.";
+            return t("The current takes a soldier. You watch him disappear downstream. Ten rations wash away with him.",
+                     "La corriente se lleva a un soldado. Lo ves desaparecer río abajo. Diez raciones se van con él.");
           }
-          return "Your column crosses safely, chest-deep in cold water. The porters barely keep the bundles dry.";
+          return t("Your column crosses safely, chest-deep in cold water. The porters barely keep the bundles dry.",
+                   "Tu columna cruza sin contratiempos, con el agua hasta el pecho. Los cargadores apenas mantienen los bultos secos.");
         }},
-        { label: "Fallen Tree Bridge", cls: "safe", act() {
+        { label: t("Fallen Tree Bridge","Puente de Árbol Caído"), cls: "safe", act() {
           loseDay();
-          return "It takes most of the day to find and cross the log bridge. Safe — but a day is lost.";
+          return t("It takes most of the day to find and cross the log bridge. Safe — but a day is lost.",
+                   "Se tarda casi todo el día en encontrar y cruzar el puente de troncos. Seguro — pero se pierde un día.");
         }},
       ]
     );
@@ -848,17 +886,20 @@ const EVENTS_OUT = [
 
   function evtMud() {
     showChoiceEvent(
-      "Mud Season",
-      "The trail dips into lowlands. The ground is soft — every step sinks ankle-deep. The porters are already struggling.",
+      t("Mud Season","Temporada de Barro"),
+      t("The trail dips into lowlands. The ground is soft — every step sinks ankle-deep. The porters are already struggling.",
+        "El camino desciende a tierras bajas. El suelo es blando — cada paso se hunde hasta los tobillos. Los cargadores ya tienen dificultades."),
       [
-        { label: "Hack an Alternate Path", cls: "safe", act() {
+        { label: t("Hack an Alternate Path","Abrir un Camino Alternativo"), cls: "safe", act() {
           G.food = Math.max(0, G.food - foodPerDay() * 0.5);
-          return "Your soldiers find higher ground through the undergrowth. Half a day lost, but the column stays intact.";
+          return t("Your soldiers find higher ground through the undergrowth. Half a day lost, but the column stays intact.",
+                   "Tus soldados encuentran terreno alto por la maleza. Medio día perdido, pero la columna sigue intacta.");
         }},
-        { label: "Push Straight Through", cls: "risky", act() {
+        { label: t("Push Straight Through","Avanzar Directamente"), cls: "risky", act() {
           G.food = Math.max(0, G.food - foodPerDay() * 1.5);
           if (Math.random() < 0.3) losePorter(1);
-          return "You slog through the mire. A day and a half of food burned. The men emerge filthy and exhausted.";
+          return t("You slog through the mire. A day and a half of food burned. The men emerge filthy and exhausted.",
+                   "Avanzas penosamente por el pantano. Día y medio de comida gastada. Los hombres salen sucios y agotados.");
         }},
       ]
     );
@@ -866,19 +907,23 @@ const EVENTS_OUT = [
 
   function evtOvergrown() {
     showChoiceEvent(
-      "Overgrown Trail",
-      "The jungle has swallowed the sacbe. Vines and roots cover the stones. You cannot march without clearing a path.",
+      t("Overgrown Trail","Camino Invadido"),
+      t("The jungle has swallowed the sacbe. Vines and roots cover the stones. You cannot march without clearing a path.",
+        "La selva ha tragado el sacbe. Lianas y raíces cubren las piedras. No puedes marchar sin despejar el camino."),
       [
-        { label: "Soldiers Hack Through", cls: "safe", act() {
+        { label: t("Soldiers Hack Through","Soldados Abren Paso"), cls: "safe", act() {
           G.food = Math.max(0, G.food - foodPerDay() * 0.5);
-          return "Your warriors spend the morning cutting vines. The road is cleared. Half a day lost, path is open.";
+          return t("Your warriors spend the morning cutting vines. The road is cleared. Half a day lost, path is open.",
+                   "Tus guerreros pasan la mañana cortando lianas. El camino queda despejado. Medio día perdido, el paso está abierto.");
         }},
-        { label: "Scout an Alternate Route", cls: "risky", act() {
+        { label: t("Scout an Alternate Route","Explorar una Ruta Alternativa"), cls: "risky", act() {
           if (Math.random() < 0.55) {
-            return "A scout finds a game trail that rejoins the sacbe ahead. No time lost at all.";
+            return t("A scout finds a game trail that rejoins the sacbe ahead. No time lost at all.",
+                     "Un explorador encuentra una vereda que se une al sacbe más adelante. No se pierde tiempo.");
           }
           loseDay();
-          return "The alternate trail loops back. A full day is wasted before you rejoin the road.";
+          return t("The alternate trail loops back. A full day is wasted before you rejoin the road.",
+                   "La ruta alternativa da la vuelta. Se pierde un día entero antes de volver al camino.");
         }},
       ]
     );
@@ -887,16 +932,19 @@ const EVENTS_OUT = [
   // ── ENCOUNTERS ──
   function evtTrader() {
     showChoiceEvent(
-      "The Trader",
-      "A merchant on the road offers dried fish and maize cakes. He wants obsidian blades in trade — two of your soldiers' weapons.",
+      t("The Trader","El Comerciante"),
+      t("A merchant on the road offers dried fish and maize cakes. He wants obsidian blades in trade — two of your soldiers' weapons.",
+        "Un mercader en el camino ofrece pescado seco y tortillas de maíz. Quiere cuchillas de obsidiana a cambio — dos armas de tus soldados."),
       [
-        { label: "Trade Weapons", cls: "risky", act() {
+        { label: t("Trade Weapons","Intercambiar Armas"), cls: "risky", act() {
           G.food = Math.min(G.food + 20, 9999);
           G.tradeWeapons = true;
-          return "You trade the blades. Twenty rations change hands. Your soldiers grip their remaining weapons nervously.";
+          return t("You trade the blades. Twenty rations change hands. Your soldiers grip their remaining weapons nervously.",
+                   "Intercambias las cuchillas. Veinte raciones cambian de manos. Tus soldados aferran nerviosamente sus armas restantes.");
         }},
-        { label: "Decline", cls: "safe", act() {
-          return "You pass the merchant by. A wise lord does not weaken his army before battle.";
+        { label: t("Decline","Rechazar"), cls: "safe", act() {
+          return t("You pass the merchant by. A wise lord does not weaken his army before battle.",
+                   "Pasas de largo al mercader. Un señor sabio no debilita a su ejército antes de la batalla.");
         }},
       ]
     );
@@ -904,19 +952,23 @@ const EVENTS_OUT = [
 
   function evtShrine() {
     showChoiceEvent(
-      "Abandoned Shrine",
-      "Your scouts find a crumbling shrine off the trail. Ancient offerings may be cached inside. The stones are dark with old incense.",
+      t("Abandoned Shrine","Santuario Abandonado"),
+      t("Your scouts find a crumbling shrine off the trail. Ancient offerings may be cached inside. The stones are dark with old incense.",
+        "Tus exploradores encuentran un santuario en ruinas cerca del camino. Pueden haber ofrendas antiguas guardadas dentro. Las piedras están oscuras de incienso viejo."),
       [
-        { label: "Search It", cls: "risky", act() {
+        { label: t("Search It","Explorarlo"), cls: "risky", act() {
           if (Math.random() < 0.7) {
             G.food = Math.min(G.food + 12, 9999);
-            return "Inside: dried maize and smoked meat sealed in clay vessels. A gift from the ancestors — twelve rations recovered.";
+            return t("Inside: dried maize and smoked meat sealed in clay vessels. A gift from the ancestors — twelve rations recovered.",
+                     "Dentro: maíz seco y carne ahumada sellados en vasijas de barro. Un regalo de los ancestros — doce raciones recuperadas.");
           }
           G.soldiers = Math.max(0, G.soldiers - 1);
-          return "Something stirs in the shadows. A soldier cries out — a fer-de-lance had nested in the dark. He will not march further.";
+          return t("Something stirs in the shadows. A soldier cries out — a fer-de-lance had nested in the dark. He will not march further.",
+                   "Algo se mueve en las sombras. Un soldado grita — una barba amarilla había anidado en la oscuridad. No marchará más.");
         }},
-        { label: "Pass By", cls: "safe", act() {
-          return "You leave the shrine undisturbed. Some things are better left alone in the jungle.";
+        { label: t("Pass By","Pasar de Largo"), cls: "safe", act() {
+          return t("You leave the shrine undisturbed. Some things are better left alone in the jungle.",
+                   "Dejas el santuario intacto. Algunas cosas es mejor dejarlas tranquilas en la selva.");
         }},
       ]
     );
@@ -924,19 +976,23 @@ const EVENTS_OUT = [
 
   function evtJaguar() {
     showChoiceEvent(
-      "Jaguar",
-      "A jaguar stalks the camp at night. Its eyes glow in the firelight. Your soldiers grip their clubs and no one moves.",
+      t("Jaguar","Jaguar"),
+      t("A jaguar stalks the camp at night. Its eyes glow in the firelight. Your soldiers grip their clubs and no one moves.",
+        "Un jaguar acecha el campamento de noche. Sus ojos brillan a la luz del fuego. Tus soldados aferran sus porras y nadie se mueve."),
       [
-        { label: "Keep Fires Burning All Night", cls: "safe", act() {
+        { label: t("Keep Fires Burning All Night","Mantener los Fuegos Toda la Noche"), cls: "safe", act() {
           G.food = Math.max(0, G.food - 3);
-          return "You keep the fires roaring until dawn. The jaguar circles but never enters the light. Three rations burned as fuel.";
+          return t("You keep the fires roaring until dawn. The jaguar circles but never enters the light. Three rations burned as fuel.",
+                   "Mantienes los fuegos rugiendo hasta el amanecer. El jaguar da vueltas pero nunca entra a la luz. Tres raciones quemadas como combustible.");
         }},
-        { label: "Post Armed Guards", cls: "risky", act() {
+        { label: t("Post Armed Guards","Poner Guardias Armados"), cls: "risky", act() {
           if (Math.random() < 0.35) {
             G.injured++;
-            return "The jaguar lunges before dawn. A soldier is mauled — he'll carry that wound into battle. The animal flees.";
+            return t("The jaguar lunges before dawn. A soldier is mauled — he'll carry that wound into battle. The animal flees.",
+                     "El jaguar ataca antes del amanecer. Un soldado es herido — llevará esa herida a la batalla. El animal huye.");
           }
-          return "Your guards hold their nerve through the night. The jaguar slinks away before sunrise. Nothing lost.";
+          return t("Your guards hold their nerve through the night. The jaguar slinks away before sunrise. Nothing lost.",
+                   "Tus guardias mantienen los nervios toda la noche. El jaguar se aleja antes del amanecer. Nada perdido.");
         }},
       ]
     );
@@ -946,19 +1002,22 @@ const EVENTS_OUT = [
     const dLeft = Math.max(1, G.distanceRemaining);
     const heavyDef = Math.random() < 0.5;
     const intel = heavyDef
-      ? "heavy fortifications along the walls and smoke from many cook-fires"
-      : "few defenders — the city seems lightly guarded";
+      ? t("heavy fortifications along the walls and smoke from many cook-fires","fuertes fortificaciones en las murallas y humo de muchos fuegos")
+      : t("few defenders — the city seems lightly guarded","pocos defensores — la ciudad parece poco vigilada");
     showChoiceEvent(
-      "Scouts Return",
-      `Your scouts report back. ${G.destination} is ${dLeft} day${dLeft===1?'':'s'} ahead. They saw ${intel}. How do you respond?`,
+      t("Scouts Return","Regresan los Exploradores"),
+      t(`Your scouts report back. ${G.destination} is ${dLeft} day${dLeft===1?'':'s'} ahead. They saw ${intel}. How do you respond?`,
+        `Tus exploradores informan. ${G.destination} está a ${dLeft} día${dLeft===1?'':'s} de marcha. Vieron ${intel}. ¿Cómo respondes?`),
       [
-        { label: "Push Hard — Arrive Fast", cls: "risky", act() {
+        { label: t("Push Hard — Arrive Fast","Presionar — Llegar Rápido"), cls: "risky", act() {
           gainDay(1);
           G.food = Math.max(0, G.food - foodPerDay());
-          return "Longer marching hours, shorter rests. You will arrive a day sooner — but the men will be tired when battle comes.";
+          return t("Longer marching hours, shorter rests. You will arrive a day sooner — but the men will be tired when battle comes.",
+                   "Más horas marchando, menos descanso. Llegarás un día antes — pero los hombres estarán cansados cuando llegue la batalla.");
         }},
-        { label: "Hold Steady Pace", cls: "safe", act() {
-          return "You keep the march as it is. Steady pace, no surprises, no wasted effort.";
+        { label: t("Hold Steady Pace","Mantener el Ritmo"), cls: "safe", act() {
+          return t("You keep the march as it is. Steady pace, no surprises, no wasted effort.",
+                   "Mantienes la marcha como está. Ritmo constante, sin sorpresas, sin esfuerzo desperdiciado.");
         }},
       ]
     );
@@ -967,21 +1026,25 @@ const EVENTS_OUT = [
   // ── MORALE & DESERTION ──
   function evtGrumbling() {
     showChoiceEvent(
-      "Grumbling",
-      "The soldiers mutter around the fire. They are far from home, the food is thin, and one asks loudly how much further you intend to march.",
+      t("Grumbling","Murmuraciones"),
+      t("The soldiers mutter around the fire. They are far from home, the food is thin, and one asks loudly how much further you intend to march.",
+        "Los soldados murmuran alrededor del fuego. Están lejos de casa, la comida escasea, y uno pregunta en voz alta cuánto más piensas marchar."),
       [
-        { label: "Share Extra Rations", cls: "safe", act() {
+        { label: t("Share Extra Rations","Compartir Raciones Extra"), cls: "safe", act() {
           G.food = Math.max(0, G.food - 5);
           G.deserterRisk = Math.max(0, G.deserterRisk - 0.5);
-          return "You share five rations. The grumbling stops. They call your name in praise — and the threat of desertion eases.";
+          return t("You share five rations. The grumbling stops. They call your name in praise — and the threat of desertion eases.",
+                   "Compartes cinco raciones. Las murmuraciones cesan. Pronuncian tu nombre con elogios — y la amenaza de deserción disminuye.");
         }},
-        { label: "Remind Them of Glory", cls: "risky", act() {
+        { label: t("Remind Them of Glory","Recordarles la Gloria"), cls: "risky", act() {
           if (Math.random() < 0.25) {
             G.soldiers = Math.max(0, G.soldiers - 1);
             G.deserterRisk += 0.5;
-            return "Your speech falls flat. By morning, one soldier is gone. Others watched him go without surprise.";
+            return t("Your speech falls flat. By morning, one soldier is gone. Others watched him go without surprise.",
+                     "Tu discurso cae en saco roto. Por la mañana, un soldado se ha ido. Otros lo vieron marchar sin sorpresa.");
           }
-          return "You speak of jade, captives, and the glory of your lineage. The soldiers pound their clubs on the ground. They will march.";
+          return t("You speak of jade, captives, and the glory of your lineage. The soldiers pound their clubs on the ground. They will march.",
+                   "Hablas de jade, cautivos y la gloria de tu linaje. Los soldados golpean sus porras en el suelo. Marcharán.");
         }},
       ]
     );
@@ -989,24 +1052,28 @@ const EVENTS_OUT = [
 
   function evtSoldierDesertion() {
     showChoiceEvent(
-      "Desertion",
-      "In the morning, a soldier is gone. His sleeping mat is cold. He took five rations with him. Your scouts can still see his tracks in the mud.",
+      t("Desertion","Deserción"),
+      t("In the morning, a soldier is gone. His sleeping mat is cold. He took five rations with him. Your scouts can still see his tracks in the mud.",
+        "Por la mañana, un soldado se ha ido. Su estera está fría. Se llevó cinco raciones. Tus exploradores aún pueden ver sus huellas en el barro."),
       [
-        { label: "Send Scouts to Track Him", cls: "risky", act() {
+        { label: t("Send Scouts to Track Him","Enviar Exploradores a Seguirlo"), cls: "risky", act() {
           G.food = Math.max(0, G.food - 4);
           if (Math.random() < 0.55) {
             G.deserterRisk = Math.max(0, G.deserterRisk - 1.5);
-            return "Your scouts drag him back before midday. You make an example of him before the column. Future desertions become less likely.";
+            return t("Your scouts drag him back before midday. You make an example of him before the column. Future desertions become less likely.",
+                     "Tus exploradores lo traen de vuelta antes del mediodía. Lo pones de ejemplo ante la columna. Las futuras deserciones son menos probables.");
           }
           G.soldiers = Math.max(0, G.soldiers - 1);
           G.deserterRisk += 0.5;
-          return "He's gone — vanished into the undergrowth. Four rations and half a day wasted on the chase. The men saw you fail.";
+          return t("He's gone — vanished into the undergrowth. Four rations and half a day wasted on the chase. The men saw you fail.",
+                   "Se ha ido — desapareció en la maleza. Cuatro raciones y medio día perdidos en la persecución. Los hombres vieron tu fracaso.");
         }},
-        { label: "Let Him Go, Keep Marching", cls: "safe", act() {
+        { label: t("Let Him Go, Keep Marching","Dejarlo Ir, Seguir Marchando"), cls: "safe", act() {
           G.soldiers = Math.max(0, G.soldiers - 1);
           G.food = Math.max(0, G.food - 5);
           G.deserterRisk += 1.5;
-          return "You give no order. The column watches in silence as you march past his empty mat. Others are already calculating the same escape.";
+          return t("You give no order. The column watches in silence as you march past his empty mat. Others are already calculating the same escape.",
+                   "No das ninguna orden. La columna observa en silencio mientras marchas junto a su estera vacía. Otros ya están calculando la misma huida.");
         }},
       ]
     );
@@ -1014,23 +1081,27 @@ const EVENTS_OUT = [
 
   function evtPorterDesertion() {
     showChoiceEvent(
-      "Porter Flees",
-      "A porter has vanished in the night — his bundle left behind, straps cut. The food is intact on the ground. Your column is watching you.",
+      t("Porter Flees","Cargador Huye"),
+      t("A porter has vanished in the night — his bundle left behind, straps cut. The food is intact on the ground. Your column is watching you.",
+        "Un cargador ha desaparecido en la noche — su bulto abandonado, las correas cortadas. La comida está intacta en el suelo. Tu columna te observa."),
       [
-        { label: "Track Him Down", cls: "risky", act() {
+        { label: t("Track Him Down","Rastrearlo"), cls: "risky", act() {
           G.food = Math.max(0, G.food - 3);
           if (Math.random() < 0.55) {
             G.deserterRisk = Math.max(0, G.deserterRisk - 1);
-            return "Found him a mile back. He returns under guard. The other porters stand a little straighter now.";
+            return t("Found him a mile back. He returns under guard. The other porters stand a little straighter now.",
+                     "Lo encontraron a una milla. Regresa bajo custodia. Los otros cargadores se enderezan un poco.");
           }
           G.porters = Math.max(0, G.porters - 1);
           G.deserterRisk += 0.75;
-          return "He is gone into the jungle. Three rations spent in the chase. The other porters watched everything.";
+          return t("He is gone into the jungle. Three rations spent in the chase. The other porters watched everything.",
+                   "Se ha ido a la selva. Tres raciones gastadas en la persecución. Los otros cargadores lo vieron todo.");
         }},
-        { label: "Salvage His Bundle and March", cls: "safe", act() {
+        { label: t("Salvage His Bundle and March","Salvar su Bulto y Marchar"), cls: "safe", act() {
           G.porters = Math.max(0, G.porters - 1);
           G.deserterRisk += 1.5;
-          return "You redistribute his load and march. The food is saved. But the other porters exchanged glances as you passed.";
+          return t("You redistribute his load and march. The food is saved. But the other porters exchanged glances as you passed.",
+                   "Redistribuyes su carga y marchas. La comida se salva. Pero los otros cargadores intercambiaron miradas al pasar.");
         }},
       ]
     );
@@ -1038,20 +1109,24 @@ const EVENTS_OUT = [
 
   function evtOmen() {
     showChoiceEvent(
-      "Omen",
-      "A quetzal bird crosses your path from right to left — a bad omen. Your porters whisper fearfully and slow their pace.",
+      t("Omen","Presagio"),
+      t("A quetzal bird crosses your path from right to left — a bad omen. Your porters whisper fearfully and slow their pace.",
+        "Un quetzal cruza tu camino de derecha a izquierda — mal presagio. Tus cargadores susurran con miedo y ralentizan el paso."),
       [
-        { label: "Perform a Ritual", cls: "safe", act() {
+        { label: t("Perform a Ritual","Realizar un Ritual"), cls: "safe", act() {
           G.food = Math.max(0, G.food - foodPerDay() * 0.5);
           G.deserterRisk = Math.max(0, G.deserterRisk - 0.5);
-          return "You halt the column and perform the rites. The porters are calmed. Half a day is lost, but spirits are steady.";
+          return t("You halt the column and perform the rites. The porters are calmed. Half a day is lost, but spirits are steady.",
+                   "Detienes la columna y realizas los ritos. Los cargadores se calman. Se pierde medio día, pero los ánimos están estables.");
         }},
-        { label: "Ignore It", cls: "risky", act() {
+        { label: t("Ignore It","Ignorarlo"), cls: "risky", act() {
           if (Math.random() < 0.5) {
             G.deserterRisk += 1;
-            return "The porters are deeply unsettled. You push on — but they murmur all day and one keeps looking back toward home.";
+            return t("The porters are deeply unsettled. You push on — but they murmur all day and one keeps looking back toward home.",
+                     "Los cargadores están muy inquietos. Sigues adelante — pero murmuran todo el día y uno sigue mirando hacia casa.");
           }
-          return "Nothing happens. The men relax by nightfall. Perhaps omens are just birds.";
+          return t("Nothing happens. The men relax by nightfall. Perhaps omens are just birds.",
+                   "No pasa nada. Los hombres se relajan al caer la noche. Quizás los presagios son solo pájaros.");
         }},
       ]
     );
@@ -1059,20 +1134,24 @@ const EVENTS_OUT = [
 
   function evtSlogging() {
     showChoiceEvent(
-      "The Long Road",
-      "Three days of the same heat, the same jungle, the same road. The men's feet are cracked. Morale is quietly rotting.",
+      t("The Long Road","El Largo Camino"),
+      t("Three days of the same heat, the same jungle, the same road. The men's feet are cracked. Morale is quietly rotting.",
+        "Tres días del mismo calor, la misma selva, el mismo camino. Los pies de los hombres están agrietados. La moral se pudre en silencio."),
       [
-        { label: "Slow the Pace, Rest Well", cls: "safe", act() {
+        { label: t("Slow the Pace, Rest Well","Reducir el Ritmo, Descansar Bien"), cls: "safe", act() {
           loseDay();
           G.deserterRisk = Math.max(0, G.deserterRisk - 0.75);
-          return "You give the column a day of rest in the shade. Feet dressed, loads readjusted. A day lost, but the men march straight again.";
+          return t("You give the column a day of rest in the shade. Feet dressed, loads readjusted. A day lost, but the men march straight again.",
+                   "Das a la columna un día de descanso a la sombra. Pies curados, cargas reajustadas. Un día perdido, pero los hombres marchan firmes de nuevo.");
         }},
-        { label: "Push Through It", cls: "risky", act() {
+        { label: t("Push Through It","Aguantar y Seguir"), cls: "risky", act() {
           if (Math.random() < 0.35) {
             G.deserterRisk += 0.75;
-            return "You drive them on. The grumbling grows quieter — but meaner. Someone will break soon.";
+            return t("You drive them on. The grumbling grows quieter — but meaner. Someone will break soon.",
+                     "Los empujas. Las murmuraciones se vuelven más calladas — pero más amargas. Alguien se romperá pronto.");
           }
-          return "They find their rhythm by afternoon. Veterans know how to make peace with the road.";
+          return t("They find their rhythm by afternoon. Veterans know how to make peace with the road.",
+                   "Encuentran su ritmo por la tarde. Los veteranos saben cómo hacer las paces con el camino.");
         }},
       ]
     );
@@ -1081,24 +1160,29 @@ const EVENTS_OUT = [
   // ── EXPLORATION / FLAVOR ──
   function evtOlmecRuins() {
     showChoiceEvent(
-      "Ancient Ruins",
-      "Your scouts return wide-eyed. Half a mile off the sacbe: enormous stone heads sit half-buried in the jungle — older than memory, older than the Maya. No one knows who made them.",
+      t("Ancient Ruins","Ruinas Antiguas"),
+      t("Your scouts return wide-eyed. Half a mile off the sacbe: enormous stone heads sit half-buried in the jungle — older than memory, older than the Maya. No one knows who made them.",
+        "Tus exploradores regresan con los ojos abiertos. A medio kilómetro del sacbe: enormes cabezas de piedra yacen semienterradas en la selva — más antiguas que la memoria, más antiguas que los mayas. Nadie sabe quién las hizo."),
       [
-        { label: "Investigate", cls: "risky", act() {
+        { label: t("Investigate","Investigar"), cls: "risky", act() {
           G.food = Math.max(0, G.food - foodPerDay() * 0.5);
           const roll = Math.random();
           if (roll < 0.5) {
             G.food = Math.min(G.food + 8, 9999);
-            return "A sealed cache of offerings inside: jade beads, preserved food. Half a day lost, but the men are awed and a little richer.";
+            return t("A sealed cache of offerings inside: jade beads, preserved food. Half a day lost, but the men are awed and a little richer.",
+                     "Una ofrenda sellada dentro: cuentas de jade, comida conservada. Medio día perdido, pero los hombres están maravillados y un poco más ricos.");
           } else if (roll < 0.85) {
-            return "Nothing but stone and silence. The heads stare at the canopy. Your men are unsettled by their size. Half a day gone.";
+            return t("Nothing but stone and silence. The heads stare at the canopy. Your men are unsettled by their size. Half a day gone.",
+                     "Solo piedra y silencio. Las cabezas miran al dosel. Tus hombres están inquietos por su tamaño. Medio día perdido.");
           } else {
             G.injured++;
-            return "A soldier falls through a hidden sinkhole at the site's edge. He'll limp the rest of the march.";
+            return t("A soldier falls through a hidden sinkhole at the site's edge. He'll limp the rest of the march.",
+                     "Un soldado cae por un sumidero oculto en el borde del sitio. Cojeará el resto de la marcha.");
           }
         }},
-        { label: "Keep Marching", cls: "safe", act() {
-          return "You order the column forward. Whatever the old ones built out there, it is none of your concern today.";
+        { label: t("Keep Marching","Seguir Marchando"), cls: "safe", act() {
+          return t("You order the column forward. Whatever the old ones built out there, it is none of your concern today.",
+                   "Ordenas a la columna avanzar. Sea lo que sea que los antiguos construyeron ahí, hoy no es asunto tuyo.");
         }},
       ]
     );
@@ -1106,24 +1190,29 @@ const EVENTS_OUT = [
 
   function evtCenoteJade() {
     showChoiceEvent(
-      "The Sacred Pool",
-      "The road passes a perfect circular cenote. The water is impossibly blue. Your porters say they can see jade and old pottery at the bottom — offerings from another age.",
+      t("The Sacred Pool","El Cenote Sagrado"),
+      t("The road passes a perfect circular cenote. The water is impossibly blue. Your porters say they can see jade and old pottery at the bottom — offerings from another age.",
+        "El camino pasa junto a un cenote circular perfecto. El agua es de un azul imposible. Tus cargadores dicen ver jade y cerámica antigua en el fondo — ofrendas de otra era."),
       [
-        { label: "Dive for the Offerings", cls: "risky", act() {
+        { label: t("Dive for the Offerings","Bucear por las Ofrendas"), cls: "risky", act() {
           const roll = Math.random();
           if (roll < 0.45) {
             G.food = Math.min(G.food + 6, 9999);
-            return "A strong swimmer surfaces with two jade beads and a clay bowl. The men are delighted. The gods seem unbothered.";
+            return t("A strong swimmer surfaces with two jade beads and a clay bowl. The men are delighted. The gods seem unbothered.",
+                     "Un buen nadador emerge con dos cuentas de jade y un cuenco de barro. Los hombres están encantados. Los dioses parecen indiferentes.");
           } else if (roll < 0.8) {
-            return "The diver comes up empty-handed. The jade was deeper than it looked. Half an hour lost.";
+            return t("The diver comes up empty-handed. The jade was deeper than it looked. Half an hour lost.",
+                     "El buceador sale con las manos vacías. El jade estaba más profundo de lo que parecía. Media hora perdida.");
           } else {
             G.soldiers = Math.max(0, G.soldiers - 1);
-            return "Something was wrong in that water. The diver does not come back up. Your soldiers are pale. You march on in silence.";
+            return t("Something was wrong in that water. The diver does not come back up. Your soldiers are pale. You march on in silence.",
+                     "Algo estaba mal en esa agua. El buceador no vuelve a subir. Tus soldados están pálidos. Marchas en silencio.");
           }
         }},
-        { label: "Drink and Move On", cls: "safe", act() {
+        { label: t("Drink and Move On","Beber y Seguir"), cls: "safe", act() {
           G.cenoteFreeDays = 1;
-          return "You order the column to fill their gourds but touch nothing else. Some offerings belong to the rain god alone.";
+          return t("You order the column to fill their gourds but touch nothing else. Some offerings belong to the rain god alone.",
+                   "Ordenas a la columna llenar sus cántaros pero no tocar nada más. Algunas ofrendas pertenecen solo al dios de la lluvia.");
         }},
       ]
     );
@@ -1131,16 +1220,19 @@ const EVENTS_OUT = [
 
   function evtStoneFormation() {
     showChoiceEvent(
-      "Strange Stones",
-      "The road runs through an unusual formation — limestone columns rising from the jungle floor like fingers. Your soldiers have never seen anything like it.",
+      t("Strange Stones","Piedras Extrañas"),
+      t("The road runs through an unusual formation — limestone columns rising from the jungle floor like fingers. Your soldiers have never seen anything like it.",
+        "El camino atraviesa una formación inusual — columnas de caliza que se elevan desde el suelo de la selva como dedos. Tus soldados nunca han visto algo así."),
       [
-        { label: "Camp Here Tonight", cls: "safe", act() {
+        { label: t("Camp Here Tonight","Acampar Aquí Esta Noche"), cls: "safe", act() {
           G.food = Math.max(0, G.food - foodPerDay() * 0.5);
           G.deserterRisk = Math.max(0, G.deserterRisk - 0.5);
-          return "You make camp among the columns. The strangeness delights the men — they name the stones and tell stories. Half a day lost, morale lifted.";
+          return t("You make camp among the columns. The strangeness delights the men — they name the stones and tell stories. Half a day lost, morale lifted.",
+                   "Acampas entre las columnas. La rareza deleita a los hombres — nombran las piedras y cuentan historias. Medio día perdido, moral elevada.");
         }},
-        { label: "Pass Through Quickly", cls: "safe", act() {
-          return "You march through. The stones are beautiful but you have a war to reach. The men sneak glances as they pass.";
+        { label: t("Pass Through Quickly","Pasar Rápidamente"), cls: "safe", act() {
+          return t("You march through. The stones are beautiful but you have a war to reach. The men sneak glances as they pass.",
+                   "Marchas a través. Las piedras son hermosas pero tienes una guerra a la que llegar. Los hombres echan miradas furtivas al pasar.");
         }},
       ]
     );
@@ -1148,23 +1240,27 @@ const EVENTS_OUT = [
 
   function evtWoundedPorter() {
     showChoiceEvent(
-      "Limping Porter",
-      "One of your porters has developed a badly infected blister. He can barely walk but is still carrying his bundle, staring at you.",
+      t("Limping Porter","Cargador que Cojea"),
+      t("One of your porters has developed a badly infected blister. He can barely walk but is still carrying his bundle, staring at you.",
+        "Uno de tus cargadores ha desarrollado una ampolla gravemente infectada. Apenas puede caminar pero sigue cargando su bulto, mirándote fijamente."),
       [
-        { label: "Help Him Along", cls: "safe", act() {
+        { label: t("Help Him Along","Ayudarlo a Seguir"), cls: "safe", act() {
           G.food = Math.max(0, G.food - foodPerDay() * 0.5);
           G.deserterRisk = Math.max(0, G.deserterRisk - 0.5);
-          return "Soldiers take turns supporting him. He survives the march. The other porters notice you looked after him.";
+          return t("Soldiers take turns supporting him. He survives the march. The other porters notice you looked after him.",
+                   "Los soldados se turnan apoyándolo. Sobrevive la marcha. Los otros cargadores notan que te preocupaste por él.");
         }},
-        { label: "Send Him Home With Rations", cls: "risky", act() {
+        { label: t("Send Him Home With Rations","Enviarlo a Casa con Raciones"), cls: "risky", act() {
           losePorter(1);
           G.deserterRisk = Math.max(0, G.deserterRisk - 0.5);
-          return "You give him a small ration and point him back down the sacbe. He weeps. The other porters watched carefully — and seem reassured.";
+          return t("You give him a small ration and point him back down the sacbe. He weeps. The other porters watched carefully — and seem reassured.",
+                   "Le das una pequeña ración y lo señalas de vuelta por el sacbe. Llora. Los otros cargadores observaron con atención — y parecen tranquilizados.");
         }},
-        { label: "Leave Him at the Roadside", cls: "risky", act() {
+        { label: t("Leave Him at the Roadside","Dejarlo al Borde del Camino"), cls: "risky", act() {
           losePorter(1);
           G.deserterRisk += 1;
-          return "You leave him with one day of food at the side of the road. The other porters' eyes go flat. They carry their bundles without looking at you.";
+          return t("You leave him with one day of food at the side of the road. The other porters' eyes go flat. They carry their bundles without looking at you.",
+                   "Lo dejas con un día de comida al borde del camino. Los ojos de los otros cargadores se apagan. Cargan sus bultos sin mirarte.");
         }},
       ]
     );
@@ -1174,18 +1270,21 @@ const EVENTS_OUT = [
 const EVENTS_RETURN = [
   function evtWounded() { // index 0
     showChoiceEvent(
-      "The Wounded",
-      "Your injured soldiers slow the march. Some cannot carry their own weight. The column crawls.",
+      t("The Wounded","Los Heridos"),
+      t("Your injured soldiers slow the march. Some cannot carry their own weight. The column crawls.",
+        "Tus soldados heridos ralentizan la marcha. Algunos no pueden cargar su propio peso. La columna avanza a rastras."),
       [
-        { label: "Make Litters, Keep Moving", cls: "safe", act() {
+        { label: t("Make Litters, Keep Moving","Hacer Camillas, Seguir Moviéndose"), cls: "safe", act() {
           G.food = Math.max(0, G.food - foodPerDay() * 0.5);
           G.wounded = true;
-          return "Soldiers cut poles and lash carrying frames. You march slower, but you leave no one behind.";
+          return t("Soldiers cut poles and lash carrying frames. You march slower, but you leave no one behind.",
+                   "Los soldados cortan postes y atan armazones de carga. Marchas más lento, pero no dejas a nadie atrás.");
         }},
-        { label: "Leave the Gravely Wounded", cls: "risky", act() {
+        { label: t("Leave the Gravely Wounded","Dejar a los Gravemente Heridos"), cls: "risky", act() {
           G.soldiers = Math.max(0, G.soldiers - 1);
           G.deserterRisk += 1;
-          return "You give the worst cases a water gourd and a knife. The rest of the column refuses to look back.";
+          return t("You give the worst cases a water gourd and a knife. The rest of the column refuses to look back.",
+                   "Das a los casos más graves un cántaro de agua y un cuchillo. El resto de la columna se niega a mirar atrás.");
         }},
       ]
     );
@@ -1193,16 +1292,19 @@ const EVENTS_RETURN = [
 
   function evtAlmostHome() { // index 1
     showChoiceEvent(
-      "Almost Home",
-      "Through the thinning jungle you can smell cook-fires and hear distant dogs barking. Home is perhaps two days away. Your soldiers quicken their step.",
+      t("Almost Home","Casi en Casa"),
+      t("Through the thinning jungle you can smell cook-fires and hear distant dogs barking. Home is perhaps two days away. Your soldiers quicken their step.",
+        "A través de la selva que se aclara puedes oler fogatas y escuchar perros ladrando a lo lejos. Casa está quizás a dos días. Tus soldados aceleran el paso."),
       [
-        { label: "Push Hard — Go Home Fast", cls: "risky", act() {
+        { label: t("Push Hard — Go Home Fast","Presionar — Llegar a Casa Rápido"), cls: "risky", act() {
           gainDay(1);
           G.food = Math.max(0, G.food - foodPerDay());
-          return "You set a brutal final pace. Men jog-march on their last reserves. You arrive a day early — exhausted but home.";
+          return t("You set a brutal final pace. Men jog-march on their last reserves. You arrive a day early — exhausted but home.",
+                   "Estableces un ritmo final brutal. Los hombres trotan marchando con sus últimas reservas. Llegas un día antes — agotados pero en casa.");
         }},
-        { label: "Final Steady March", cls: "safe", act() {
-          return "You hold the pace. Steady. Your men will arrive tired but not broken — and your dynasty will see it.";
+        { label: t("Final Steady March","Marcha Final Constante"), cls: "safe", act() {
+          return t("You hold the pace. Steady. Your men will arrive tired but not broken — and your dynasty will see it.",
+                   "Mantienes el ritmo. Constante. Tus hombres llegarán cansados pero no quebrados — y tu dinastía lo verá.");
         }},
       ]
     );
@@ -1210,22 +1312,26 @@ const EVENTS_RETURN = [
 
   function evtReturnExhaustion() { // index 2
     showChoiceEvent(
-      "Exhaustion",
-      "The column staggers. Men who were proud warriors now stumble like old men. Someone will fall out if you don't act.",
+      t("Exhaustion","Agotamiento"),
+      t("The column staggers. Men who were proud warriors now stumble like old men. Someone will fall out if you don't act.",
+        "La columna tambalea. Hombres que eran orgullosos guerreros ahora tropiezan como ancianos. Alguien caerá si no actúas."),
       [
-        { label: "Call a Rest Day", cls: "safe", act() {
+        { label: t("Call a Rest Day","Ordenar un Día de Descanso"), cls: "safe", act() {
           loseDay();
           G.deserterRisk = Math.max(0, G.deserterRisk - 0.5);
-          return "You spend the day in camp. Men dress their wounds, sleep long. A day lost, but the column will march tomorrow.";
+          return t("You spend the day in camp. Men dress their wounds, sleep long. A day lost, but the column will march tomorrow.",
+                   "Pasas el día en el campamento. Los hombres curan sus heridas, duermen largo. Un día perdido, pero la columna marchará mañana.");
         }},
-        { label: "Ration the Rest, Keep Moving", cls: "risky", act() {
+        { label: t("Ration the Rest, Keep Moving","Racionar el Descanso, Seguir Moviéndose"), cls: "risky", act() {
           G.food = Math.max(0, G.food - foodPerDay() * 0.5);
           if (Math.random() < 0.35) {
             G.soldiers = Math.max(0, G.soldiers - 1);
             G.deserterRisk += 0.5;
-            return "A soldier gives out and will not rise. The column leaves him at a roadside village.";
+            return t("A soldier gives out and will not rise. The column leaves him at a roadside village.",
+                     "Un soldado se rinde y no se levanta. La columna lo deja en un poblado junto al camino.");
           }
-          return "Half-rest, half-march. The men are ragged but moving. You'll make it.";
+          return t("Half-rest, half-march. The men are ragged but moving. You'll make it.",
+                   "Medio descanso, medio marcha. Los hombres están en mal estado pero avanzan. Lo lograrás.");
         }},
       ]
     );
@@ -1233,21 +1339,25 @@ const EVENTS_RETURN = [
 
   function evtReturnGrumbling() { // index 3
     showChoiceEvent(
-      "Grumbling",
-      "The soldiers mutter around the fire. They are wounded, hungry, and far from home. One says: 'Why did we march at all?'",
+      t("Grumbling","Murmuraciones"),
+      t("The soldiers mutter around the fire. They are wounded, hungry, and far from home. One says: 'Why did we march at all?'",
+        "Los soldados murmuran alrededor del fuego. Están heridos, hambrientos y lejos de casa. Uno dice: '¿Para qué marchamos?'"),
       [
-        { label: "Share Rations", cls: "safe", act() {
+        { label: t("Share Rations","Compartir Raciones"), cls: "safe", act() {
           G.food = Math.max(0, G.food - 5);
           G.deserterRisk = Math.max(0, G.deserterRisk - 0.5);
-          return "You share what little is left. The men eat in silence, but they will march tomorrow.";
+          return t("You share what little is left. The men eat in silence, but they will march tomorrow.",
+                   "Compartes lo poco que queda. Los hombres comen en silencio, pero marcharán mañana.");
         }},
-        { label: "Speak of Glory", cls: "risky", act() {
+        { label: t("Speak of Glory","Hablar de la Gloria"), cls: "risky", act() {
           if (Math.random() < 0.35) {
             G.soldiers = Math.max(0, G.soldiers - 1);
             G.deserterRisk += 0.5;
-            return "A soldier disappears that night. He wanted no more glory — only home.";
+            return t("A soldier disappears that night. He wanted no more glory — only home.",
+                     "Un soldado desaparece esa noche. No quería más gloria — solo llegar a casa.");
           }
-          return "You speak of the captives taken, the city humbled. The men nod slowly. They will march.";
+          return t("You speak of the captives taken, the city humbled. The men nod slowly. They will march.",
+                   "Hablas de los cautivos tomados, de la ciudad humillada. Los hombres asienten lentamente. Marcharán.");
         }},
       ]
     );
@@ -1255,22 +1365,26 @@ const EVENTS_RETURN = [
 
   function evtReturnPorterMutiny() { // index 4 — boosted by deserterRisk
     showChoiceEvent(
-      "Porter Mutiny",
-      "Two porters approach at dawn, bundles on the ground. They point back toward home. They are done. The food is intact. Your column is watching.",
+      t("Porter Mutiny","Motín de Cargadores"),
+      t("Two porters approach at dawn, bundles on the ground. They point back toward home. They are done. The food is intact. Your column is watching.",
+        "Dos cargadores se acercan al amanecer, bultos en el suelo. Señalan hacia casa. Han terminado. La comida está intacta. Tu columna observa."),
       [
-        { label: "Force Them to Carry On", cls: "risky", act() {
+        { label: t("Force Them to Carry On","Obligarlos a Continuar"), cls: "risky", act() {
           if (Math.random() < 0.45) {
-            return "Under the eyes of armed soldiers they shoulder the bundles again. They will not speak for two days — but they march.";
+            return t("Under the eyes of armed soldiers they shoulder the bundles again. They will not speak for two days — but they march.",
+                     "Bajo la mirada de soldados armados vuelven a cargar los bultos. No hablarán en dos días — pero marchan.");
           }
           losePorter(2);
           G.deserterRisk += 2;
-          return "Your soldiers draw clubs. The porters scatter into the jungle at a run. Both are gone. The food lies in the road.";
+          return t("Your soldiers draw clubs. The porters scatter into the jungle at a run. Both are gone. The food lies in the road.",
+                   "Tus soldados sacan porras. Los cargadores se dispersan hacia la selva corriendo. Ambos se han ido. La comida queda en el camino.");
         }},
-        { label: "Release Them, Take the Food", cls: "safe", act() {
+        { label: t("Release Them, Take the Food","Dejarlos Ir, Tomar la Comida"), cls: "safe", act() {
           losePorter(2);
           G.food = Math.max(0, G.food - 4);
           G.deserterRisk = Math.max(0, G.deserterRisk - 0.5);
-          return "You wave them off. Soldiers shoulder their loads. The remaining porters look relieved — and a little more loyal.";
+          return t("You wave them off. Soldiers shoulder their loads. The remaining porters look relieved — and a little more loyal.",
+                   "Les haces señas para que se vayan. Los soldados cargan sus bultos. Los cargadores restantes parecen aliviados — y un poco más leales.");
         }},
       ]
     );
@@ -1278,24 +1392,28 @@ const EVENTS_RETURN = [
 
   function evtReturnSoldierDesertion() { // index 5 — boosted by deserterRisk
     showChoiceEvent(
-      "Desertion",
-      "A soldier is gone at dawn — his mat cold, food taken. Your scouts can still see his tracks heading away from the army.",
+      t("Desertion","Deserción"),
+      t("A soldier is gone at dawn — his mat cold, food taken. Your scouts can still see his tracks heading away from the army.",
+        "Un soldado se ha ido al amanecer — su estera fría, comida tomada. Tus exploradores aún pueden ver sus huellas alejándose del ejército."),
       [
-        { label: "Send Scouts After Him", cls: "risky", act() {
+        { label: t("Send Scouts After Him","Enviar Exploradores Tras Él"), cls: "risky", act() {
           G.food = Math.max(0, G.food - 4);
           if (Math.random() < 0.5) {
             G.deserterRisk = Math.max(0, G.deserterRisk - 1.5);
-            return "Scouts bring him back before noon. You make an example of it. The column marches straighter.";
+            return t("Scouts bring him back before noon. You make an example of it. The column marches straighter.",
+                     "Los exploradores lo traen de vuelta antes del mediodía. Lo pones de ejemplo. La columna marcha más firme.");
           }
           G.soldiers = Math.max(0, G.soldiers - 1);
           G.deserterRisk += 0.5;
-          return "He's gone into the jungle. Food and time wasted. The others watched you fail.";
+          return t("He's gone into the jungle. Food and time wasted. The others watched you fail.",
+                   "Se ha ido a la selva. Comida y tiempo perdidos. Los otros vieron tu fracaso.");
         }},
-        { label: "Let Him Go", cls: "safe", act() {
+        { label: t("Let Him Go","Dejarlo Ir"), cls: "safe", act() {
           G.soldiers = Math.max(0, G.soldiers - 1);
           G.food = Math.max(0, G.food - 4);
           G.deserterRisk += 1.5;
-          return "You give no order. The column watches in silence. The number of people calculating their own escape is now higher.";
+          return t("You give no order. The column watches in silence. The number of people calculating their own escape is now higher.",
+                   "No das ninguna orden. La columna observa en silencio. El número de personas calculando su propia huida es ahora mayor.");
         }},
       ]
     );
@@ -1333,26 +1451,28 @@ function showCamp() {
   document.getElementById('v-camp-day').textContent = G.day;
 
   const dLeft = Math.max(0, G.distanceRemaining);
-  const destWord = G.isReturn ? 'days to home' : `days to ${G.destination}`;
+  const destWord = G.isReturn
+    ? t('days to home','días hasta casa')
+    : t(`days to ${G.destination}`,`días hasta ${G.destination}`);
 
   const cls = (v, warnV, badV) =>
     v <= badV ? 'bad' : v <= warnV ? 'warn' : 'val';
 
   document.getElementById('camp-stats').innerHTML = `
-    <div><span class="lbl">Day: </span><span class="val">${G.day}</span></div>
-    <div><span class="lbl">Warriors: </span><span class="${cls(G.soldiers,3,1)}">${G.soldiers}</span></div>
-    <div><span class="lbl">Porters: </span><span class="${cls(G.porters,2,0)}">${G.porters}</span></div>
-    <div><span class="lbl">Rations: </span><span class="${cls(G.food,25,10)}">${Math.ceil(G.food)}</span></div>
-    <div><span class="lbl">Distance: </span><span class="val">${dLeft} ${destWord}</span></div>
-    <div><span class="lbl">Dry season: </span><span class="${cls(G.seasonLeft,20,10)}">${G.seasonLeft} days left</span></div>
+    <div><span class="lbl">${t('Day:','Día:')} </span><span class="val">${G.day}</span></div>
+    <div><span class="lbl">${t('Warriors:','Guerreros:')} </span><span class="${cls(G.soldiers,3,1)}">${G.soldiers}</span></div>
+    <div><span class="lbl">${t('Porters:','Cargadores:')} </span><span class="${cls(G.porters,2,0)}">${G.porters}</span></div>
+    <div><span class="lbl">${t('Rations:','Raciones:')} </span><span class="${cls(G.food,25,10)}">${Math.ceil(G.food)}</span></div>
+    <div><span class="lbl">${t('Distance:','Distancia:')} </span><span class="val">${dLeft} ${destWord}</span></div>
+    <div><span class="lbl">${t('Dry season:','Temporada seca:')} </span><span class="${cls(G.seasonLeft,20,10)}">${G.seasonLeft} ${t('days left','días restantes')}</span></div>
   `;
 
   const warn = document.getElementById('camp-warning');
   if (G.food < 10) {
-    warn.textContent = 'Your men are starving. You may not reach your destination.';
+    warn.textContent = t('Your men are starving. You may not reach your destination.','Tus hombres se mueren de hambre. Puede que no llegues a tu destino.');
     warn.style.display = 'block';
   } else if (G.porters === 0) {
-    warn.textContent = 'No porters remain. Your soldiers carry what food is left, but it will not last.';
+    warn.textContent = t('No porters remain. Your soldiers carry what food is left, but it will not last.','No quedan cargadores. Tus soldados cargan la comida que queda, pero no durará.');
     warn.style.display = 'block';
   } else {
     warn.style.display = 'none';
@@ -1377,26 +1497,28 @@ function doArrive() {
   bar.className = '';
 
   document.getElementById('end-title').textContent = G.isReturn
-    ? 'Home'
-    : `You Have Reached ${G.destination}`;
+    ? t('Home','De Regreso')
+    : t(`You Have Reached ${G.destination}`,`Has Llegado a ${G.destination}`);
 
   document.getElementById('end-sub').textContent = G.isReturn
-    ? 'Home. Your people watch from the fields as your army returns. The long march is done.'
-    : `You have reached ${G.destination}. Your army stands at the tree line, exhausted but ready.`;
+    ? t('Home. Your people watch from the fields as your army returns. The long march is done.',
+        'Casa. Tu gente observa desde los campos mientras tu ejército regresa. La larga marcha ha terminado.')
+    : t(`You have reached ${G.destination}. Your army stands at the tree line, exhausted but ready.`,
+        `Has llegado a ${G.destination}. Tu ejército está en la línea de árboles, agotado pero listo.`);
 
   const daysMarched = G.day - 1;   // day counter starts at 1 and increments before arrival
   document.getElementById('end-stats').innerHTML = `
-    <div>⚔️ Warriors remaining: <strong>${G.soldiers}</strong></div>
-    <div>📦 Porters remaining:  <strong>${G.porters}</strong></div>
-    <div>🌽 Rations remaining:  <strong>${Math.ceil(G.food)}</strong></div>
-    <div>📅 Days marched:       <strong>${daysMarched}</strong> of ${G.distanceDays} planned</div>
-    ${G.tradeWeapons ? '<div style="color:#b45309;margin-top:4px">⚠️ Soldier weapons were traded on the road</div>' : ''}
-    ${G.raining      ? '<div style="color:#3b82f6;margin-top:4px">🌧 Arrived during the rains</div>' : ''}
+    <div>⚔️ ${t('Warriors remaining:','Guerreros restantes:')} <strong>${G.soldiers}</strong></div>
+    <div>📦 ${t('Porters remaining:','Cargadores restantes:')}  <strong>${G.porters}</strong></div>
+    <div>🌽 ${t('Rations remaining:','Raciones restantes:')}  <strong>${Math.ceil(G.food)}</strong></div>
+    <div>📅 ${t('Days marched:','Días marchados:')}       <strong>${daysMarched}</strong> ${t('of','de')} ${G.distanceDays} ${t('planned','planificados')}</div>
+    ${G.tradeWeapons ? `<div style="color:#b45309;margin-top:4px">⚠️ ${t('Soldier weapons were traded on the road','Las armas de los soldados fueron intercambiadas en el camino')}</div>` : ''}
+    ${G.raining      ? `<div style="color:#3b82f6;margin-top:4px">🌧 ${t('Arrived during the rains','Llegaste durante las lluvias')}</div>` : ''}
   `;
 
   const btn = document.getElementById('end-btn');
   btn.className = '';
-  btn.textContent = G.isReturn ? 'Enter the City' : 'Prepare for Battle';
+  btn.textContent = G.isReturn ? t('Enter the City','Entrar a la Ciudad') : t('Prepare for Battle','Prepararse para la Batalla');
 
   document.getElementById('end-overlay').style.display = 'flex';
 
@@ -1432,16 +1554,17 @@ function doArrive() {
 function doGameOver() {
   G.paused = true;
   document.getElementById('end-top-bar').className = 'fail';
-  document.getElementById('end-title').textContent = 'Your Warriors Are Gone';
+  document.getElementById('end-title').textContent = t('Your Warriors Are Gone','Tus Guerreros Han Caído');
   document.getElementById('end-sub').textContent =
-    'You stand alone in the jungle. Your dynasty has ended. The jungle reclaims your name.';
+    t('You stand alone in the jungle. Your dynasty has ended. The jungle reclaims your name.',
+      'Estás solo en la selva. Tu dinastía ha terminado. La selva reclama tu nombre.');
   document.getElementById('end-stats').innerHTML = `
-    <div>📅 Days marched: <strong>${G.day}</strong></div>
-    <div>🌽 Food remaining: <strong>${Math.ceil(G.food)}</strong></div>
+    <div>📅 ${t('Days marched:','Días marchados:')} <strong>${G.day}</strong></div>
+    <div>🌽 ${t('Food remaining:','Comida restante:')} <strong>${Math.ceil(G.food)}</strong></div>
   `;
   const btn = document.getElementById('end-btn');
   btn.className = 'fail';
-  btn.textContent = 'Return to the Fields';
+  btn.textContent = t('Return to the Fields','Volver a los Campos');
   btn.onclick = () => {
     try {
       const s = JSON.parse(localStorage.getItem(LS_KEY)) || {};

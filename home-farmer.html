@@ -475,7 +475,7 @@ function drawTributeCarts(sc) {
     ctx.beginPath(); ctx.moveTo(0, -20*sc); ctx.lineTo(0, -4*sc); ctx.stroke();
     if (isNear) {
       ctx.fillStyle = '#ca8a04'; ctx.font = `${9*sc}px 'Cinzel',serif`;
-      ctx.textAlign = 'center'; ctx.fillText('Tap \u2022 Collect', 0, -26*sc);
+      ctx.textAlign = 'center'; ctx.fillText(t('Tap \u2022 Collect','Toca \u2022 Recoger'), 0, -26*sc);
     }
     ctx.restore();
   });
@@ -534,7 +534,7 @@ function drawTributeCarts(sc) {
     if (isNear && !dialogOpen) {
       ctx.save(); ctx.translate(sx, c.y * sc);
       ctx.fillStyle = '#ca8a04'; ctx.font = `${9*sc}px 'Cinzel',serif`; ctx.textAlign = 'center';
-      ctx.fillText('Tap \u2022 Speak', 0, (-68+bob)*sc);
+      ctx.fillText(t('Tap \u2022 Speak','Toca \u2022 Hablar'), 0, (-68+bob)*sc);
       ctx.restore();
     }
   });
@@ -1232,14 +1232,17 @@ function draw() {
   let prompt='';
   if (!dialogOpen) {
     if (nearTributeBox >= 0) {
-      prompt = `Tap \u2022 Collect Tribute Box (+${tributeBoxes[nearTributeBox]?.food ?? 14} rations)`;
+      const food = tributeBoxes[nearTributeBox]?.food ?? 14;
+      prompt = t(`Tap \u2022 Collect Tribute Box (+${food} rations)`, `Toca \u2022 Recoger Caja de Tributo (+${food} raciones)`);
     } else if (nearTributeCarrier >= 0) {
-      prompt = `Tap \u2022 Speak with the Tribute Bearer`;
+      prompt = t('Tap \u2022 Speak with the Tribute Bearer','Toca \u2022 Hablar con el Portador de Tributo');
     } else if (nearTemple) {
       const n=farmers.filter(f=>f.role!=='farmer').length;
-      prompt = n ? `Tap \u2022 Speak at the Temple  (${n} assembled)` : `Tap \u2022 Speak at the Temple`;
+      prompt = n
+        ? t(`Tap \u2022 Speak at the Temple  (${n} assembled)`, `Toca \u2022 Hablar en el Templo  (${n} reunidos)`)
+        : t('Tap \u2022 Speak at the Temple','Toca \u2022 Hablar en el Templo');
     } else if (nearFarmer>=0) {
-      prompt = `Tap \u2022 Speak with ${farmers[nearFarmer].name}`;
+      prompt = t(`Tap \u2022 Speak with ${farmers[nearFarmer].name}`, `Toca \u2022 Hablar con ${farmers[nearFarmer].name}`);
     }
   }
   if (prompt) {
@@ -1256,8 +1259,8 @@ function draw() {
     ctx.fillStyle='rgba(11,11,12,.6)';
     ctx.beginPath(); ctx.roundRect(14,H-70,180,48,6); ctx.fill();
     ctx.fillStyle='rgba(245,240,225,.7)'; ctx.font="10px 'Cinzel',serif"; ctx.textAlign='left';
-    ctx.fillText('Arrow keys / WASD  Move',24,H-50);
-    ctx.fillText('Tap  \u2022  [E]  Talk to farmers',24,H-33);
+    ctx.fillText(t('Arrow keys / WASD  Move','Flechas / WASD  Moverse'),24,H-50);
+    ctx.fillText(t('Tap  \u2022  [E]  Talk to farmers','Toca  \u2022  [E]  Hablar con campesinos'),24,H-33);
     ctx.globalAlpha=1;
   }
 }

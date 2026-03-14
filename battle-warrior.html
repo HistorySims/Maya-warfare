@@ -28,6 +28,9 @@ canvas {
 <div id="wrap"><canvas id="c"></canvas></div>
 <script>
 'use strict';
+const LANG = localStorage.getItem('mayaLang') || 'en';
+const ES   = LANG === 'es';
+function t(en, es) { return ES ? es : en; }
 
 // ── CONSTANTS ─────────────────────────────────────────────────────────────────
 const W = 800, H = 480;
@@ -672,14 +675,14 @@ function drawHUD() {
   ctx.fillRect(10, 10, 170 * hpPct, 16);
   ctx.strokeStyle = '#555'; ctx.lineWidth = 1; ctx.strokeRect(10, 10, 170, 16);
   ctx.fillStyle = '#eee8da'; ctx.font = '11px Cinzel, serif'; ctx.textAlign = 'left';
-  ctx.fillText(`HP  ${Math.max(0, Math.ceil(player.hp))} / ${player.maxHp}`, 12, 42);
+  ctx.fillText(`${t('HP','PS')}  ${Math.max(0, Math.ceil(player.hp))} / ${player.maxHp}`, 12, 42);
 
   // Soldiers
   const alive = soldiers.filter(s => !s.dead && !s.dying).length;
   ctx.fillStyle = 'rgba(0,0,0,0.6)';
   ctx.beginPath(); ctx.roundRect(6, 54, 148, 22, 5); ctx.fill();
   ctx.fillStyle = '#eee8da'; ctx.font = '11px Cinzel, serif';
-  ctx.fillText(`\u2694 Warriors: ${alive} / ${startingSoldiers}`, 12, 69);
+  ctx.fillText(`\u2694 ${t('Warriors','Guerreros')}: ${alive} / ${startingSoldiers}`, 12, 69);
 
   // Zone name (top right)
   const zone = zones[currentZone];
@@ -699,7 +702,7 @@ function drawHUD() {
     ctx.fillRect(0, 0, W, H);
     ctx.fillStyle = `rgba(239,68,68,${pulse})`;
     ctx.font = 'bold 15px Cinzel, serif'; ctx.textAlign = 'center';
-    ctx.fillText('\u26a0 KILL ZONE \u2014 PUSH THROUGH FAST!', W / 2, 32);
+    ctx.fillText(t('\u26a0 KILL ZONE \u2014 PUSH THROUGH FAST!','\u26a0 ZONA DE PELIGRO \u2014 ¡AVANZA RÁPIDO!'), W / 2, 32);
   }
 
   // Advance prompt
@@ -708,7 +711,7 @@ function drawHUD() {
     ctx.fillStyle = 'rgba(0,0,0,0.65)';
     ctx.beginPath(); ctx.roundRect(W / 2 - 90, H / 2 - 24, 180, 38, 8); ctx.fill();
     ctx.fillStyle = '#fbbf24'; ctx.font = 'bold 19px Cinzel, serif'; ctx.textAlign = 'center';
-    ctx.fillText('ADVANCE \u2192', W / 2, H / 2 + 2);
+    ctx.fillText(t('ADVANCE \u2192','AVANZAR \u2192'), W / 2, H / 2 + 2);
     ctx.restore();
   }
 
@@ -791,15 +794,17 @@ function drawVictory() {
 
   // Title
   ctx.fillStyle = COL.gold; ctx.font = 'bold 26px Cinzel, serif';
-  ctx.fillText(`${battleState.destination} Has Fallen!`, W / 2, H / 2 - 156);
+  ctx.fillText(t(`${battleState.destination} Has Fallen!`,`¡${battleState.destination} Ha Caído!`), W / 2, H / 2 - 156);
 
   // Combat stats
   const alive = soldiers.filter(s => !s.dead && !s.dying).length;
   ctx.fillStyle = '#eee8da'; ctx.font = '14px Cinzel, serif';
-  ctx.fillText(`Warriors lost: ${startingSoldiers - alive}   ·   Your HP: ${Math.max(0, Math.ceil(player.hp))} / ${player.maxHp}`, W / 2, H / 2 - 118);
+  ctx.fillText(t(`Warriors lost: ${startingSoldiers - alive}   ·   Your HP: ${Math.max(0, Math.ceil(player.hp))} / ${player.maxHp}`,
+                 `Guerreros perdidos: ${startingSoldiers - alive}   ·   Tus PS: ${Math.max(0, Math.ceil(player.hp))} / ${player.maxHp}`), W / 2, H / 2 - 118);
   if (battleState.isReconquest && killZoneLosses > 0) {
     ctx.fillStyle = '#ef4444'; ctx.font = '13px Cinzel, serif';
-    ctx.fillText(`Kill zone took ${killZoneLosses} warrior${killZoneLosses !== 1 ? 's' : ''}`, W / 2, H / 2 - 96);
+    ctx.fillText(t(`Kill zone took ${killZoneLosses} warrior${killZoneLosses !== 1 ? 's' : ''}`,
+                   `La zona de peligro costó ${killZoneLosses} guerrero${killZoneLosses !== 1 ? 's' : ''}`), W / 2, H / 2 - 96);
   }
 
   // Divider
@@ -808,27 +813,30 @@ function drawVictory() {
 
   // Tribute header
   ctx.fillStyle = COL.jade; ctx.font = 'bold 11px Cinzel, serif';
-  ctx.fillText('TRIBUTE TERMS', W / 2, H / 2 - 56);
+  ctx.fillText(t('TRIBUTE TERMS','TÉRMINOS DEL TRIBUTO'), W / 2, H / 2 - 56);
 
   const porters = (savedState?.expedition?.porters ?? 0);
   const food    = porters * 14 + 20;
 
   ctx.fillStyle = '#a8d8b0'; ctx.font = '13px Cinzel, serif';
   if (!battleState.isReconquest) {
-    ctx.fillText('Your kinsman is installed as Ajaw of Ox Witz.', W / 2, H / 2 - 36);
+    ctx.fillText(t('Your kinsman is installed as Ajaw of Ox Witz.','Tu pariente es instalado como Ajaw de Ox Witz.'), W / 2, H / 2 - 36);
     ctx.fillStyle = COL.gold; ctx.font = '13px Cinzel, serif';
-    ctx.fillText(`${porters} porter${porters !== 1 ? 's' : ''} loaded ${food} rations from the city stores.`, W / 2, H / 2 - 16);
+    ctx.fillText(t(`${porters} porter${porters !== 1 ? 's' : ''} loaded ${food} rations from the city stores.`,
+                   `${porters} cargador${porters !== 1 ? 'es' : ''} cargó ${food} raciones de los almacenes de la ciudad.`), W / 2, H / 2 - 16);
     ctx.fillStyle = '#8ab89a'; ctx.font = '12px Cinzel, serif';
-    ctx.fillText('The Ajaw kneels. Tribute will flow without end.', W / 2, H / 2 + 4);
+    ctx.fillText(t('The Ajaw kneels. Tribute will flow without end.','El Ajaw se arrodilla. El tributo fluirá sin cesar.'), W / 2, H / 2 + 4);
     ctx.fillStyle = '#6a9a7a';
-    ctx.fillText('He names you supreme power. He swears on his lineage.', W / 2, H / 2 + 22);
+    ctx.fillText(t('He names you supreme power. He swears on his lineage.','Te nombra poder supremo. Jura sobre su linaje.'), W / 2, H / 2 + 22);
   } else {
     ctx.fillStyle = '#a8d8b0';
-    ctx.fillText('The Ajaw weeps. He begs you to remember his loyalty.', W / 2, H / 2 - 36);
+    ctx.fillText(t('The Ajaw weeps. He begs you to remember his loyalty.','El Ajaw llora. Te suplica que recuerdes su lealtad.'), W / 2, H / 2 - 36);
     ctx.fillStyle = COL.gold;
-    ctx.fillText(`${food} rations loaded. He swears the betrayal will never happen again.`, W / 2, H / 2 - 16);
+    ctx.fillText(t(`${food} rations loaded. He swears the betrayal will never happen again.`,
+                   `${food} raciones cargadas. Jura que la traición nunca volverá a ocurrir.`), W / 2, H / 2 - 16);
     ctx.fillStyle = '#8ab89a'; ctx.font = '12px Cinzel, serif';
-    ctx.fillText('He says he feared you before. Now he has felt your wrath. Now he truly knows.', W / 2, H / 2 + 4);
+    ctx.fillText(t('He says he feared you before. Now he has felt your wrath. Now he truly knows.',
+                   'Dice que antes te temía. Ahora ha sentido tu ira. Ahora lo sabe de verdad.'), W / 2, H / 2 + 4);
   }
 
   // Three tribute cart figures, animated
@@ -841,7 +849,7 @@ function drawVictory() {
   ctx.fillStyle = 'rgba(196,160,32,.5)'; ctx.font = '18px serif';
   ctx.fillText('← ← ←', W / 2, cartY + 22);
   ctx.fillStyle = '#6a9a7a'; ctx.font = '10px Cinzel, serif';
-  ctx.fillText('heading for your city', W / 2, cartY + 38);
+  ctx.fillText(t('heading for your city','rumbo a tu ciudad'), W / 2, cartY + 38);
 
   // Button — locked for 2 s after victory so rapid swing-clicking can't skip
   const secLeft = Math.ceil((2000 - (totalMs - victoryAt)) / 1000);
@@ -849,10 +857,14 @@ function drawVictory() {
   ctx.fillStyle = ready ? COL.jade : '#2a4a35';
   ctx.beginPath(); ctx.roundRect(W / 2 - 140, H / 2 + 118, 280, 46, 9); ctx.fill();
   ctx.fillStyle = ready ? '#fff' : '#6a8a72'; ctx.font = 'bold 15px Cinzel, serif';
-  ctx.fillText(ready ? 'Begin the March Home' : `Begin the March Home (${secLeft})`, W / 2, H / 2 + 147);
+  ctx.fillText(ready
+    ? t('Begin the March Home','Comenzar el Regreso a Casa')
+    : t(`Begin the March Home (${secLeft})`,`Comenzar el Regreso a Casa (${secLeft})`), W / 2, H / 2 + 147);
 
   ctx.fillStyle = '#555'; ctx.font = '11px Cinzel, serif';
-  ctx.fillText(ready ? 'Click / tap to continue' : 'Read the terms…', W / 2, H / 2 + 186);
+  ctx.fillText(ready
+    ? t('Click / tap to continue','Haz clic / toca para continuar')
+    : t('Read the terms…','Lee los términos…'), W / 2, H / 2 + 186);
 }
 
 function drawDefeat() {
@@ -864,17 +876,17 @@ function drawDefeat() {
 
   ctx.textAlign = 'center';
   ctx.fillStyle = COL.blood; ctx.font = 'bold 26px Cinzel, serif';
-  ctx.fillText('Your Dynasty Has Ended', W / 2, H / 2 - 80);
+  ctx.fillText(t('Your Dynasty Has Ended','Tu Dinastía Ha Terminado'), W / 2, H / 2 - 80);
   ctx.fillStyle = '#c4b48a'; ctx.font = '14px Cinzel, serif';
-  ctx.fillText('The jungle reclaims your name.', W / 2, H / 2 - 46);
+  ctx.fillText(t('The jungle reclaims your name.','La selva reclama tu nombre.'), W / 2, H / 2 - 46);
 
   ctx.fillStyle = '#7c2020';
   ctx.beginPath(); ctx.roundRect(W / 2 - 110, H / 2 + 14, 220, 46, 8); ctx.fill();
   ctx.fillStyle = '#fff'; ctx.font = 'bold 15px Cinzel, serif';
-  ctx.fillText('Try Again', W / 2, H / 2 + 43);
+  ctx.fillText(t('Try Again','Intentar de Nuevo'), W / 2, H / 2 + 43);
 
   ctx.fillStyle = '#555'; ctx.font = '12px Cinzel, serif';
-  ctx.fillText('Click / tap to restart', W / 2, H / 2 + 90);
+  ctx.fillText(t('Click / tap to restart','Haz clic / toca para reiniciar'), W / 2, H / 2 + 90);
 }
 
 // ── COMBAT ────────────────────────────────────────────────────────────────────
