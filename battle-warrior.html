@@ -195,13 +195,13 @@ function buildZones() {
   if (!battleState.isReconquest) {
     killZone = null;
     zones = [
-      { name: 'Jungle Edge',     x1: 0,    x2: 1100,
+      { name: t('Jungle Edge','Borde de la Selva'),     x1: 0,    x2: 1100,
         types: arr('enemy', 3 + rnd(2)),
         xs: scatter(500, 1050, 4 + rnd(2)), spawned: false, cleared: false },
-      { name: 'The Plaza',       x1: 1100, x2: 2400,
+      { name: t('The Plaza','La Plaza'),       x1: 1100, x2: 2400,
         types: arr('enemy', 6 + rnd(3)),
         xs: scatter(1300, 2300, 10),        spawned: false, cleared: false },
-      { name: 'The Pyramid Steps', x1: 2400, x2: 3300, isFinal: true,
+      { name: t('The Pyramid Steps','Las Gradas de la Pirámide'), x1: 2400, x2: 3300, isFinal: true,
         types: [...arr('enemy', 2), 'captain'],
         xs: scatter(2600, 3100, 5),         spawned: false, cleared: false },
     ];
@@ -210,23 +210,23 @@ function buildZones() {
     const KZ1 = OW + 110, KZ2 = IW - 10;
     killZone = { x1: KZ1, x2: KZ2 };
     zones = [
-      { name: 'The Approach',    x1: 0,       x2: OW - 50,
+      { name: t('The Approach','El Avance'),    x1: 0,       x2: OW - 50,
         types: arr('enemy', 3),
         xs: scatter(350, OW - 80, 5),          spawned: false, cleared: false },
-      { name: 'The Outer Gate',  x1: OW - 50, x2: KZ1,
+      { name: t('The Outer Gate','La Puerta Exterior'),  x1: OW - 50, x2: KZ1,
         types: arr('enemy', 3 + wl),
         xs: scatter(OW - 20, KZ1 - 20, 6),    spawned: false, cleared: false,
         wallX: OW, gateW: 110 },
-      { name: 'The Kill Zone',   x1: KZ1, x2: KZ2,
+      { name: t('The Kill Zone','La Zona de Peligro'),   x1: KZ1, x2: KZ2,
         types: arr('enemy', 2 + wl),
         xs: scatter(KZ1 + 60, KZ2 - 60, 4),   spawned: false, cleared: false,
         defWX: [IW - 5, IW + 55, IW + 115].slice(0, 2 + wl),
         defY:  [LANE_TOP - 18, LANE_TOP - 10, LANE_TOP - 14].slice(0, 2 + wl) },
-      { name: 'The Inner Gate',  x1: KZ2, x2: IW + 200,
+      { name: t('The Inner Gate','La Puerta Interior'),  x1: KZ2, x2: IW + 200,
         types: arr('enemy', 3 + wl),
         xs: scatter(IW + 20, IW + 180, 6),    spawned: false, cleared: false,
         wallX: IW, gateW: 90 },
-      { name: 'The Palace Plaza', x1: IW + 200, x2: IW + 1500, isFinal: true,
+      { name: t('The Palace Plaza','La Plaza del Palacio'), x1: IW + 200, x2: IW + 1500, isFinal: true,
         types: [...arr('enemy', 4 + wl), 'captain'],
         xs: scatter(IW + 300, IW + 1300, 10), spawned: false, cleared: false },
     ];
@@ -840,11 +840,11 @@ function drawVictory() {
   }
 
   // Three tribute cart figures, animated
-  const t = totalMs / 1000;
+  const animT = totalMs / 1000;
   const cartY = H / 2 + 72;
-  drawTributeCartFigure(W / 2 - 70, cartY, t);
-  drawTributeCartFigure(W / 2,       cartY, t + 0.8);
-  drawTributeCartFigure(W / 2 + 70,  cartY, t + 1.6);
+  drawTributeCartFigure(W / 2 - 70, cartY, animT);
+  drawTributeCartFigure(W / 2,       cartY, animT + 0.8);
+  drawTributeCartFigure(W / 2 + 70,  cartY, animT + 1.6);
   // Arrow showing direction of travel
   ctx.fillStyle = 'rgba(196,160,32,.5)'; ctx.font = '18px serif';
   ctx.fillText('← ← ←', W / 2, cartY + 22);
