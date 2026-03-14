@@ -925,16 +925,18 @@ function updateSeason(dt) {
   seasonTimer += dt;
   if (season === 'dry') {
     cropGrowth = Math.min(1, seasonTimer / DRY_DUR);
-    // Accumulate food based on active farmers (more farmers = more yield)
-    // 6 farmers × 0.5/s × 80s = 240 gross gain; village eats ~0.6/s × 115s = 69/cycle → ~171 net surplus
+    // Production: 6 farmers × 0.4/s × 80s = 192 rations per dry season
+    // Consumption: 11 eaters × 0.12/s × 115s = 151.8 per cycle → net +40 with 6 farmers
     const activeFarmers = farmers.filter(f => f.role==='farmer' && !f.gone).length;
-    cropStore = Math.min(200, cropStore + activeFarmers * 0.5 * dt);
-    cropStore = Math.max(0, cropStore - 0.6 * dt);  // village consumes food continuously
+    const eaters = farmers.filter(f => !f.gone).length + 1;  // present farmers + player
+    cropStore = Math.min(200, cropStore + activeFarmers * 0.4 * dt);
+    cropStore = Math.max(0, cropStore - eaters * 0.12 * dt);
     if (seasonTimer >= DRY_DUR) { season='rainy'; seasonTimer=0; cropGrowth=1; }
   } else {
     // During rain, stalks slowly die back so new planting cycle is visible
     cropGrowth = Math.max(0, 1 - seasonTimer / RAINY_DUR);
-    cropStore = Math.max(0, cropStore - 0.6 * dt);  // village still eats during rainy season
+    const eaters = farmers.filter(f => !f.gone).length + 1;
+    cropStore = Math.max(0, cropStore - eaters * 0.12 * dt);
     if (seasonTimer >= RAINY_DUR) {
       season='dry'; seasonTimer=0; cropGrowth=0;
       if (tributeActive) {
