@@ -208,11 +208,11 @@ window.addEventListener('keyup', e => { keys[e.key] = false; });
 
 // Canvas tap → speak
 canvas.addEventListener('click', () => {
-  if (!dialogOpen && (nearFarmer>=0 || nearTemple)) tryInteract();
+  if (!dialogOpen && (nearFarmer>=0 || nearTemple || nearTributeBox>=0 || nearTributeCarrier>=0)) tryInteract();
 });
 canvas.addEventListener('touchend', e => {
   e.preventDefault();
-  if (!dialogOpen && (nearFarmer>=0 || nearTemple)) tryInteract();
+  if (!dialogOpen && (nearFarmer>=0 || nearTemple || nearTributeBox>=0 || nearTributeCarrier>=0)) tryInteract();
 }, { passive: false });
 
 const mbL = document.getElementById('mobile-left');
@@ -492,11 +492,13 @@ function drawTributeCarts(sc) {
     if (dropping) { ctx.translate(0, (-20+bob)*sc); ctx.rotate(0.32); ctx.translate(0, (20-bob)*sc); }
     ctx.fillStyle='#312e81';
     ctx.beginPath(); ctx.roundRect(-9*sc,(-34+bob)*sc,18*sc,22*sc,3*sc); ctx.fill();
-    // Bundle on back only while walking/leaving
+    // Crate on back while walking/leaving (before box is placed)
     if (!dropping && !c.boxCreated) {
-      ctx.fillStyle='#b45309'; ctx.fillRect(-10*sc,(-52+bob)*sc,20*sc,14*sc);
-      ctx.strokeStyle='#ca8a04'; ctx.lineWidth=1.5*sc; ctx.strokeRect(-10*sc,(-52+bob)*sc,20*sc,14*sc);
-      ctx.fillStyle='#ca8a04'; ctx.beginPath(); ctx.arc(0,(-46+bob)*sc,3.5*sc,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#b45309'; ctx.fillRect(-11*sc,(-54+bob)*sc,22*sc,16*sc);
+      ctx.strokeStyle='#ca8a04'; ctx.lineWidth=1.5*sc; ctx.strokeRect(-11*sc,(-54+bob)*sc,22*sc,16*sc);
+      // Cross-binding lines like the ground crate
+      ctx.beginPath(); ctx.moveTo(-11*sc,(-46+bob)*sc); ctx.lineTo(11*sc,(-46+bob)*sc); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0,(-54+bob)*sc); ctx.lineTo(0,(-38+bob)*sc); ctx.stroke();
     }
     // Arms — lowered when dropping
     const armS = dropping ? 0 : Math.sin(c.walkPhase+Math.PI)*7;
@@ -924,12 +926,15 @@ function updateSeason(dt) {
   if (season === 'dry') {
     cropGrowth = Math.min(1, seasonTimer / DRY_DUR);
     // Accumulate food based on active farmers (more farmers = more yield)
+    // 6 farmers × 0.5/s × 80s = 240 gross gain; village eats ~0.6/s × 115s = 69/cycle → ~171 net surplus
     const activeFarmers = farmers.filter(f => f.role==='farmer' && !f.gone).length;
-    cropStore = Math.min(200, cropStore + activeFarmers * 0.3 * dt);
+    cropStore = Math.min(200, cropStore + activeFarmers * 0.5 * dt);
+    cropStore = Math.max(0, cropStore - 0.6 * dt);  // village consumes food continuously
     if (seasonTimer >= DRY_DUR) { season='rainy'; seasonTimer=0; cropGrowth=1; }
   } else {
     // During rain, stalks slowly die back so new planting cycle is visible
     cropGrowth = Math.max(0, 1 - seasonTimer / RAINY_DUR);
+    cropStore = Math.max(0, cropStore - 0.6 * dt);  // village still eats during rainy season
     if (seasonTimer >= RAINY_DUR) {
       season='dry'; seasonTimer=0; cropGrowth=0;
       if (tributeActive) {
