@@ -405,7 +405,7 @@
       <canvas id="camp-fire-canvas" width="90" height="65"></canvas>
       <div id="camp-stats"></div>
       <div id="camp-warning"></div>
-      <button id="camp-btn" id="camp-btn">Continue March</button>
+      <button id="camp-btn">Continue March</button>
     </div>
   </div>
 
@@ -740,7 +740,7 @@ function showChoiceEvent(title, desc, choices) {
       resultEl.textContent = txt;
       resultEl.style.display = 'block';
       updateHUD();
-      const cont = makeBtn('Continue', 'neutral', () => {
+      const cont = makeBtn(t('Continue','Continuar'), 'neutral', () => {
         ov.style.display = 'none';
         G.paused = false;
         checkDeath();
@@ -1007,7 +1007,7 @@ const EVENTS_OUT = [
     showChoiceEvent(
       t("Scouts Return","Regresan los Exploradores"),
       t(`Your scouts report back. ${G.destination} is ${dLeft} day${dLeft===1?'':'s'} ahead. They saw ${intel}. How do you respond?`,
-        `Tus exploradores informan. ${G.destination} está a ${dLeft} día${dLeft===1?'':'s} de marcha. Vieron ${intel}. ¿Cómo respondes?`),
+        `Tus exploradores informan. ${G.destination} está a ${dLeft} día${dLeft===1?'':'s'} de marcha. Vieron ${intel}. ¿Cómo respondes?`),
       [
         { label: t("Push Hard — Arrive Fast","Presionar — Llegar Rápido"), cls: "risky", act() {
           gainDay(1);
