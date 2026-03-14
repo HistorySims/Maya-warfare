@@ -66,6 +66,11 @@
 <script>
 'use strict';
 
+// ── LANGUAGE ───────────────────────────────────────────────────────────────────
+const LANG = localStorage.getItem('mayaLang') || 'en';
+const ES   = LANG === 'es';
+function t(en, es) { return ES ? es : en; }
+
 // ── SHARED STATE KEY ───────────────────────────────────────────────────────────
 const LS_KEY = 'mayaThreeGameState';
 
@@ -115,16 +120,16 @@ const CISTERNS = [
 
 // ── FARMER DATA ────────────────────────────────────────────────────────────────
 const FARMER_DATA = [
-  { name:"Balam",   zone:'left',   cornH:14, str:8,  end:6,  flavor:"Works the dawn field before the heat rises." },
-  { name:"Ah Kin",  zone:'left',   cornH:11, str:5,  end:9,  flavor:"Steady. Forty seasons and he has never stopped." },
-  { name:"Tz'ikin", zone:'left',   cornH: 9, str:7,  end:7,  flavor:"Quick and light. He moves like a bird through the furrows." },
-  { name:"Kan",     zone:'left',   cornH:16, str:4,  end:8,  flavor:"Old but tireless. His yields are always the highest." },
-  { name:"Ix Chel", zone:'right',  cornH:18, str:4,  end:10, flavor:"She carries twice what the others will. Without complaint." },
-  { name:"Pakal",   zone:'right',  cornH:12, str:9,  end:7,  flavor:"Young, proud, and eager to prove himself in war." },
-  { name:"Yaxun",   zone:'right',  cornH: 8, str:7,  end:8,  flavor:"He has a scar from a market dispute. Holds a grudge well." },
-  { name:"Ixim",    zone:'right',  cornH:20, str:5,  end:6,  flavor:"Named for corn. He loves these fields more than any battle." },
-  { name:"K'awiil", zone:'center', cornH: 5, str:10, end:8,  flavor:"He barely farms. He watches the jungle edge, always restless." },
-  { name:"Sak Bak", zone:'center', cornH: 7, str:6,  end:9,  flavor:"A quiet man. Carries the water jars without complaint." },
+  { name:"Balam",   zone:'left',   cornH:14, str:8,  end:6,  flavor:"Works the dawn field before the heat rises.",         flavor_es:"Trabaja el campo del amanecer antes de que suba el calor." },
+  { name:"Ah Kin",  zone:'left',   cornH:11, str:5,  end:9,  flavor:"Steady. Forty seasons and he has never stopped.",     flavor_es:"Constante. Cuarenta temporadas y nunca ha parado." },
+  { name:"Tz'ikin", zone:'left',   cornH: 9, str:7,  end:7,  flavor:"Quick and light. He moves like a bird through the furrows.", flavor_es:"Rápido y ligero. Se mueve como un pájaro por los surcos." },
+  { name:"Kan",     zone:'left',   cornH:16, str:4,  end:8,  flavor:"Old but tireless. His yields are always the highest.", flavor_es:"Viejo pero incansable. Sus cosechas son siempre las más altas." },
+  { name:"Ix Chel", zone:'right',  cornH:18, str:4,  end:10, flavor:"She carries twice what the others will. Without complaint.", flavor_es:"Carga el doble que los demás. Sin quejarse." },
+  { name:"Pakal",   zone:'right',  cornH:12, str:9,  end:7,  flavor:"Young, proud, and eager to prove himself in war.",    flavor_es:"Joven, orgulloso y ansioso por demostrar su valor en la guerra." },
+  { name:"Yaxun",   zone:'right',  cornH: 8, str:7,  end:8,  flavor:"He has a scar from a market dispute. Holds a grudge well.", flavor_es:"Tiene una cicatriz de una riña en el mercado. Guarda bien los rencores." },
+  { name:"Ixim",    zone:'right',  cornH:20, str:5,  end:6,  flavor:"Named for corn. He loves these fields more than any battle.", flavor_es:"Llamado así por el maíz. Ama estos campos más que cualquier batalla." },
+  { name:"K'awiil", zone:'center', cornH: 5, str:10, end:8,  flavor:"He barely farms. He watches the jungle edge, always restless.", flavor_es:"Apenas cultiva. Vigila el borde de la selva, siempre inquieto." },
+  { name:"Sak Bak", zone:'center', cornH: 7, str:6,  end:9,  flavor:"A quiet man. Carries the water jars without complaint.", flavor_es:"Un hombre tranquilo. Carga los cántaros de agua sin quejarse." },
 ];
 
 function homeX(i) {
@@ -250,19 +255,24 @@ function showCard(html, opts = {}) {
 
 function openFarmerDialog(idx) {
   const f = farmers[idx];
-  const roleLabel = f.role==='farmer'?'Tending the Fields': f.role==='warrior'?'Selected as Warrior':'Selected as Porter';
+  const roleLabel = f.role==='farmer'
+    ? t('Tending the Fields','Trabajando los Campos')
+    : f.role==='warrior'
+      ? t('Selected as Warrior','Seleccionado como Guerrero')
+      : t('Selected as Porter','Seleccionado como Cargador');
   const roleColor = f.role==='warrior'?'#b91c1c': f.role==='porter'?'#0f766e':'#5a4a2a';
-  const mkW = f.role!=='warrior' ? `<button class="btn btn-warrior" onclick="assignRole(${idx},'warrior')">Make Warrior</button>` : '';
-  const mkP = f.role!=='porter'  ? `<button class="btn btn-porter"  onclick="assignRole(${idx},'porter')">Make Porter</button>`   : '';
-  const ret = f.role!=='farmer'  ? `<button class="btn btn-send-back" onclick="assignRole(${idx},'farmer')">Return to Fields</button>` : '';
+  const flavorText = ES ? (f.flavor_es || f.flavor) : f.flavor;
+  const mkW = f.role!=='warrior' ? `<button class="btn btn-warrior" onclick="assignRole(${idx},'warrior')">${t('Make Warrior','Hacer Guerrero')}</button>` : '';
+  const mkP = f.role!=='porter'  ? `<button class="btn btn-porter"  onclick="assignRole(${idx},'porter')">${t('Make Porter','Hacer Cargador')}</button>`   : '';
+  const ret = f.role!=='farmer'  ? `<button class="btn btn-send-back" onclick="assignRole(${idx},'farmer')">${t('Return to Fields','Volver a los Campos')}</button>` : '';
   showCard(`
     <h2>${f.name}</h2>
-    <div class="flavor">"${f.flavor}"</div>
-    <div class="stat-row"><span class="stat-label">Strength</span><div class="bar-bg"><div class="bar-fill" style="width:${f.str*10}%;background:#b91c1c"></div></div><span class="bar-val">${f.str}</span></div>
-    <div class="stat-row"><span class="stat-label">Endurance</span><div class="bar-bg"><div class="bar-fill" style="width:${f.end*10}%;background:#0f766e"></div></div><span class="bar-val">${f.end}</span></div>
-    <div class="corn-row"><span>Corn harvested this season</span><span>${f.cornH} loads</span></div>
+    <div class="flavor">"${flavorText}"</div>
+    <div class="stat-row"><span class="stat-label">${t('Strength','Fuerza')}</span><div class="bar-bg"><div class="bar-fill" style="width:${f.str*10}%;background:#b91c1c"></div></div><span class="bar-val">${f.str}</span></div>
+    <div class="stat-row"><span class="stat-label">${t('Endurance','Resistencia')}</span><div class="bar-bg"><div class="bar-fill" style="width:${f.end*10}%;background:#0f766e"></div></div><span class="bar-val">${f.end}</span></div>
+    <div class="corn-row"><span>${t('Corn harvested this season','Maíz cosechado esta temporada')}</span><span>${f.cornH} ${t('loads','cargas')}</span></div>
     <div class="role-badge" style="color:${roleColor}">${roleLabel}</div>
-    <div class="btn-row">${mkW}${mkP}${ret}<button class="btn btn-back" onclick="closeDialog()">Leave</button></div>
+    <div class="btn-row">${mkW}${mkP}${ret}<button class="btn btn-back" onclick="closeDialog()">${t('Leave','Salir')}</button></div>
   `);
 }
 
@@ -270,7 +280,7 @@ function openTempleDialog() {
   const warriors = farmers.filter(f=>f.role==='warrior');
   const porters  = farmers.filter(f=>f.role==='porter');
   if (!warriors.length && !porters.length) {
-    showCard(`<h2>The Temple Steps</h2><div class="flavor">The plaza is empty. Speak to your farmers in the fields first.</div><div class="btn-row"><button class="btn btn-back" onclick="closeDialog()">Return to the Fields</button></div>`);
+    showCard(`<h2>${t('The Temple Steps','Las Gradas del Templo')}</h2><div class="flavor">${t('The plaza is empty. Speak to your farmers in the fields first.','La plaza está vacía. Habla primero con tus campesinos en los campos.')}</div><div class="btn-row"><button class="btn btn-back" onclick="closeDialog()">${t('Return to the Fields','Volver a los Campos')}</button></div>`);
     return;
   }
 
@@ -289,38 +299,39 @@ function openTempleDialog() {
   const rows = [...warriors,...porters].map(f=>{
     const fi=farmers.indexOf(f);
     const tc=f.role==='warrior'?'role-warrior-tag':'role-porter-tag';
-    return `<div class="roster-item"><span class="roster-name">${f.name}</span><span class="roster-role ${tc}">${f.role}</span><button class="btn btn-send-back" onclick="sendBack(${fi})">Send Back</button></div>`;
+    const roleWord = f.role==='warrior' ? t('warrior','guerrero') : t('porter','cargador');
+    return `<div class="roster-item"><span class="roster-name">${f.name}</span><span class="roster-role ${tc}">${roleWord}</span><button class="btn btn-send-back" onclick="sendBack(${fi})">${t('Send Back','Enviar de Vuelta')}</button></div>`;
   }).join('');
 
-  const reconFlag = tributeStopNotified ? `<div style="color:#b91c1c;font-size:.72rem;margin-bottom:8px;padding:4px 8px;background:rgba(185,28,28,.1);border-radius:4px">⚔️ Reconquest — doubled walls await at Ox Witz</div>` : '';
+  const reconFlag = tributeStopNotified ? `<div style="color:#b91c1c;font-size:.72rem;margin-bottom:8px;padding:4px 8px;background:rgba(185,28,28,.1);border-radius:4px">⚔️ ${t('Reconquest — doubled walls await at Ox Witz','Reconquista — murallas reforzadas aguardan en Ox Witz')}</div>` : '';
 
   let marchSection;
   if (season === 'rainy') {
-    marchSection = `<div style="text-align:center;color:#1d4ed8;font-size:.8rem;padding:10px;background:rgba(29,78,216,.1);border-radius:4px;margin-bottom:8px">The rains have come. No column marches through mud season.<br><em style="font-size:.7rem;opacity:.8">Wait for the dry season to return.</em></div>`;
+    marchSection = `<div style="text-align:center;color:#1d4ed8;font-size:.8rem;padding:10px;background:rgba(29,78,216,.1);border-radius:4px;margin-bottom:8px">${t('The rains have come. No column marches through mud season.','Han llegado las lluvias. Ninguna columna marcha en la temporada de barro.')}<br><em style="font-size:.7rem;opacity:.8">${t('Wait for the dry season to return.','Espera a que regrese la temporada seca.')}</em></div>`;
   } else if (!warriors.length) {
-    marchSection = `<div style="text-align:center;color:#b91c1c;font-size:.75rem;margin-bottom:8px">At least one warrior is required.</div>`;
+    marchSection = `<div style="text-align:center;color:#b91c1c;font-size:.75rem;margin-bottom:8px">${t('At least one warrior is required.','Se requiere al menos un guerrero.')}</div>`;
   } else if (!ok) {
-    marchSection = `<div style="text-align:center;color:#b91c1c;font-size:.75rem;margin-bottom:8px">Short ${shortfall} rations — grow more or reduce the column.</div><button class="btn btn-march" style="opacity:.45;cursor:not-allowed" disabled>Cannot March — Rations Short</button>`;
+    marchSection = `<div style="text-align:center;color:#b91c1c;font-size:.75rem;margin-bottom:8px">${t(`Short ${shortfall} rations — grow more or reduce the column.`,`Faltan ${shortfall} raciones — cultiva más o reduce la columna.`)}</div><button class="btn btn-march" style="opacity:.45;cursor:not-allowed" disabled>${t('Cannot March — Rations Short','No se Puede Marchar — Raciones Insuficientes')}</button>`;
   } else {
-    marchSection = `<button class="btn btn-march" onclick="beginMarch()">Begin the March →</button>`;
+    marchSection = `<button class="btn btn-march" onclick="beginMarch()">${t('Begin the March →','Comenzar la Marcha →')}</button>`;
   }
 
   showCard(`
-    <h2>The Great Temple</h2>
-    <div class="flavor">Destination: ${DEST} · ${DIST}-day march</div>
+    <h2>${t('The Great Temple','El Gran Templo')}</h2>
+    <div class="flavor">${t('Destination','Destino')}: ${DEST} · ${t(`${DIST}-day march`,`marcha de ${DIST} días`)}</div>
     <div class="summary-row">
-      <div><strong>${warriors.length}</strong>Warriors</div>
-      <div><strong>${porters.length}</strong>Porters</div>
-      <div><strong>${avail}</strong><span style="font-size:.65rem;color:#5a4a2a"> / ${porterCap} cap</span> Rations</div>
+      <div><strong>${warriors.length}</strong>${t('Warriors','Guerreros')}</div>
+      <div><strong>${porters.length}</strong>${t('Porters','Cargadores')}</div>
+      <div><strong>${avail}</strong><span style="font-size:.65rem;color:#5a4a2a"> / ${porterCap} cap</span> ${t('Rations','Raciones')}</div>
     </div>
     <div style="font-size:.72rem;color:#5a4a2a;margin-bottom:10px;padding:6px 8px;background:rgba(0,0,0,.04);border-radius:4px;line-height:1.7">
-      <div>🗺 Distance: ${DIST} days &nbsp;·&nbsp; Food/day: ${fpd} rations</div>
-      <div style="color:${foodColor}">🌽 Need <strong>${needed}</strong> rations — have <strong>${avail}</strong>${ok ? ' ✓' : ' ✗ short ' + shortfall}</div>
-      <div style="color:#5a4a2a">📦 Porter carry: ${porterCap} rations (${porters.length} porter${porters.length!==1?'s':''})</div>
+      <div>🗺 ${t('Distance','Distancia')}: ${DIST} ${t('days','días')} &nbsp;·&nbsp; ${t('Food/day','Comida/día')}: ${fpd} ${t('rations','raciones')}</div>
+      <div style="color:${foodColor}">🌽 ${t('Need','Necesita')} <strong>${needed}</strong> ${t('rations — have','raciones — tiene')} <strong>${avail}</strong>${ok ? ' ✓' : ' ✗ ' + t('short','faltan') + ' ' + shortfall}</div>
+      <div style="color:#5a4a2a">📦 ${t('Porter carry','Capacidad cargadores')}: ${porterCap} ${t('rations','raciones')} (${porters.length} ${porters.length!==1 ? t('porters','cargadores') : t('porter','cargador')})</div>
     </div>
     ${reconFlag}
     <div class="roster-list">${rows}</div>
-    <div class="btn-row">${marchSection}<button class="btn btn-back" onclick="closeDialog()">Back to the Fields</button></div>
+    <div class="btn-row">${marchSection}<button class="btn btn-back" onclick="closeDialog()">${t('Back to the Fields','Volver a los Campos')}</button></div>
   `);
 }
 
@@ -533,15 +544,15 @@ function drawTributeCarts(sc) {
 function showTributeStopped() {
   tributeStopNotified = false;
   showCard(`
-    <h2 style="color:#b91c1c">An Insult From Ox Witz</h2>
-    <div class="flavor">A lone messenger walks in from the east — no cart behind him. He carries a bundle of rotten maize and a carved stone tablet.</div>
+    <h2 style="color:#b91c1c">${t('An Insult From Ox Witz','Un Insulto de Ox Witz')}</h2>
+    <div class="flavor">${t('A lone messenger walks in from the east — no cart behind him. He carries a bundle of rotten maize and a carved stone tablet.','Un mensajero solitario llega del este — sin carros detrás. Lleva un fardo de maíz podrido y una tableta de piedra tallada.')}</div>
     <div style="font-size:.8rem;color:#7f1d1d;background:#fde8e8;border-left:4px solid #b91c1c;padding:10px 12px;margin:10px 0;border-radius:2px;font-style:italic;line-height:1.7">
-      "Ox Witz will not be bled dry by jungle kings who crawl home through the mud. Send your farmers. We are done."
+      "${t('Ox Witz will not be bled dry by jungle kings who crawl home through the mud. Send your farmers. We are done.','Ox Witz no será desangrado por reyes de la selva que se arrastran a casa por el barro. Manda a tus campesinos. Hemos terminado.')}"
     </div>
-    <div style="font-size:.75rem;color:#5a4a2a;margin-bottom:14px;line-height:1.6">They have had time to rebuild their walls. The next battle will be harder — but tribute could flow again.</div>
+    <div style="font-size:.75rem;color:#5a4a2a;margin-bottom:14px;line-height:1.6">${t('They have had time to rebuild their walls. The next battle will be harder — but tribute could flow again.','Han tenido tiempo de reconstruir sus murallas. La próxima batalla será más dura — pero el tributo podría fluir de nuevo.')}</div>
     <div class="btn-row">
-      <button class="btn btn-warrior" onclick="flagReconquest()">March Again — Make Them Pay</button>
-      <button class="btn btn-back" onclick="closeDialog()">Swallow the Insult</button>
+      <button class="btn btn-warrior" onclick="flagReconquest()">${t('March Again — Make Them Pay','Marchar de Nuevo — Hacerlos Pagar')}</button>
+      <button class="btn btn-back" onclick="closeDialog()">${t('Swallow the Insult','Tragar el Insulto')}</button>
     </div>
   `, { red: true });
 }
@@ -553,10 +564,10 @@ function flagReconquest() {
 
 function openCarrierDialog() {
   showCard(`
-    <h2>Tribute Bearer</h2>
-    <div class="flavor">"Great lord. We carry what Ox Witz owes you. Your victory is spoken of in the plazas. We honor your power."</div>
-    <div style="font-size:.78rem;color:#5a4a2a;margin-bottom:14px;line-height:1.6">He bows his head and sets the bundle at your feet. Collect it when you are ready.</div>
-    <div class="btn-row"><button class="btn btn-back" onclick="closeDialog()">Receive Him</button></div>
+    <h2>${t('Tribute Bearer','Portador de Tributo')}</h2>
+    <div class="flavor">"${t('Great lord. We carry what Ox Witz owes you. Your victory is spoken of in the plazas. We honor your power.','Gran señor. Llevamos lo que Ox Witz te debe. Tu victoria es mencionada en las plazas. Honramos tu poder.')}"</div>
+    <div style="font-size:.78rem;color:#5a4a2a;margin-bottom:14px;line-height:1.6">${t('He bows his head and sets the bundle at your feet. Collect it when you are ready.','Inclina la cabeza y deja el fardo a tus pies. Recógelo cuando estés listo.')}</div>
+    <div class="btn-row"><button class="btn btn-back" onclick="closeDialog()">${t('Receive Him','Recibirlo')}</button></div>
   `);
 }
 
@@ -573,19 +584,19 @@ function showWelcomeBack(soldiersSurvived, portersSurvived, exp) {
   const wLost = Math.max(0, ws - soldiersSurvived);
   const pLost = Math.max(0, ps - portersSurvived);
   const tributeLine = (exp.victory !== false && exp.victory !== undefined)
-    ? `<div style="color:#ca8a04;margin:8px 0;font-size:.78rem">🎁 Tribute carts from ${exp.target ?? 'Ox Witz'} are on their way.</div>`
-    : `<div style="color:#b91c1c;margin:8px 0;font-size:.78rem">The battle was lost. No tribute will come.</div>`;
+    ? `<div style="color:#ca8a04;margin:8px 0;font-size:.78rem">🎁 ${t(`Tribute carts from ${exp.target ?? 'Ox Witz'} are on their way.`,`Los carros de tributo de ${exp.target ?? 'Ox Witz'} están en camino.`)}</div>`
+    : `<div style="color:#b91c1c;margin:8px 0;font-size:.78rem">${t('The battle was lost. No tribute will come.','La batalla se perdió. No llegará ningún tributo.')}</div>`;
   showCard(`
-    <h2>The March Home</h2>
-    <div class="flavor">Your warriors cross the fields at dawn. The people come to see who returned.</div>
+    <h2>${t('The March Home','El Regreso a Casa')}</h2>
+    <div class="flavor">${t('Your warriors cross the fields at dawn. The people come to see who returned.','Tus guerreros cruzan los campos al amanecer. La gente viene a ver quién regresó.')}</div>
     <div class="summary-row">
-      <div><strong>${soldiersSurvived}</strong>Warriors back</div>
-      <div><strong>${portersSurvived}</strong>Porters back</div>
+      <div><strong>${soldiersSurvived}</strong>${t('Warriors back','Guerreros de vuelta')}</div>
+      <div><strong>${portersSurvived}</strong>${t('Porters back','Cargadores de vuelta')}</div>
     </div>
-    ${wLost > 0 ? `<div style="color:#b91c1c;font-size:.78rem;margin-bottom:6px">⚔️ ${wLost} warrior${wLost!==1?'s':''} fell on the road or in battle.</div>` : ''}
-    ${pLost > 0 ? `<div style="color:#5a4a2a;font-size:.78rem;margin-bottom:6px">📦 ${pLost} porter${pLost!==1?'s':''} did not return.</div>` : ''}
+    ${wLost > 0 ? `<div style="color:#b91c1c;font-size:.78rem;margin-bottom:6px">⚔️ ${wLost} ${wLost!==1 ? t('warriors','guerreros') : t('warrior','guerrero')} ${t('fell on the road or in battle.','cayeron en el camino o en batalla.')}</div>` : ''}
+    ${pLost > 0 ? `<div style="color:#5a4a2a;font-size:.78rem;margin-bottom:6px">📦 ${pLost} ${pLost!==1 ? t('porters','cargadores') : t('porter','cargador')} ${t('did not return.','no regresaron.')}</div>` : ''}
     ${tributeLine}
-    <div class="btn-row"><button class="btn btn-back" onclick="closeDialog()">Return to the Fields</button></div>
+    <div class="btn-row"><button class="btn btn-back" onclick="closeDialog()">${t('Return to the Fields','Volver a los Campos')}</button></div>
   `);
 }
 
@@ -1036,13 +1047,13 @@ function drawSeasonHUD(W, H) {
 
   // Label
   const phase = season==='dry'
-    ? (cropGrowth<0.12?'Planting': cropGrowth<0.76?'Growing': 'Harvest')
-    : 'Rainy Season';
+    ? (cropGrowth<0.12 ? t('Planting','Siembra') : cropGrowth<0.76 ? t('Growing','Creciendo') : t('Harvest','Cosecha'))
+    : t('Rainy Season','Temporada de Lluvias');
   ctx.fillStyle='rgba(245,240,225,.82)'; ctx.font="10px 'Cinzel',serif"; ctx.textAlign='center';
   ctx.fillText(phase, W/2, bY+bH+14);
 
   // Food store indicator (top-right)
-  const foodStr = `🌽 ${Math.floor(cropStore)} rations stored`;
+  const foodStr = `🌽 ${Math.floor(cropStore)} ${t('rations stored','raciones almacenadas')}`;
   ctx.font="10px 'Cinzel',serif"; ctx.textAlign='right';
   ctx.fillStyle='rgba(0,0,0,.6)';
   const fw = ctx.measureText(foodStr).width + 16;
@@ -1055,7 +1066,7 @@ function drawSeasonHUD(W, H) {
     ctx.fillStyle='rgba(0,0,0,.55)';
     ctx.beginPath(); ctx.roundRect(8, 10, 170, 22, 4); ctx.fill();
     ctx.fillStyle='#fbbf24'; ctx.textAlign='left';
-    ctx.fillText('🎁 Tribute arriving from Ox Witz', 14, 25);
+    ctx.fillText(t('🎁 Tribute arriving from Ox Witz','🎁 Tributo llegando desde Ox Witz'), 14, 25);
     ctx.textAlign='left';
   }
 }
@@ -1134,8 +1145,8 @@ function draw() {
   ctx.fillRect(100*sc,(GROUND_Y-88)*sc,1050*sc,72*sc);
   ctx.fillRect((TEMPLE_X+380)*sc,(GROUND_Y-88)*sc,1050*sc,72*sc);
   ctx.globalAlpha=.5; ctx.fillStyle='#ca8a04'; ctx.font=`${13*sc}px 'Cinzel',serif`; ctx.textAlign='center';
-  ctx.fillText('MAIZE FIELDS',625*sc,(GROUND_Y-58)*sc);
-  ctx.fillText('MAIZE FIELDS',(TEMPLE_X+905)*sc,(GROUND_Y-58)*sc);
+  ctx.fillText(t('MAIZE FIELDS','CAMPOS DE MAÍZ'),625*sc,(GROUND_Y-58)*sc);
+  ctx.fillText(t('MAIZE FIELDS','CAMPOS DE MAÍZ'),(TEMPLE_X+905)*sc,(GROUND_Y-58)*sc);
   ctx.globalAlpha=1;
 
   // Near trees
@@ -1176,11 +1187,11 @@ function draw() {
   const pArr=farmers.filter(f=>f.role==='porter');
   if(wArr.length){
     ctx.globalAlpha=.45; ctx.fillStyle='#b91c1c'; ctx.fillRect((GATHER_W_X-52)*sc,(GROUND_Y-1)*sc,104*sc,4*sc);
-    ctx.globalAlpha=.7; ctx.font=`${9*sc}px 'Cinzel',serif`; ctx.textAlign='center'; ctx.fillText('WARRIORS',GATHER_W_X*sc,(GROUND_Y+15)*sc); ctx.globalAlpha=1;
+    ctx.globalAlpha=.7; ctx.font=`${9*sc}px 'Cinzel',serif`; ctx.textAlign='center'; ctx.fillText(t('WARRIORS','GUERREROS'),GATHER_W_X*sc,(GROUND_Y+15)*sc); ctx.globalAlpha=1;
   }
   if(pArr.length){
     ctx.globalAlpha=.45; ctx.fillStyle='#0f766e'; ctx.fillRect((GATHER_P_X-52)*sc,(GROUND_Y-1)*sc,104*sc,4*sc);
-    ctx.globalAlpha=.7; ctx.font=`${9*sc}px 'Cinzel',serif`; ctx.textAlign='center'; ctx.fillText('PORTERS',GATHER_P_X*sc,(GROUND_Y+15)*sc); ctx.globalAlpha=1;
+    ctx.globalAlpha=.7; ctx.font=`${9*sc}px 'Cinzel',serif`; ctx.textAlign='center'; ctx.fillText(t('PORTERS','CARGADORES'),GATHER_P_X*sc,(GROUND_Y+15)*sc); ctx.globalAlpha=1;
   }
 
   // Farmers
