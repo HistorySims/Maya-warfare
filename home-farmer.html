@@ -148,7 +148,46 @@ const rainDrops = Array.from({length:130}, (_,i) => ({
 }));
 
 // ── PLAYER ─────────────────────────────────────────────────────────────────────
-const P = { x: TEMPLE_X, y: GROUND_Y, vx: 0, facing: 1, walkPhase: 0 };
+const P = { x: TEMPLE_X, y: GROUND_Y, vx: 0, facing: 1, walkPhase: 0, dustCD: 0 };
+
+// ── NARRATION TOAST ─────────────────────────────────────────────────────────────
+// Short lines that surface when a worker leaves the field or returns to it,
+// so the change from farmer → warrior reads as a deliberate, narrated act.
+let toast = null;  // { msg, life, max }
+function pushToast(msg) { toast = { msg, life: 0, max: 4.6 }; }
+function updateToast(dt) { if (toast) { toast.life += dt; if (toast.life >= toast.max) toast = null; } }
+
+// ── DUST KICKED UP UNDERFOOT (dry season) ───────────────────────────────────────
+// Walkers leave little puffs of dry earth — most visible while a mustered worker
+// marches the length of the fields toward the temple.
+const dust = [];
+function spawnDust(o, dt) {
+  if (season === 'rainy') return;
+  o.dustCD = (o.dustCD || 0) - dt;
+  if (o.dustCD > 0) return;
+  o.dustCD = 0.12;
+  dust.push({
+    x: o.x - (o.facing || 1) * 6, y: GROUND_Y,
+    vx: -(o.facing || 1) * 8 + (Math.random() * 8 - 4),
+    vy: -8 - Math.random() * 8,
+    life: 0, max: 0.5 + Math.random() * 0.3, r: 2 + Math.random() * 2,
+  });
+}
+function updateDust(dt) {
+  for (let i = dust.length - 1; i >= 0; i--) {
+    const d = dust[i];
+    d.life += dt; d.x += d.vx * dt; d.y += d.vy * dt; d.vy += 20 * dt;
+    if (d.life >= d.max) dust.splice(i, 1);
+  }
+}
+function drawDust(sc) {
+  dust.forEach(d => {
+    ctx.globalAlpha = (1 - d.life / d.max) * 0.4;
+    ctx.fillStyle = '#b8a47a';
+    ctx.beginPath(); ctx.arc(d.x * sc, d.y * sc, d.r * sc * (0.6 + d.life / d.max), 0, Math.PI * 2); ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+}
 
 // ── FARMERS ───────────────────────────────────────────────────────────────────
 const farmers = FARMER_DATA.map((d, i) => {
@@ -336,13 +375,35 @@ function openTempleDialog() {
 }
 
 function assignRole(idx, role) {
-  const f = farmers[idx]; f.role = role;
-  if (role === 'farmer') { f.x=f.homeX; f.y=GROUND_Y; f.task='tend'; f.taskTimer=3; }
-  else { const gx=role==='warrior'?GATHER_W_X:GATHER_P_X; const slot=farmers.filter(ff=>ff.role===role).length-1; f.x=gx+(slot%5)*22-44; f.y=GROUND_Y; }
+  const f = farmers[idx];
+  const wasFarmer = f.role === 'farmer';
+  f.role = role; f.y = GROUND_Y; f.pose = 'none';
+  if (role === 'farmer') {
+    // Lay down arms and walk back across the fields to the home plot.
+    f.mustering = false; f.returning = true; f.task = 'returning';
+    pushToast(t(`${f.name} shoulders a digging stick and walks back to the field.`,
+                `${f.name} se echa al hombro el palo de sembrar y vuelve al campo.`));
+  } else {
+    // March from the field to the muster ground beside the temple.
+    const gx   = role === 'warrior' ? GATHER_W_X : GATHER_P_X;
+    const slot = farmers.filter(ff => ff.role === role).length - 1;
+    f.musterX  = gx + (slot % 5) * 22 - 44;
+    f.mustering = true; f.returning = false;
+    if (wasFarmer) { f.toolLeft = true; f.toolX = f.homeX; }   // tool stays planted in the empty plot
+    pushToast(role === 'warrior'
+      ? t(`${f.name} sets down the harvest basket and marches to the temple to take up arms.`,
+          `${f.name} deja la canasta de cosecha y marcha al templo para tomar las armas.`)
+      : t(`${f.name} leaves the furrows to shoulder a porter's load.`,
+          `${f.name} deja los surcos para cargar como porteador.`));
+  }
   openFarmerDialog(idx);
 }
 function sendBack(fi) {
-  farmers[fi].role='farmer'; farmers[fi].x=farmers[fi].homeX; farmers[fi].y=GROUND_Y; farmers[fi].task='tend'; farmers[fi].taskTimer=3;
+  const f = farmers[fi];
+  f.role = 'farmer'; f.y = GROUND_Y; f.pose = 'none';
+  f.mustering = false; f.returning = true; f.task = 'returning';
+  pushToast(t(`${f.name} lays down arms and returns to the fields.`,
+              `${f.name} depone las armas y vuelve a los campos.`));
   openTempleDialog();
 }
 function beginMarch() {
@@ -715,6 +776,19 @@ function drawCistern(cx, cy) {
   ctx.restore();
 }
 
+// A digging stick left planted in the soil where a worker has gone to war —
+// makes the field read as visibly emptier, and stands as a marker for the fallen.
+function drawLeftTool(x, gy, sc) {
+  ctx.save(); ctx.translate(x, gy); ctx.scale(sc, sc);
+  ctx.fillStyle='rgba(0,0,0,.2)'; ctx.beginPath(); ctx.ellipse(0,2,7,3,0,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='#5a3d1e'; ctx.lineWidth=3; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(0,2); ctx.lineTo(-7,-30); ctx.stroke();
+  // a small gourd / basket leaning at its base
+  ctx.fillStyle='#92400e'; ctx.beginPath(); ctx.ellipse(8,-3,6,5,0,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='#ca8a04'; ctx.lineWidth=1; ctx.beginPath(); ctx.ellipse(8,-4,6,2.5,0,0,Math.PI*2); ctx.stroke();
+  ctx.restore();
+}
+
 function drawPyramid(cx, gy) {
   const steps=[{w:200,h:24},{w:162,h:22},{w:128,h:20},{w:96,h:18},{w:68,h:16},{w:42,h:40}];
   let y=gy;
@@ -838,7 +912,27 @@ function walkTo(f, tx, dist) {
 }
 
 function updateFarmer(f, fi, dt) {
-  if (f.role !== 'farmer') { f.walkPhase += dt*.4; return; }
+  if (f.role !== 'farmer') {
+    if (f.mustering) {
+      // March the length of the fields to the temple muster ground.
+      walkTo(f, f.musterX, P_SPEED*0.72*dt);
+      f.walkPhase += dt*7; spawnDust(f, dt);
+      if (Math.abs(f.x - f.musterX) < 4) { f.x = f.musterX; f.mustering = false; }
+    } else {
+      f.walkPhase += dt*.4;   // idle sway while assembled
+    }
+    return;
+  }
+  // A returning warrior/porter walking home before resuming field work.
+  if (f.returning) {
+    walkTo(f, f.homeX, P_SPEED*0.72*dt);
+    f.walkPhase += dt*7; spawnDust(f, dt);
+    if (Math.abs(f.x - f.homeX) < 4) {
+      f.x = f.homeX; f.returning = false; f.toolLeft = false;
+      f.task = 'tend'; f.taskTimer = 3; f.pose = 'none';
+    }
+    return;
+  }
   const isCenter   = FARMER_DATA[fi].zone === 'center';
   const harvestNow = season==='dry' && cropGrowth > 0.76;
 
@@ -977,6 +1071,7 @@ function update(dt) {
   if (goR) P.facing=1; if (goL) P.facing=-1;
   P.x = Math.max(40, Math.min(WORLD_W-40, P.x + P.vx*dt));
   if (Math.abs(P.vx)>5) P.walkPhase += dt*8;
+  if (Math.abs(P.vx)>40) spawnDust(P, dt);
 
   camX += (P.x - canvas.width/2 - camX) * Math.min(1, dt*7);
   camX  = Math.max(0, Math.min(WORLD_W - canvas.width, camX));
@@ -984,6 +1079,8 @@ function update(dt) {
   farmers.forEach((f,fi) => { if (!f.gone) updateFarmer(f,fi,dt); });
   maize.forEach(m => { m.phase += dt*(season==='rainy'?1.1:0.6); });
   updateTributeCarts(dt);
+  updateDust(dt);
+  updateToast(dt);
 
   // Rain particle update (screen-space)
   if (season === 'rainy') {
@@ -1094,6 +1191,23 @@ function drawMinimap(W, H) {
   ctx.beginPath(); ctx.arc(ppx,MY+MH/2,3.5,0,Math.PI*2); ctx.stroke();
 }
 
+// ── DRAW NARRATION TOAST ────────────────────────────────────────────────────────
+function drawToast(W, H) {
+  if (!toast) return;
+  const fadeIn  = Math.min(1, toast.life / 0.3);
+  const fadeOut = Math.min(1, (toast.max - toast.life) / 0.6);
+  const a = Math.min(fadeIn, fadeOut);
+  ctx.save();
+  ctx.globalAlpha = a;
+  ctx.font = "12px 'Cinzel',serif"; ctx.textAlign = 'center';
+  const pw = ctx.measureText(toast.msg).width + 34;
+  const px = W/2 - pw/2, py = 104;
+  ctx.fillStyle = 'rgba(11,11,12,.82)'; ctx.beginPath(); ctx.roundRect(px, py, pw, 30, 6); ctx.fill();
+  ctx.strokeStyle = '#ca8a04'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.roundRect(px, py, pw, 30, 6); ctx.stroke();
+  ctx.fillStyle = '#f5f0e1'; ctx.fillText(toast.msg, W/2, py + 19);
+  ctx.restore();
+}
+
 // ── DRAW ───────────────────────────────────────────────────────────────────────
 function draw() {
   const W=canvas.width, H=canvas.height;
@@ -1170,6 +1284,14 @@ function draw() {
     }
   });
 
+  // Tools left planted in the plots of workers who have gone to muster or to war
+  farmers.forEach(f=>{
+    if (!f.toolLeft) return;
+    const tx=(f.toolX ?? f.homeX), sx=tx*sc;
+    if(sx-camX*sc<-60*sc||sx-camX*sc>W+60*sc) return;
+    drawLeftTool(sx, GROUND_Y*sc, sc);
+  });
+
   // Pyramid
   drawPyramid(TEMPLE_X*sc,GROUND_Y*sc);
 
@@ -1219,6 +1341,9 @@ function draw() {
   ctx.fillStyle='#ca8a04'; ctx.font=`${11*sc}px 'Cinzel',serif`; ctx.textAlign='center';
   ctx.fillText("K'uhul Ajaw",P.x*sc,(P.y-78)*sc);
 
+  // Dust underfoot
+  drawDust(sc);
+
   ctx.restore(); // end world-space
 
   // Rain overlay (screen-space)
@@ -1227,6 +1352,7 @@ function draw() {
   // HUD
   drawMinimap(W, H);
   drawSeasonHUD(W, H);
+  drawToast(W, H);
 
   // Interact prompt (tap-friendly label)
   let prompt='';
