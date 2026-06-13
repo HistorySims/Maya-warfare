@@ -48,21 +48,26 @@
   .role-warrior-tag{background:#b91c1c;color:#fff}.role-porter-tag{background:#0f766e;color:#fff}
   #card .summary-row{display:flex;justify-content:space-around;margin-bottom:14px;padding:8px 0;border-top:1px solid #d6cbb0;border-bottom:1px solid #d6cbb0;font-size:.78rem;color:#5a4a2a}
   #card .summary-row strong{color:#1c1208;font-size:.88rem;display:block;text-align:center}
-  #mobile-left,#mobile-right{
-    position:fixed;bottom:28px;z-index:5;width:64px;height:64px;border-radius:50%;
-    background:rgba(15,118,110,.55);border:2px solid #0f766e;color:#fff;font-size:1.5rem;
+  .mbtn{
+    position:fixed;z-index:5;width:58px;height:58px;border-radius:50%;
+    background:rgba(15,118,110,.5);border:2px solid #0f766e;color:#fff;font-size:1.35rem;
     display:none;align-items:center;justify-content:center;cursor:pointer;
     -webkit-tap-highlight-color:transparent;user-select:none;
   }
-  #mobile-left{left:18px}#mobile-right{right:18px}
-  @media(max-width:640px){#mobile-left,#mobile-right{display:flex}}
+  #mobile-left{left:20px;bottom:30px}
+  #mobile-right{left:140px;bottom:30px}
+  #mobile-up{right:80px;bottom:92px}
+  #mobile-down{right:80px;bottom:30px}
+  @media(max-width:640px){.mbtn{display:flex}}
 </style>
 </head>
 <body>
 <canvas id="canvas"></canvas>
 <div id="overlay"><div id="card"></div></div>
-<button id="mobile-left" aria-label="Move Left">&#9664;</button>
-<button id="mobile-right" aria-label="Move Right">&#9654;</button>
+<button id="mobile-left"  class="mbtn" aria-label="Move Left">&#9664;</button>
+<button id="mobile-right" class="mbtn" aria-label="Move Right">&#9654;</button>
+<button id="mobile-up"    class="mbtn" aria-label="Move Back">&#9650;</button>
+<button id="mobile-down"  class="mbtn" aria-label="Move Forward">&#9660;</button>
 <script>
 'use strict';
 
@@ -94,14 +99,32 @@ const WORLD_H    = 480;
 const TEMPLE_X   = 1700;
 const GROUND_Y   = 340;
 const P_SPEED    = 160;
+const P_SPEED_Z  = 96;    // depth-walk speed (toward/away from camera)
 const P_ACCEL    = 900;
 const P_DECEL    = 700;
 const INTERACT_R = 80;
-const TEMPLE_R   = 140;
+const INTERACT_Z = 46;    // depth tolerance for "near" checks
+const TEMPLE_R   = 150;
 const GATHER_W_X = TEMPLE_X - 190;
 const GATHER_P_X = TEMPLE_X + 190;
+const GATHER_Z   = 132;   // muster ground sits in the plaza, in front of the pyramid
 const DRY_DUR    = 80;
 const RAINY_DUR  = 35;
+
+// ── 2.5D DEPTH PLANE ────────────────────────────────────────────────────────────
+// The village is a walkable ground band. A point's depth `z` (Z_MIN = far back by
+// the temple, Z_MAX = near the camera) sets both how far down the screen its feet
+// land and how large it is drawn. Everything is painted back-to-front by z.
+const Z_MIN      = 30;
+const Z_MAX      = 212;
+const SCALE_FAR  = 0.60;  // sprite scale at the back of the band
+const SCALE_NEAR = 1.22;  // sprite scale at the front
+function horizonY(H){ return H*0.42; }
+function frontY(H)  { return H*0.96; }
+function depthFrac(z){ return (Math.max(Z_MIN,Math.min(Z_MAX,z)) - Z_MIN) / (Z_MAX - Z_MIN); }
+function projScale(z){ return SCALE_FAR + depthFrac(z)*(SCALE_NEAR - SCALE_FAR); }
+function projY(z, H){ return horizonY(H) + depthFrac(z)*(frontY(H) - horizonY(H)); }
+function projX(x){ return x - camX; }   // camX is the world-px coordinate of the left screen edge
 
 function sr(n){ return Math.abs(Math.sin(n*9301+49297)*23423.4)%1; }
 
@@ -112,11 +135,22 @@ let cropGrowth  = 0;   // 0=seedling, 1=mature/golden
 
 // ── CISTERNS ──────────────────────────────────────────────────────────────────
 const CISTERNS = [
-  { x: 500,              side: 'left'  },
-  { x: 920,              side: 'left'  },
-  { x: TEMPLE_X + 530,   side: 'right' },
-  { x: TEMPLE_X + 940,   side: 'right' },
+  { x: 500,              z: 158, side: 'left'  },
+  { x: 920,              z: 96,  side: 'left'  },
+  { x: TEMPLE_X + 530,   z: 150, side: 'right' },
+  { x: TEMPLE_X + 940,   z: 104, side: 'right' },
 ];
+
+// ── VILLAGE HUTS ────────────────────────────────────────────────────────────────
+// Thatched dwellings clustered around the plaza and scattered through the fields,
+// each at its own depth so the player can walk between and around them.
+const HUTS = [
+  { x: TEMPLE_X - 470, z: 74  }, { x: TEMPLE_X - 300, z: 168 },
+  { x: TEMPLE_X - 120, z: 60  }, { x: TEMPLE_X + 150, z: 178 },
+  { x: TEMPLE_X + 330, z: 70  }, { x: TEMPLE_X + 470, z: 150 },
+  { x: 760,            z: 186 }, { x: 1180, z: 64 },
+  { x: TEMPLE_X + 1180, z: 188 }, { x: TEMPLE_X + 1420, z: 88 },
+].map((h,i) => ({ ...h, variant: Math.floor(sr(i*5)*3), smoke: sr(i*7) }));
 
 // ── FARMER DATA ────────────────────────────────────────────────────────────────
 const FARMER_DATA = [
@@ -138,6 +172,11 @@ function homeX(i) {
   if (d.zone === 'right')  return TEMPLE_X + 480 + Math.floor(sr(i*3) * 560);
   return TEMPLE_X - 340 + Math.floor(sr(i*3+1) * 680);
 }
+function homeZ(i) {
+  const d = FARMER_DATA[i];
+  if (d.zone === 'center') return 88 + Math.floor(sr(i*9)*70);   // tradesfolk near the plaza
+  return 72 + Math.floor(sr(i*9+2)*126);                          // out in the depth of the fields
+}
 
 // ── RAIN DROPS (screen-space) ─────────────────────────────────────────────────
 const rainDrops = Array.from({length:130}, (_,i) => ({
@@ -148,7 +187,7 @@ const rainDrops = Array.from({length:130}, (_,i) => ({
 }));
 
 // ── PLAYER ─────────────────────────────────────────────────────────────────────
-const P = { x: TEMPLE_X, y: GROUND_Y, vx: 0, facing: 1, walkPhase: 0, dustCD: 0 };
+const P = { x: TEMPLE_X, z: 182, vx: 0, vz: 0, facing: 1, walkPhase: 0, dustCD: 0 };
 
 // ── NARRATION TOAST ─────────────────────────────────────────────────────────────
 // Short lines that surface when a worker leaves the field or returns to it,
@@ -167,24 +206,28 @@ function spawnDust(o, dt) {
   if (o.dustCD > 0) return;
   o.dustCD = 0.12;
   dust.push({
-    x: o.x - (o.facing || 1) * 6, y: GROUND_Y,
+    x: o.x - (o.facing || 1) * 6, z: o.z != null ? o.z : 150, h: 0,
     vx: -(o.facing || 1) * 8 + (Math.random() * 8 - 4),
-    vy: -8 - Math.random() * 8,
+    vh: 10 + Math.random() * 8,
     life: 0, max: 0.5 + Math.random() * 0.3, r: 2 + Math.random() * 2,
   });
 }
 function updateDust(dt) {
   for (let i = dust.length - 1; i >= 0; i--) {
     const d = dust[i];
-    d.life += dt; d.x += d.vx * dt; d.y += d.vy * dt; d.vy += 20 * dt;
+    d.life += dt; d.x += d.vx * dt; d.h += d.vh * dt; d.vh -= 22 * dt;
     if (d.life >= d.max) dust.splice(i, 1);
   }
 }
-function drawDust(sc) {
+function drawDust() {
+  const H = canvas.height;
   dust.forEach(d => {
+    const scl = projScale(d.z);
     ctx.globalAlpha = (1 - d.life / d.max) * 0.4;
     ctx.fillStyle = '#b8a47a';
-    ctx.beginPath(); ctx.arc(d.x * sc, d.y * sc, d.r * sc * (0.6 + d.life / d.max), 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath();
+    ctx.arc(projX(d.x), projY(d.z, H) - d.h*scl, d.r * scl * (0.6 + d.life / d.max), 0, Math.PI * 2);
+    ctx.fill();
   });
   ctx.globalAlpha = 1;
 }
@@ -193,12 +236,13 @@ function drawDust(sc) {
 const farmers = FARMER_DATA.map((d, i) => {
   const side  = d.zone === 'right' ? 'right' : d.zone === 'left' ? 'left' : null;
   const cists = side ? CISTERNS.filter(c => c.side === side) : [];
-  const cX    = cists.length ? cists[Math.floor(sr(i*7) * cists.length)].x : homeX(i);
+  const cist  = cists.length ? cists[Math.floor(sr(i*7) * cists.length)] : null;
   return {
     ...d,
-    x: homeX(i), y: GROUND_Y, homeX: homeX(i),
+    x: homeX(i), z: homeZ(i), homeX: homeX(i), homeZ: homeZ(i),
     role: 'farmer', facing: 1, walkPhase: sr(i*7)*Math.PI*2,
-    task: 'tend', taskTimer: 4 + sr(i*31)*7, targetX: null, cisternX: cX,
+    task: 'tend', taskTimer: 4 + sr(i*31)*7, targetX: null,
+    cisternX: cist ? cist.x : homeX(i), cisternZ: cist ? cist.z : homeZ(i),
     waterLoaded: false, pose: 'none', poseTimer: 0,
     actCD: sr(i*23)*3 + 1,
     wanderDir: sr(i*11)>.5?1:-1, wanderTimer: sr(i*13)*3+1,
@@ -206,12 +250,13 @@ const farmers = FARMER_DATA.map((d, i) => {
 });
 
 // ── MAIZE ─────────────────────────────────────────────────────────────────────
+// Spread through the depth of each field so the rows recede toward the temple.
 const maize = [];
 for (let i=0; i<80; i++) {
-  maize.push({ x:140+sr(i*17)*1100, y:GROUND_Y-sr(i*23)*55-5, phase:sr(i*7)*Math.PI*2, sc:0.7+sr(i*13)*0.5, go:sr(i*41)*0.12-0.06 });
+  maize.push({ x:140+sr(i*17)*1100, z:64+sr(i*23)*140, yj:sr(i*29)*6, phase:sr(i*7)*Math.PI*2, sc:0.7+sr(i*13)*0.5, go:sr(i*41)*0.12-0.06 });
 }
 for (let i=0; i<80; i++) {
-  maize.push({ x:TEMPLE_X+420+sr(i*17+500)*1100, y:GROUND_Y-sr(i*23+500)*55-5, phase:sr(i*7+500)*Math.PI*2, sc:0.7+sr(i*13+500)*0.5, go:sr(i*41+500)*0.12-0.06 });
+  maize.push({ x:TEMPLE_X+420+sr(i*17+500)*1100, z:64+sr(i*23+500)*140, yj:sr(i*29+500)*6, phase:sr(i*7+500)*Math.PI*2, sc:0.7+sr(i*13+500)*0.5, go:sr(i*41+500)*0.12-0.06 });
 }
 
 // ── CAMERA / GLOBALS ──────────────────────────────────────────────────────────
@@ -259,16 +304,20 @@ canvas.addEventListener('touchend', e => {
   if (!dialogOpen && (nearFarmer>=0 || nearTemple || nearTributeBox>=0 || nearTributeCarrier>=0)) tryInteract();
 }, { passive: false });
 
-const mbL = document.getElementById('mobile-left');
-const mbR = document.getElementById('mobile-right');
-mbL.addEventListener('touchstart', e=>{e.preventDefault();keys['ArrowLeft']=true;},{passive:false});
-mbL.addEventListener('touchend',   e=>{e.preventDefault();keys['ArrowLeft']=false;},{passive:false});
-mbR.addEventListener('touchstart', e=>{e.preventDefault();keys['ArrowRight']=true;},{passive:false});
-mbR.addEventListener('touchend',   e=>{e.preventDefault();keys['ArrowRight']=false;},{passive:false});
-mbL.addEventListener('mousedown', ()=>keys['ArrowLeft']=true);
-mbL.addEventListener('mouseup',   ()=>keys['ArrowLeft']=false);
-mbR.addEventListener('mousedown', ()=>keys['ArrowRight']=true);
-mbR.addEventListener('mouseup',   ()=>keys['ArrowRight']=false);
+function bindHold(id, key){
+  const el = document.getElementById(id);
+  const on  = e => { if (e) e.preventDefault(); keys[key] = true; };
+  const off = e => { if (e) e.preventDefault(); keys[key] = false; };
+  el.addEventListener('touchstart', on,  {passive:false});
+  el.addEventListener('touchend',   off, {passive:false});
+  el.addEventListener('mousedown', on);
+  el.addEventListener('mouseup',   off);
+  el.addEventListener('mouseleave', off);
+}
+bindHold('mobile-left',  'ArrowLeft');
+bindHold('mobile-right', 'ArrowRight');
+bindHold('mobile-up',    'ArrowUp');
+bindHold('mobile-down',  'ArrowDown');
 
 // ── DIALOG ─────────────────────────────────────────────────────────────────────
 function tryInteract() {
@@ -388,8 +437,9 @@ function assignRole(idx, role) {
     const gx   = role === 'warrior' ? GATHER_W_X : GATHER_P_X;
     const slot = farmers.filter(ff => ff.role === role).length - 1;
     f.musterX  = gx + (slot % 5) * 22 - 44;
+    f.musterZ  = GATHER_Z + Math.floor(slot / 5) * 26;   // ranks form back-to-front in the plaza
     f.mustering = true; f.returning = false;
-    if (wasFarmer) { f.toolLeft = true; f.toolX = f.homeX; }   // tool stays planted in the empty plot
+    if (wasFarmer) { f.toolLeft = true; f.toolX = f.homeX; f.toolZ = f.homeZ; }   // tool stays planted in the empty plot
     pushToast(role === 'warrior'
       ? t(`${f.name} sets down the harvest basket and marches to the temple to take up arms.`,
           `${f.name} deja la canasta de cosecha y marcha al templo para tomar las armas.`)
@@ -454,7 +504,7 @@ function spawnOneTributeCart() {
   const dropX = TEMPLE_X + 280 - (tributeCarts.length % 4) * 55;
   tributeCarts.push({
     x: WORLD_W + 50,
-    y: GROUND_Y,
+    z: 172 - (tributeCarts.length % 3) * 16,   // they file in along the near road
     facing: -1,
     walkPhase: Math.random() * Math.PI * 2,
     state: 'walking',   // 'walking' | 'dropping' | 'leaving' | 'done'
@@ -498,7 +548,7 @@ function updateTributeCarts(dt) {
     } else if (c.state === 'dropping') {
       c.dropTimer += dt;
       if (!c.boxCreated && c.dropTimer >= 0.6) {
-        tributeBoxes.push({ x: c.x - 18, food: 14, collected: false });
+        tributeBoxes.push({ x: c.x - 18, z: c.z, food: 14, collected: false });
         c.boxCreated = true;
       }
       if (c.dropTimer >= 2.2) {
@@ -520,85 +570,73 @@ function updateTributeCarts(dt) {
   }
 }
 
-function drawTributeCarts(sc) {
-  // Draw uncollected tribute boxes on the ground
-  tributeBoxes.forEach((box, bi) => {
-    if (box.collected) return;
-    const sx = box.x * sc;
-    if (sx - camX*sc < -80*sc || sx - camX*sc > canvas.width + 80*sc) return;
-    const isNear = nearTributeBox === bi;
-    ctx.save();
-    ctx.translate(sx, GROUND_Y * sc);
-    if (isNear) { ctx.shadowColor = '#ca8a04'; ctx.shadowBlur = 16 * sc; }
-    ctx.fillStyle = '#b45309'; ctx.fillRect(-10*sc, -20*sc, 20*sc, 16*sc);
-    ctx.strokeStyle = '#ca8a04'; ctx.lineWidth = 1.5*sc; ctx.strokeRect(-10*sc, -20*sc, 20*sc, 16*sc);
-    ctx.beginPath(); ctx.moveTo(-10*sc, -12*sc); ctx.lineTo(10*sc, -12*sc); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(0, -20*sc); ctx.lineTo(0, -4*sc); ctx.stroke();
-    if (isNear) {
-      ctx.fillStyle = '#ca8a04'; ctx.font = `${9*sc}px 'Cinzel',serif`;
-      ctx.textAlign = 'center'; ctx.fillText(t('Tap \u2022 Collect','Toca \u2022 Recoger'), 0, -26*sc);
-    }
-    ctx.restore();
-  });
+function drawTributeBoxP(box, bi, H) {
+  const sx = projX(box.x);
+  if (sx < -120 || sx > canvas.width + 120) return;
+  const scl = projScale(box.z), sy = projY(box.z, H);
+  const isNear = nearTributeBox === bi;
+  ctx.save();
+  ctx.translate(sx, sy); ctx.scale(scl, scl);
+  ctx.fillStyle='rgba(0,0,0,.2)'; ctx.beginPath(); ctx.ellipse(0,2,12,4,0,0,Math.PI*2); ctx.fill();
+  if (isNear) { ctx.shadowColor = '#ca8a04'; ctx.shadowBlur = 16; }
+  ctx.fillStyle = '#b45309'; ctx.fillRect(-10, -20, 20, 16);
+  ctx.strokeStyle = '#ca8a04'; ctx.lineWidth = 1.5; ctx.strokeRect(-10, -20, 20, 16);
+  ctx.beginPath(); ctx.moveTo(-10, -12); ctx.lineTo(10, -12); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, -20); ctx.lineTo(0, -4); ctx.stroke();
+  if (isNear) {
+    ctx.fillStyle = '#ca8a04'; ctx.font = "9px 'Cinzel',serif";
+    ctx.textAlign = 'center'; ctx.fillText(t('Tap • Collect','Toca • Recoger'), 0, -26);
+  }
+  ctx.restore();
+}
 
-  tributeCarts.forEach((c, ci) => {
-    const sx = c.x * sc;
-    if (sx - camX*sc < -80*sc || sx - camX*sc > canvas.width + 80*sc) return;
-    const dropping = c.state === 'dropping';
-    const bob  = dropping ? Math.sin(totalTime * 4) * 1 : Math.sin(c.walkPhase) * 2;
-    const legS = dropping ? 0 : Math.sin(c.walkPhase) * 9;
-    const isNear = nearTributeCarrier === ci;
-    ctx.save();
-    ctx.translate(sx, c.y * sc);
-    ctx.scale(c.facing, 1);
-    if (isNear) { ctx.shadowColor = '#ca8a04'; ctx.shadowBlur = 16 * sc; }
-    // Shadow
-    ctx.fillStyle='rgba(0,0,0,.18)'; ctx.beginPath(); ctx.ellipse(0,2,14,4,0,0,Math.PI*2); ctx.fill();
-    // Legs
-    const bentFwd = dropping ? 0.28 : 0;
-    ctx.strokeStyle='#312e81'; ctx.lineWidth=5*sc; ctx.lineCap='round';
-    ctx.beginPath(); ctx.moveTo(-3*sc,(-14+bob)*sc); ctx.lineTo((-5-bentFwd*6)*sc,(legS>0?-legS*.3:2*bentFwd)*sc); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo( 3*sc,(-14+bob)*sc); ctx.lineTo(( 5+bentFwd*6)*sc,(legS<0? legS*.3:2*bentFwd)*sc); ctx.stroke();
-    // Body (tilt forward when dropping)
-    ctx.save();
-    if (dropping) { ctx.translate(0, (-20+bob)*sc); ctx.rotate(0.32); ctx.translate(0, (20-bob)*sc); }
-    ctx.fillStyle='#312e81';
-    ctx.beginPath(); ctx.roundRect(-9*sc,(-34+bob)*sc,18*sc,22*sc,3*sc); ctx.fill();
-    // Crate on back while walking/leaving (before box is placed)
-    if (!dropping && !c.boxCreated) {
-      ctx.fillStyle='#b45309'; ctx.fillRect(-11*sc,(-54+bob)*sc,22*sc,16*sc);
-      ctx.strokeStyle='#ca8a04'; ctx.lineWidth=1.5*sc; ctx.strokeRect(-11*sc,(-54+bob)*sc,22*sc,16*sc);
-      // Cross-binding lines like the ground crate
-      ctx.beginPath(); ctx.moveTo(-11*sc,(-46+bob)*sc); ctx.lineTo(11*sc,(-46+bob)*sc); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(0,(-54+bob)*sc); ctx.lineTo(0,(-38+bob)*sc); ctx.stroke();
-    }
-    // Arms — lowered when dropping
-    const armS = dropping ? 0 : Math.sin(c.walkPhase+Math.PI)*7;
-    const armY = dropping ? -10 : -20;
-    ctx.strokeStyle='#312e81'; ctx.lineWidth=4*sc;
-    ctx.beginPath(); ctx.moveTo(-9*sc,(-28+bob)*sc); ctx.lineTo(-14*sc,(armY+bob+armS*.4)*sc); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo( 9*sc,(-28+bob)*sc); ctx.lineTo( 14*sc,(armY+bob-armS*.4)*sc); ctx.stroke();
+function drawTributeCartP(c, ci, H) {
+  const sx = projX(c.x);
+  if (sx < -120 || sx > canvas.width + 120) return;
+  const scl = projScale(c.z), sy = projY(c.z, H);
+  const dropping = c.state === 'dropping';
+  const bob  = dropping ? Math.sin(totalTime * 4) * 1 : Math.sin(c.walkPhase) * 2;
+  const legS = dropping ? 0 : Math.sin(c.walkPhase) * 9;
+  const isNear = nearTributeCarrier === ci;
+  ctx.save();
+  ctx.translate(sx, sy);
+  ctx.scale(c.facing * scl, scl);
+  if (isNear) { ctx.shadowColor = '#ca8a04'; ctx.shadowBlur = 16; }
+  ctx.fillStyle='rgba(0,0,0,.18)'; ctx.beginPath(); ctx.ellipse(0,2,14,4,0,0,Math.PI*2); ctx.fill();
+  const bentFwd = dropping ? 0.28 : 0;
+  ctx.strokeStyle='#312e81'; ctx.lineWidth=5; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(-3,(-14+bob)); ctx.lineTo((-5-bentFwd*6),(legS>0?-legS*.3:2*bentFwd)); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo( 3,(-14+bob)); ctx.lineTo(( 5+bentFwd*6),(legS<0? legS*.3:2*bentFwd)); ctx.stroke();
+  ctx.save();
+  if (dropping) { ctx.translate(0, (-20+bob)); ctx.rotate(0.32); ctx.translate(0, (20-bob)); }
+  ctx.fillStyle='#312e81';
+  ctx.beginPath(); ctx.roundRect(-9,(-34+bob),18,22,3); ctx.fill();
+  if (!dropping && !c.boxCreated) {
+    ctx.fillStyle='#b45309'; ctx.fillRect(-11,(-54+bob),22,16);
+    ctx.strokeStyle='#ca8a04'; ctx.lineWidth=1.5; ctx.strokeRect(-11,(-54+bob),22,16);
+    ctx.beginPath(); ctx.moveTo(-11,(-46+bob)); ctx.lineTo(11,(-46+bob)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,(-54+bob)); ctx.lineTo(0,(-38+bob)); ctx.stroke();
+  }
+  const armS = dropping ? 0 : Math.sin(c.walkPhase+Math.PI)*7;
+  const armY = dropping ? -10 : -20;
+  ctx.strokeStyle='#312e81'; ctx.lineWidth=4;
+  ctx.beginPath(); ctx.moveTo(-9,(-28+bob)); ctx.lineTo(-14,(armY+bob+armS*.4)); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo( 9,(-28+bob)); ctx.lineTo( 14,(armY+bob-armS*.4)); ctx.stroke();
+  ctx.restore();
+  ctx.fillStyle='#c27d4a'; ctx.beginPath(); ctx.ellipse(0,(-42+bob),9,10,0,0,Math.PI*2); ctx.fill();
+  const fc=['#b91c1c','#16a34a','#ca8a04','#7c3aed','#0f766e','#dc2626','#0ea5e9'];
+  [-0.55,-0.28,0,0.28,0.55,-0.4,0.4].forEach((ang,fi) => {
+    ctx.save(); ctx.translate(0,(-52+bob)); ctx.rotate(ang);
+    ctx.fillStyle=fc[fi%fc.length];
+    ctx.beginPath(); ctx.ellipse(0,-9,2.5,12,0,0,Math.PI*2); ctx.fill();
     ctx.restore();
-    // Head
-    ctx.fillStyle='#c27d4a'; ctx.beginPath(); ctx.ellipse(0,(-42+bob)*sc,9*sc,10*sc,0,0,Math.PI*2); ctx.fill();
-    // Feather headdress
-    const fc=['#b91c1c','#16a34a','#ca8a04','#7c3aed','#0f766e','#dc2626','#0ea5e9'];
-    [-0.55,-0.28,0,0.28,0.55,-0.4,0.4].forEach((ang,fi) => {
-      ctx.save(); ctx.translate(0,(-52+bob)*sc); ctx.rotate(ang);
-      ctx.fillStyle=fc[fi%fc.length];
-      ctx.beginPath(); ctx.ellipse(0,-9*sc,2.5*sc,12*sc,0,0,Math.PI*2); ctx.fill();
-      ctx.restore();
-    });
-    ctx.fillStyle='#fbbf24'; ctx.fillRect(-10*sc,(-50+bob)*sc,20*sc,4*sc);
-    ctx.restore();
-    // Speak prompt
-    if (isNear && !dialogOpen) {
-      ctx.save(); ctx.translate(sx, c.y * sc);
-      ctx.fillStyle = '#ca8a04'; ctx.font = `${9*sc}px 'Cinzel',serif`; ctx.textAlign = 'center';
-      ctx.fillText(t('Tap \u2022 Speak','Toca \u2022 Hablar'), 0, (-68+bob)*sc);
-      ctx.restore();
-    }
   });
+  ctx.fillStyle='#fbbf24'; ctx.fillRect(-10,(-50+bob),20,4);
+  ctx.restore();
+  if (isNear && !dialogOpen) {
+    ctx.fillStyle = '#ca8a04'; ctx.font = "10px 'Cinzel',serif"; ctx.textAlign = 'center';
+    ctx.fillText(t('Tap • Speak','Toca • Hablar'), sx, sy + (-68+bob)*scl);
+  }
 }
 
 // ── TRIBUTE / RETURN DIALOGS ───────────────────────────────────────────────────
@@ -700,8 +738,8 @@ function checkReturnState() {
   // Return survivors to farming
   [...wIdx, ...pIdx].forEach(fi => {
     if (fi >= 0 && fi < farmers.length && !farmers[fi].gone) {
-      farmers[fi].role = 'farmer'; farmers[fi].x = farmers[fi].homeX;
-      farmers[fi].y = GROUND_Y; farmers[fi].task = 'tend'; farmers[fi].taskTimer = 3;
+      farmers[fi].role = 'farmer'; farmers[fi].x = farmers[fi].homeX; farmers[fi].z = farmers[fi].homeZ;
+      farmers[fi].task = 'tend'; farmers[fi].taskTimer = 3;
     }
   });
 
@@ -766,8 +804,8 @@ function drawMaize(x, y, phase, sc, g) {
   ctx.restore();
 }
 
-function drawCistern(cx, cy) {
-  ctx.save(); ctx.translate(cx, cy);
+function drawCistern(cx, cy, sc) {
+  ctx.save(); ctx.translate(cx, cy); ctx.scale(sc||1, sc||1);
   ctx.fillStyle='#9e8e6a'; ctx.beginPath(); ctx.ellipse(0,-5,18,9,0,0,Math.PI*2); ctx.fill();
   ctx.fillStyle='#b8a880'; ctx.beginPath(); ctx.ellipse(0,-7,16,7,0,0,Math.PI*2); ctx.fill();
   ctx.fillStyle='rgba(29,78,216,.7)'; ctx.beginPath(); ctx.ellipse(0,-7,13,5,0,0,Math.PI*2); ctx.fill();
@@ -787,6 +825,44 @@ function drawLeftTool(x, gy, sc) {
   ctx.fillStyle='#92400e'; ctx.beginPath(); ctx.ellipse(8,-3,6,5,0,0,Math.PI*2); ctx.fill();
   ctx.strokeStyle='#ca8a04'; ctx.lineWidth=1; ctx.beginPath(); ctx.ellipse(8,-4,6,2.5,0,0,Math.PI*2); ctx.stroke();
   ctx.restore();
+}
+
+// A Maya pole-and-thatch dwelling: adobe walls, a steep palm roof, a dark doorway.
+function drawHut(h, H) {
+  const scl = projScale(h.z), sx = projX(h.x), sy = projY(h.z, H);
+  if (sx < -160 || sx > canvas.width + 160) return;
+  ctx.save(); ctx.translate(sx, sy); ctx.scale(scl, scl);
+  const wallW = 54, wallH = 30, roofW = wallW/2 + 13, roofH = 27 + h.variant*3;
+  // ground shadow
+  ctx.fillStyle='rgba(0,0,0,.2)'; ctx.beginPath(); ctx.ellipse(0,3,roofW,8,0,0,Math.PI*2); ctx.fill();
+  // adobe walls
+  ctx.fillStyle='#d8ccab'; ctx.fillRect(-wallW/2,-wallH,wallW,wallH);
+  ctx.fillStyle='rgba(0,0,0,.13)'; ctx.fillRect(wallW/2-8,-wallH,8,wallH);   // shaded wall
+  ctx.strokeStyle='#b3a47f'; ctx.lineWidth=1; ctx.strokeRect(-wallW/2,-wallH,wallW,wallH);
+  // doorway
+  ctx.fillStyle='#241810'; ctx.fillRect(-8,-20,16,20);
+  ctx.beginPath(); ctx.arc(0,-20,8,Math.PI,0); ctx.fill();
+  // thatch roof
+  ctx.fillStyle='#7a5a2e'; ctx.beginPath();
+  ctx.moveTo(-roofW,-wallH+1); ctx.lineTo(0,-wallH-roofH); ctx.lineTo(roofW,-wallH+1); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle='rgba(0,0,0,.16)'; ctx.lineWidth=1;
+  for (let i=1;i<4;i++){ const f=i/4, yy=-wallH-roofH*(1-f), ww=roofW*f; ctx.beginPath(); ctx.moveTo(-ww,yy); ctx.lineTo(ww,yy); ctx.stroke(); }
+  ctx.fillStyle='#6b4e28'; ctx.fillRect(-roofW,-wallH-3,roofW*2,4);   // eave beam
+  ctx.restore();
+  // a thread of hearth-smoke from some homes in the dry season
+  if (season==='dry' && h.variant===0) {
+    const baseY = sy - (wallH+roofH)*scl;
+    for (let i=0;i<4;i++){
+      const tt = totalTime*0.6 + h.smoke*6 + i*0.8;
+      const rise = (tt % 3) / 3;
+      ctx.globalAlpha = (1-rise)*0.22*scl;
+      ctx.fillStyle='#cfc4b0';
+      ctx.beginPath();
+      ctx.arc(sx + Math.sin(tt*1.6)*8*scl, baseY - rise*46*scl, (3+rise*5)*scl, 0, Math.PI*2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
 }
 
 function drawPyramid(cx, gy) {
@@ -814,10 +890,10 @@ function drawPyramid(cx, gy) {
 }
 
 // pose: 'walk'|'plant'|'water'|'fill'|'harvest'|'rest'
-function drawSprite(x, y, phase, facing, role, isPlayer, pose) {
+function drawSprite(x, y, phase, facing, role, isPlayer, pose, scl) {
   ctx.save();
   ctx.translate(x, y);
-  ctx.scale(facing, 1);
+  ctx.scale(facing * (scl || 1), scl || 1);
 
   const isWalk = !pose || pose==='walk';
   const bob  = isWalk ? Math.sin(phase)*(isPlayer?3:2) : 0;
@@ -906,18 +982,25 @@ function drawSprite(x, y, phase, facing, role, isPlayer, pose) {
 }
 
 // ── FARMER TASK SYSTEM ────────────────────────────────────────────────────────
-function walkTo(f, tx, dist) {
-  if (f.x < tx) { f.x=Math.min(f.x+dist, tx); f.facing=1; }
-  else           { f.x=Math.max(f.x-dist, tx); f.facing=-1; }
+// Walk toward a point on the ground plane (x across, z in depth). Facing only
+// flips on sideways motion. Returns true on arrival.
+function walkTo2D(f, tx, tz, dist) {
+  const target_z = tz == null ? f.z : tz;
+  const dx = tx - f.x, dz = target_z - f.z;
+  const d  = Math.hypot(dx, dz);
+  if (d <= dist || d === 0) { f.x = tx; f.z = target_z; return true; }
+  f.x += dx / d * dist;
+  f.z += dz / d * dist;
+  if (Math.abs(dx) > 0.5) f.facing = dx > 0 ? 1 : -1;
+  return false;
 }
 
 function updateFarmer(f, fi, dt) {
   if (f.role !== 'farmer') {
     if (f.mustering) {
-      // March the length of the fields to the temple muster ground.
-      walkTo(f, f.musterX, P_SPEED*0.72*dt);
+      // March across the fields and into the plaza to take up a rank.
+      if (walkTo2D(f, f.musterX, f.musterZ, P_SPEED*0.72*dt)) f.mustering = false;
       f.walkPhase += dt*7; spawnDust(f, dt);
-      if (Math.abs(f.x - f.musterX) < 4) { f.x = f.musterX; f.mustering = false; }
     } else {
       f.walkPhase += dt*.4;   // idle sway while assembled
     }
@@ -925,11 +1008,11 @@ function updateFarmer(f, fi, dt) {
   }
   // A returning warrior/porter walking home before resuming field work.
   if (f.returning) {
-    walkTo(f, f.homeX, P_SPEED*0.72*dt);
-    f.walkPhase += dt*7; spawnDust(f, dt);
-    if (Math.abs(f.x - f.homeX) < 4) {
-      f.x = f.homeX; f.returning = false; f.toolLeft = false;
+    if (walkTo2D(f, f.homeX, f.homeZ, P_SPEED*0.72*dt)) {
+      f.returning = false; f.toolLeft = false;
       f.task = 'tend'; f.taskTimer = 3; f.pose = 'none';
+    } else {
+      f.walkPhase += dt*7; spawnDust(f, dt);
     }
     return;
   }
@@ -945,10 +1028,8 @@ function updateFarmer(f, fi, dt) {
       f.task = 'rest'; f.pose = 'none';
       f.targetX = f.homeX + (f.homeX < TEMPLE_X ? -55 : 55);
     }
-    walkTo(f, f.targetX, 22*dt);
-    if (Math.abs(f.x - f.targetX) < 6 && f.pose === 'none') {
-      f.pose = 'rest'; f.poseTimer = 99;
-    }
+    const there = walkTo2D(f, f.targetX, f.homeZ, 22*dt);
+    if (there && f.pose === 'none') { f.pose = 'rest'; f.poseTimer = 99; }
     return;
   }
 
@@ -991,9 +1072,8 @@ function updateFarmer(f, fi, dt) {
       break;
 
     case 'to_cistern':
-      walkTo(f, f.targetX, P_SPEED*.62*dt);
       f.walkPhase += dt*6;
-      if (Math.abs(f.x-f.targetX) < 8) {
+      if (walkTo2D(f, f.cisternX, f.cisternZ, P_SPEED*.62*dt)) {
         f.task='at_cistern'; f.taskTimer=2.2; f.pose='fill'; f.poseTimer=2.2;
       }
       break;
@@ -1007,10 +1087,9 @@ function updateFarmer(f, fi, dt) {
       break;
 
     case 'from_cistern':
-      walkTo(f, f.targetX, P_SPEED*.52*dt);
       f.walkPhase += dt*5;
       f.pose = 'water'; // show carrying-water pose while walking
-      if (Math.abs(f.x-f.targetX) < 10) {
+      if (walkTo2D(f, f.targetX, f.homeZ, P_SPEED*.52*dt)) {
         f.task='watering'; f.taskTimer=2.8; f.pose='water'; f.poseTimer=2.8;
       }
       break;
@@ -1062,19 +1141,28 @@ function update(dt) {
 
   const goL = keys['ArrowLeft']  || keys['a'] || keys['A'];
   const goR = keys['ArrowRight'] || keys['d'] || keys['D'];
+  const goB = keys['ArrowUp']    || keys['w'] || keys['W'];   // walk into the screen (toward temple)
+  const goF = keys['ArrowDown']  || keys['s'] || keys['S'];   // walk toward the camera
   if (goR)      P.vx = Math.min(P.vx + P_ACCEL*dt,  P_SPEED);
   else if (goL) P.vx = Math.max(P.vx - P_ACCEL*dt, -P_SPEED);
   else {
     if (P.vx>0) P.vx = Math.max(0, P.vx-P_DECEL*dt);
     if (P.vx<0) P.vx = Math.min(0, P.vx+P_DECEL*dt);
   }
+  if (goF)      P.vz = Math.min(P.vz + P_ACCEL*dt,  P_SPEED_Z);
+  else if (goB) P.vz = Math.max(P.vz - P_ACCEL*dt, -P_SPEED_Z);
+  else {
+    if (P.vz>0) P.vz = Math.max(0, P.vz-P_DECEL*dt);
+    if (P.vz<0) P.vz = Math.min(0, P.vz+P_DECEL*dt);
+  }
   if (goR) P.facing=1; if (goL) P.facing=-1;
   P.x = Math.max(40, Math.min(WORLD_W-40, P.x + P.vx*dt));
-  if (Math.abs(P.vx)>5) P.walkPhase += dt*8;
-  if (Math.abs(P.vx)>40) spawnDust(P, dt);
+  P.z = Math.max(Z_MIN+6, Math.min(Z_MAX-4, P.z + P.vz*dt));
+  if (Math.abs(P.vx)>5 || Math.abs(P.vz)>5) P.walkPhase += dt*8;
+  if (Math.abs(P.vx)>40 || Math.abs(P.vz)>40) spawnDust(P, dt);
 
   camX += (P.x - canvas.width/2 - camX) * Math.min(1, dt*7);
-  camX  = Math.max(0, Math.min(WORLD_W - canvas.width, camX));
+  camX  = Math.max(0, Math.min(Math.max(0, WORLD_W - canvas.width), camX));
 
   farmers.forEach((f,fi) => { if (!f.gone) updateFarmer(f,fi,dt); });
   maize.forEach(m => { m.phase += dt*(season==='rainy'?1.1:0.6); });
@@ -1091,26 +1179,29 @@ function update(dt) {
     });
   }
 
-  // Proximity checks
+  // Proximity checks — measured on the ground plane (x across, z in depth).
+  // The temple is interactable from anywhere along its broad steps near the back.
   nearFarmer = -1;
   nearTributeCarrier = -1;
   nearTributeBox = -1;
-  nearTemple = Math.abs(P.x - TEMPLE_X) < TEMPLE_R;
+  nearTemple = Math.abs(P.x - TEMPLE_X) < TEMPLE_R && P.z < GATHER_Z + 30;
   if (!nearTemple) {
+    let best = Infinity;
     for (let i=0; i<farmers.length; i++) {
       if (farmers[i].gone) continue;
-      if (Math.abs(P.x-farmers[i].x) < INTERACT_R) { nearFarmer=i; break; }
+      const dx = Math.abs(P.x - farmers[i].x), dz = Math.abs(P.z - farmers[i].z);
+      if (dx < INTERACT_R && dz < INTERACT_Z && dx < best) { best = dx; nearFarmer = i; }
     }
   }
   tributeCarts.forEach((c, i) => {
     if (c.done) return;
     if (c.state === 'walking' || c.state === 'dropping') {
-      if (Math.abs(P.x - c.x) < INTERACT_R) nearTributeCarrier = i;
+      if (Math.abs(P.x - c.x) < INTERACT_R && Math.abs(P.z - c.z) < INTERACT_Z) nearTributeCarrier = i;
     }
   });
   tributeBoxes.forEach((box, i) => {
     if (box.collected) return;
-    if (Math.abs(P.x - box.x) < INTERACT_R) nearTributeBox = i;
+    if (Math.abs(P.x - box.x) < INTERACT_R && Math.abs(P.z - box.z) < INTERACT_Z) nearTributeBox = i;
   });
 }
 
@@ -1169,26 +1260,30 @@ function drawSeasonHUD(W, H) {
 }
 
 // ── DRAW MINIMAP ───────────────────────────────────────────────────────────────
+// Top-down map of the whole village: x across, depth (z) down the little panel.
 function drawMinimap(W, H) {
-  const MW=180, MH=22, MX=W/2-MW/2, MY=16;
+  const MW=180, MH=40, MX=W/2-MW/2, MY=14;
+  const mapX = x => MX + (x/WORLD_W)*MW;
+  const mapZ = z => MY + 4 + depthFrac(z)*(MH-8);
   ctx.fillStyle='rgba(0,0,0,.58)'; ctx.beginPath(); ctx.roundRect(MX,MY,MW,MH,5); ctx.fill();
   ctx.strokeStyle=season==='rainy'?'#1d4ed8':'#ca8a04'; ctx.lineWidth=1;
   ctx.beginPath(); ctx.roundRect(MX,MY,MW,MH,5); ctx.stroke();
+  // Huts
+  ctx.fillStyle='rgba(122,90,46,.9)';
+  HUTS.forEach(h=>{ ctx.fillRect(mapX(h.x)-1.5, mapZ(h.z)-1.5, 3, 3); });
   // Temple marker
-  const tx=MX+(TEMPLE_X/WORLD_W)*MW;
-  ctx.fillStyle='#ca8a04'; ctx.fillRect(tx-2,MY+4,4,MH-8);
-  // Farmer dots
+  ctx.fillStyle='#ca8a04';
+  ctx.beginPath(); ctx.moveTo(mapX(TEMPLE_X),mapZ(Z_MIN)-1); ctx.lineTo(mapX(TEMPLE_X)-3,mapZ(Z_MIN)+4); ctx.lineTo(mapX(TEMPLE_X)+3,mapZ(Z_MIN)+4); ctx.closePath(); ctx.fill();
+  // Farmer / warrior / porter dots
   farmers.forEach(f=>{
     if (f.gone) return;
-    const fx=MX+(f.x/WORLD_W)*MW;
     ctx.fillStyle=f.role==='warrior'?'#b91c1c': f.role==='porter'?'#0f766e':'#6b7c2a';
-    ctx.beginPath(); ctx.arc(fx,MY+MH/2,2.5,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(mapX(f.x),mapZ(f.z),2,0,Math.PI*2); ctx.fill();
   });
   // Player
-  const ppx=MX+(P.x/WORLD_W)*MW;
-  ctx.fillStyle='#f5f0e1'; ctx.beginPath(); ctx.arc(ppx,MY+MH/2,3.5,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#f5f0e1'; ctx.beginPath(); ctx.arc(mapX(P.x),mapZ(P.z),3,0,Math.PI*2); ctx.fill();
   ctx.strokeStyle='#ca8a04'; ctx.lineWidth=1.3;
-  ctx.beginPath(); ctx.arc(ppx,MY+MH/2,3.5,0,Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(mapX(P.x),mapZ(P.z),3,0,Math.PI*2); ctx.stroke();
 }
 
 // ── DRAW NARRATION TOAST ────────────────────────────────────────────────────────
@@ -1211,182 +1306,180 @@ function drawToast(W, H) {
 // ── DRAW ───────────────────────────────────────────────────────────────────────
 function draw() {
   const W=canvas.width, H=canvas.height;
-  const sc=H/WORLD_H;
-  const gY=GROUND_Y*sc;
-
+  const hY=horizonY(H);
   ctx.clearRect(0,0,W,H);
 
-  // Sky
-  const sky=ctx.createLinearGradient(0,0,0,gY);
-  sky.addColorStop(0, season==='rainy'?'#060c10':'#0c1a0e');
-  sky.addColorStop(.5, season==='rainy'?'#0b1e2e':'#1a3320');
-  sky.addColorStop(1, season==='rainy'?'#173448':'#2d5a35');
-  ctx.fillStyle=sky; ctx.fillRect(0,0,W,gY);
+  // Sky above the canopy
+  const sky=ctx.createLinearGradient(0,0,0,hY);
+  sky.addColorStop(0,  season==='rainy'?'#060c10':'#0c1a0e');
+  sky.addColorStop(.6, season==='rainy'?'#0b1e2e':'#16301c');
+  sky.addColorStop(1,  season==='rainy'?'#173448':'#2d5a35');
+  ctx.fillStyle=sky; ctx.fillRect(0,0,W,hY);
 
-  // Parallax trees (far + mid, screen-offset)
-  const farOff=-(camX*.18*sc);
-  FAR.forEach(t=>{ const sx=t.x*sc+farOff; if(sx>-100&&sx<W+100) drawTree(sx,gY,t.variant,sc*.55,.32); });
-  const midOff=-(camX*.38*sc);
-  MID.forEach(t=>{ const sx=t.x*sc+midOff; if(sx>-100&&sx<W+100) drawTree(sx,gY-2*sc,t.variant,sc*.74,.52); });
+  drawHorizonTrees(W,H);
+  drawGround(W,H);
+  drawFieldLabels(W,H);
+  drawMusterGround(W,H);
 
-  // ── World-space ──
-  ctx.save();
-  ctx.translate(-camX*sc, 0);
+  // Everything that stands on the ground plane, painted back (small z) to front (large z).
+  const items=[];
+  items.push({ z: Z_MIN-2, fn: ()=> drawTempleProjected(H) });
+  HUTS.forEach(h => items.push({ z:h.z, fn: ()=> drawHut(h,H) }));
+  CISTERNS.forEach(c => items.push({ z:c.z, fn: ()=> {
+    const sx=projX(c.x); if(sx>-60&&sx<W+60) drawCistern(sx, projY(c.z,H), projScale(c.z));
+  }}));
+  maize.forEach(m => items.push({ z:m.z, fn: ()=> {
+    const sx=projX(m.x);
+    if(sx>-50&&sx<W+50){ const g=Math.max(0,Math.min(1,cropGrowth+m.go)); const s=projScale(m.z);
+      drawMaize(sx, projY(m.z,H)-m.yj*s, m.phase, m.sc*s, g); }
+  }}));
+  farmers.forEach(f => { if(f.toolLeft){ const tz=(f.toolZ ?? f.homeZ);
+    items.push({ z: tz-0.5, fn: ()=> { const sx=projX(f.toolX ?? f.homeX); if(sx>-60&&sx<W+60) drawLeftTool(sx, projY(tz,H), projScale(tz)); } });
+  }});
+  farmers.forEach((f,fi) => { if(!f.gone) items.push({ z:f.z, fn: ()=> drawFarmerP(f,fi,H) }); });
+  tributeBoxes.forEach((b,bi) => { if(!b.collected) items.push({ z:b.z, fn: ()=> drawTributeBoxP(b,bi,H) }); });
+  tributeCarts.forEach((c,ci) => { if(!c.done) items.push({ z:c.z, fn: ()=> drawTributeCartP(c,ci,H) }); });
+  items.push({ z:P.z, fn: ()=> drawPlayerP(H) });
+  items.sort((a,b)=> a.z - b.z);
+  items.forEach(it => it.fn());
 
-  // Ground
-  ctx.fillStyle=season==='rainy'?'#26190b':'#3d2b10';
-  ctx.fillRect(0,gY,WORLD_W*sc,H-gY);
-  ctx.fillStyle=season==='rainy'?'#253f22':'#4a6741';
-  ctx.fillRect(0,gY,WORLD_W*sc,14*sc);
+  drawDust();
 
-  // Mud puddles in rainy season
-  if (season==='rainy') {
-    ctx.fillStyle='rgba(38,20,8,.5)';
-    for (let i=0;i<18;i++) {
-      const px=(160+sr(i*7)*3080)*sc, py=gY+9*sc;
-      ctx.beginPath(); ctx.ellipse(px,py,(18+sr(i*11)*22)*sc,(5+sr(i*13)*5)*sc,sr(i*17)*0.6,0,Math.PI*2); ctx.fill();
-    }
-  }
-
-  // Sacbe road
-  const ry=(GROUND_Y+2)*sc;
-  ctx.fillStyle='#c8bea0'; ctx.fillRect(0,ry,(TEMPLE_X+100)*sc,11*sc);
-  ctx.strokeStyle='#a89060'; ctx.lineWidth=.8;
-  for(let rx=0;rx<(TEMPLE_X+100)*sc;rx+=26*sc){ctx.beginPath();ctx.moveTo(rx,ry);ctx.lineTo(rx,ry+11*sc);ctx.stroke();}
-
-  // Field labels
-  ctx.globalAlpha=.2; ctx.fillStyle='#ca8a04';
-  ctx.fillRect(100*sc,(GROUND_Y-88)*sc,1050*sc,72*sc);
-  ctx.fillRect((TEMPLE_X+380)*sc,(GROUND_Y-88)*sc,1050*sc,72*sc);
-  ctx.globalAlpha=.5; ctx.fillStyle='#ca8a04'; ctx.font=`${13*sc}px 'Cinzel',serif`; ctx.textAlign='center';
-  ctx.fillText(t('MAIZE FIELDS','CAMPOS DE MAÍZ'),625*sc,(GROUND_Y-58)*sc);
-  ctx.fillText(t('MAIZE FIELDS','CAMPOS DE MAÍZ'),(TEMPLE_X+905)*sc,(GROUND_Y-58)*sc);
-  ctx.globalAlpha=1;
-
-  // Near trees
-  NEAR.forEach(t=>{
-    const sx=t.x*sc;
-    if(sx-camX*sc>-120*sc&&sx-camX*sc<W+120*sc) drawTree(sx,gY,t.variant,sc*.92,.68);
-  });
-
-  // Cisterns
-  CISTERNS.forEach(c=>{
-    const sx=c.x*sc;
-    if(sx-camX*sc>-50*sc&&sx-camX*sc<W+50*sc) drawCistern(sx,GROUND_Y*sc);
-  });
-
-  // Maize plants
-  maize.forEach(m=>{
-    const sx=m.x*sc;
-    if(sx-camX*sc>-60*sc&&sx-camX*sc<W+60*sc) {
-      const g=Math.max(0,Math.min(1,cropGrowth+m.go));
-      drawMaize(sx,(m.y+4)*sc,m.phase,m.sc*sc,g);
-    }
-  });
-
-  // Tools left planted in the plots of workers who have gone to muster or to war
-  farmers.forEach(f=>{
-    if (!f.toolLeft) return;
-    const tx=(f.toolX ?? f.homeX), sx=tx*sc;
-    if(sx-camX*sc<-60*sc||sx-camX*sc>W+60*sc) return;
-    drawLeftTool(sx, GROUND_Y*sc, sc);
-  });
-
-  // Pyramid
-  drawPyramid(TEMPLE_X*sc,GROUND_Y*sc);
-
-  // Temple glow when near
-  if (nearTemple) {
-    ctx.globalAlpha=.14+Math.sin(totalTime*3)*.05;
-    const tg=ctx.createRadialGradient(TEMPLE_X*sc,(GROUND_Y-50)*sc,20*sc,TEMPLE_X*sc,(GROUND_Y-50)*sc,130*sc);
-    tg.addColorStop(0,'#ca8a04'); tg.addColorStop(1,'transparent');
-    ctx.fillStyle=tg; ctx.beginPath(); ctx.arc(TEMPLE_X*sc,(GROUND_Y-50)*sc,130*sc,0,Math.PI*2); ctx.fill();
-    ctx.globalAlpha=1;
-  }
-
-  // Gather zone markers
-  const wArr=farmers.filter(f=>f.role==='warrior');
-  const pArr=farmers.filter(f=>f.role==='porter');
-  if(wArr.length){
-    ctx.globalAlpha=.45; ctx.fillStyle='#b91c1c'; ctx.fillRect((GATHER_W_X-52)*sc,(GROUND_Y-1)*sc,104*sc,4*sc);
-    ctx.globalAlpha=.7; ctx.font=`${9*sc}px 'Cinzel',serif`; ctx.textAlign='center'; ctx.fillText(t('WARRIORS','GUERREROS'),GATHER_W_X*sc,(GROUND_Y+15)*sc); ctx.globalAlpha=1;
-  }
-  if(pArr.length){
-    ctx.globalAlpha=.45; ctx.fillStyle='#0f766e'; ctx.fillRect((GATHER_P_X-52)*sc,(GROUND_Y-1)*sc,104*sc,4*sc);
-    ctx.globalAlpha=.7; ctx.font=`${9*sc}px 'Cinzel',serif`; ctx.textAlign='center'; ctx.fillText(t('PORTERS','CARGADORES'),GATHER_P_X*sc,(GROUND_Y+15)*sc); ctx.globalAlpha=1;
-  }
-
-  // Farmers
-  farmers.forEach((f,fi)=>{
-    if (f.gone) return;
-    const sx=f.x*sc;
-    if(sx-camX*sc<-80*sc||sx-camX*sc>W+80*sc) return;
-    const isNear=nearFarmer===fi;
-    ctx.save(); if(isNear){ctx.shadowColor='#ca8a04';ctx.shadowBlur=16;}
-    const pose=f.role==='farmer' ? (f.pose==='none'?'walk':f.pose) : 'walk';
-    drawSprite(sx,f.y*sc,f.walkPhase,f.facing,f.role,false,pose);
-    ctx.restore();
-    ctx.fillStyle=isNear?'#ca8a04':'rgba(245,240,225,.62)';
-    ctx.font=`${isNear?11:9}px 'Cinzel',serif`; ctx.textAlign='center';
-    ctx.fillText(f.name,sx,(f.y-74)*sc);
-  });
-
-  // Tribute carts
-  drawTributeCarts(sc);
-
-  // Player
-  ctx.save(); ctx.shadowColor='#0f766e'; ctx.shadowBlur=22;
-  drawSprite(P.x*sc,P.y*sc,P.walkPhase,P.facing,'player',true,'walk');
-  ctx.restore();
-  ctx.fillStyle='#ca8a04'; ctx.font=`${11*sc}px 'Cinzel',serif`; ctx.textAlign='center';
-  ctx.fillText("K'uhul Ajaw",P.x*sc,(P.y-78)*sc);
-
-  // Dust underfoot
-  drawDust(sc);
-
-  ctx.restore(); // end world-space
-
-  // Rain overlay (screen-space)
   if (season==='rainy') drawRain();
 
   // HUD
   drawMinimap(W, H);
   drawSeasonHUD(W, H);
   drawToast(W, H);
+  drawPromptAndHints(W, H);
+}
 
-  // Interact prompt (tap-friendly label)
+// Distant jungle ridge along the horizon, with gentle parallax.
+function drawHorizonTrees(W,H){
+  const hY=horizonY(H);
+  const farOff=-(camX*0.14);
+  FAR.forEach(o=>{ const sx=o.x*0.9+farOff; if(sx>-100&&sx<W+100) drawTree(sx,hY+8,o.variant,0.5,.34); });
+  const midOff=-(camX*0.3);
+  MID.forEach(o=>{ const sx=o.x*1.0+midOff; if(sx>-100&&sx<W+100) drawTree(sx,hY+16,o.variant,0.72,.52); });
+}
+
+// The ground band with depth furrows that converge toward the temple.
+function drawGround(W,H){
+  const hY=horizonY(H);
+  const g=ctx.createLinearGradient(0,hY,0,H);
+  if (season==='rainy'){ g.addColorStop(0,'#24331f'); g.addColorStop(.5,'#2a2415'); g.addColorStop(1,'#1c1206'); }
+  else { g.addColorStop(0,'#46612f'); g.addColorStop(.5,'#5c5226'); g.addColorStop(1,'#3d2b10'); }
+  ctx.fillStyle=g; ctx.fillRect(0,hY,W,H-hY);
+  ctx.strokeStyle = season==='rainy' ? 'rgba(18,12,4,.32)' : 'rgba(60,40,14,.32)';
+  for(let i=0;i<=12;i++){
+    const z=Z_MIN+(Z_MAX-Z_MIN)*(i/12), y=projY(z,H);
+    ctx.lineWidth=0.5+(i/12)*2.2;
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke();
+  }
+  if (season==='rainy'){
+    ctx.fillStyle='rgba(20,30,45,.4)';
+    for(let i=0;i<26;i++){
+      const z=Z_MIN+sr(i*13)*(Z_MAX-Z_MIN), s=projScale(z), sx=projX(160+sr(i*7)*3080);
+      if(sx<-40||sx>W+40) continue;
+      ctx.beginPath(); ctx.ellipse(sx,projY(z,H),(16+sr(i*11)*20)*s,(5+sr(i*5)*4)*s,0,0,Math.PI*2); ctx.fill();
+    }
+  }
+}
+
+function drawFieldLabels(W,H){
+  ctx.globalAlpha=.4; ctx.fillStyle='#ca8a04'; ctx.font="13px 'Cinzel',serif"; ctx.textAlign='center';
+  let sx=projX(625);            if(sx>-80&&sx<W+80) ctx.fillText(t('MAIZE FIELDS','CAMPOS DE MAÍZ'), sx, projY(Z_MIN+10,H));
+  sx=projX(TEMPLE_X+905);       if(sx>-80&&sx<W+80) ctx.fillText(t('MAIZE FIELDS','CAMPOS DE MAÍZ'), sx, projY(Z_MIN+10,H));
+  ctx.globalAlpha=1;
+}
+
+// Muster pads in the plaza, shown once warriors/porters have assembled.
+function drawMusterGround(W,H){
+  const pad=(gx,label,color,show)=>{
+    if(!show) return;
+    const s=projScale(GATHER_Z), sx=projX(gx), sy=projY(GATHER_Z,H);
+    if(sx<-100||sx>W+100) return;
+    ctx.save();
+    ctx.globalAlpha=.38; ctx.fillStyle=color;
+    ctx.beginPath(); ctx.ellipse(sx,sy,62*s,16*s,0,0,Math.PI*2); ctx.fill();
+    ctx.globalAlpha=.85; ctx.fillStyle=color; ctx.font="10px 'Cinzel',serif"; ctx.textAlign='center';
+    ctx.fillText(label, sx, sy+24*s);
+    ctx.restore();
+  };
+  pad(GATHER_W_X, t('WARRIORS','GUERREROS'), '#b91c1c', farmers.some(f=>f.role==='warrior'));
+  pad(GATHER_P_X, t('PORTERS','CARGADORES'), '#0f766e', farmers.some(f=>f.role==='porter'));
+}
+
+// The great pyramid stands at the back of the plaza and towers over the canopy.
+function drawTempleProjected(H){
+  const s=projScale(Z_MIN)*2.5, sx=projX(TEMPLE_X), sy=projY(Z_MIN,H);
+  if(sx<-300||sx>canvas.width+300) return;
+  ctx.save(); ctx.translate(sx,sy); ctx.scale(s,s); drawPyramid(0,0); ctx.restore();
+  if(nearTemple){
+    ctx.globalAlpha=.14+Math.sin(totalTime*3)*.05;
+    const cy=sy-70*s, tg=ctx.createRadialGradient(sx,cy,20,sx,cy,150);
+    tg.addColorStop(0,'#ca8a04'); tg.addColorStop(1,'transparent');
+    ctx.fillStyle=tg; ctx.beginPath(); ctx.arc(sx,cy,150,0,Math.PI*2); ctx.fill();
+    ctx.globalAlpha=1;
+  }
+}
+
+function drawFarmerP(f,fi,H){
+  const sx=projX(f.x); if(sx<-90||sx>canvas.width+90) return;
+  const s=projScale(f.z), sy=projY(f.z,H);
+  const isNear=nearFarmer===fi;
+  ctx.save(); if(isNear){ctx.shadowColor='#ca8a04';ctx.shadowBlur=16;}
+  const pose=f.role==='farmer' ? (f.pose==='none'?'walk':f.pose) : 'walk';
+  drawSprite(sx,sy,f.walkPhase,f.facing,f.role,false,pose,s);
+  ctx.restore();
+  ctx.fillStyle=isNear?'#ca8a04':'rgba(245,240,225,.7)';
+  ctx.font=`${isNear?12:10}px 'Cinzel',serif`; ctx.textAlign='center';
+  ctx.fillText(f.name,sx,sy-72*s);
+}
+
+function drawPlayerP(H){
+  const sx=projX(P.x), s=projScale(P.z), sy=projY(P.z,H);
+  ctx.save(); ctx.shadowColor='#0f766e'; ctx.shadowBlur=22;
+  drawSprite(sx,sy,P.walkPhase,P.facing,'player',true,'walk',s);
+  ctx.restore();
+  ctx.fillStyle='#ca8a04'; ctx.font="12px 'Cinzel',serif"; ctx.textAlign='center';
+  ctx.fillText("K'uhul Ajaw",sx,sy-76*s);
+}
+
+function drawPromptAndHints(W,H){
   let prompt='';
   if (!dialogOpen) {
     if (nearTributeBox >= 0) {
       const food = tributeBoxes[nearTributeBox]?.food ?? 14;
-      prompt = t(`Tap \u2022 Collect Tribute Box (+${food} rations)`, `Toca \u2022 Recoger Caja de Tributo (+${food} raciones)`);
+      prompt = t(`Tap • Collect Tribute Box (+${food} rations)`, `Toca • Recoger Caja de Tributo (+${food} raciones)`);
     } else if (nearTributeCarrier >= 0) {
-      prompt = t('Tap \u2022 Speak with the Tribute Bearer','Toca \u2022 Hablar con el Portador de Tributo');
+      prompt = t('Tap • Speak with the Tribute Bearer','Toca • Hablar con el Portador de Tributo');
     } else if (nearTemple) {
       const n=farmers.filter(f=>f.role!=='farmer').length;
       prompt = n
-        ? t(`Tap \u2022 Speak at the Temple  (${n} assembled)`, `Toca \u2022 Hablar en el Templo  (${n} reunidos)`)
-        : t('Tap \u2022 Speak at the Temple','Toca \u2022 Hablar en el Templo');
+        ? t(`Tap • Speak at the Temple  (${n} assembled)`, `Toca • Hablar en el Templo  (${n} reunidos)`)
+        : t('Tap • Speak at the Temple','Toca • Hablar en el Templo');
     } else if (nearFarmer>=0) {
-      prompt = t(`Tap \u2022 Speak with ${farmers[nearFarmer].name}`, `Toca \u2022 Hablar con ${farmers[nearFarmer].name}`);
+      prompt = t(`Tap • Speak with ${farmers[nearFarmer].name}`, `Toca • Hablar con ${farmers[nearFarmer].name}`);
     }
   }
   if (prompt) {
     ctx.font="13px 'Cinzel',serif";
-    const pw=ctx.measureText(prompt).width+28, px=W/2-pw/2, py=H-88;
+    const pw=ctx.measureText(prompt).width+28, px=W/2-pw/2, py=H-92;
     ctx.fillStyle='rgba(11,11,12,.78)'; ctx.beginPath(); ctx.roundRect(px,py,pw,32,6); ctx.fill();
     ctx.strokeStyle='#ca8a04'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.roundRect(px,py,pw,32,6); ctx.stroke();
     ctx.fillStyle='#f5f0e1'; ctx.textAlign='center'; ctx.fillText(prompt,W/2,py+20);
   }
 
-  // Controls hint (first 6 seconds)
-  if (totalTime < 6) {
-    ctx.globalAlpha=Math.min(1,Math.max(0,6-totalTime));
-    ctx.fillStyle='rgba(11,11,12,.6)';
-    ctx.beginPath(); ctx.roundRect(14,H-70,180,48,6); ctx.fill();
-    ctx.fillStyle='rgba(245,240,225,.7)'; ctx.font="10px 'Cinzel',serif"; ctx.textAlign='left';
-    ctx.fillText(t('Arrow keys / WASD  Move','Flechas / WASD  Moverse'),24,H-50);
-    ctx.fillText(t('Tap  \u2022  [E]  Talk to farmers','Toca  \u2022  [E]  Hablar con campesinos'),24,H-33);
+  // Controls hint (first 7 seconds) — now includes walking in depth.
+  if (totalTime < 7) {
+    ctx.globalAlpha=Math.min(1,Math.max(0,7-totalTime));
+    ctx.fillStyle='rgba(11,11,12,.62)';
+    ctx.beginPath(); ctx.roundRect(14,H-86,232,64,6); ctx.fill();
+    ctx.fillStyle='rgba(245,240,225,.78)'; ctx.font="10px 'Cinzel',serif"; ctx.textAlign='left';
+    ctx.fillText(t('← → / A D  —  walk along the village','← → / A D  —  caminar por la aldea'),24,H-66);
+    ctx.fillText(t('↑ ↓ / W S  —  walk in and out of depth','↑ ↓ / W S  —  caminar hacia el fondo'),24,H-49);
+    ctx.fillText(t('Tap • [E]  —  speak to your people','Toca • [E]  —  hablar con tu gente'),24,H-32);
     ctx.globalAlpha=1;
   }
 }
